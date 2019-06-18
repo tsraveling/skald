@@ -1,4 +1,4 @@
-define introParagraph:
+@define introParagraph
 
     // This is a comment. Ignore it.
 
@@ -9,7 +9,7 @@ define introParagraph:
     A conditional will only be included if the passed state requirement is met: { (shouldShowInclude): Inserted text }
     An insert is inserted as-is: {insert}
 
-    Standard **Markdown** works.
+    If you want **Markdown** to work, you'll have to process the text through a third-party library.
 
     A pick statement is used to choose randomly from a longer list of options. A conditional can be placed at the beginning of the line to allow for greater filtration.
     Note: Skald will trim whitespace off the front and end of a line. Indentation is not required, but may help script readability.
@@ -42,3 +42,10 @@ define introParagraph:
     As with the pick statement, a switch statement ends when a line does not begin with the `someKey: result` pattern.
 
     Finally, to try this out, set up a Skald object on this file and run `skaldExample.perform('introParagraph', state)` with the values found in this repositories README file.
+@end
+
+@define secondFunction
+
+    // This is a second function
+    Some content.
+@end

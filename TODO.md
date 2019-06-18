@@ -4,10 +4,11 @@ Next steps for developing the Skald interactive fiction scripting language.
 
 ## On Deck
 
+Everything in current objectives has the hood open, both in `skald.js`, where the RNG stuff
+should go, and in `skald-parser.js`, where the syntax reading stuff should go.
+
 ## Current Objectives
 
-- Define functions
-- Define base text
 - Define inline random swaps
     - Initial baseline usage
     - Optional tags
@@ -29,6 +30,7 @@ Next steps for developing the Skald interactive fiction scripting language.
 
 ## Future / Nice to Have
 
+- Better markup tools
 - IntelliJ plugin to suport Ska files
 - C# interpreter
 - Swift interpreter

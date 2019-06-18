@@ -20,11 +20,31 @@ export default class Skald {
         return new Skald(skaObject);
     }
 
-    perform(func, state) {
+    perform(functionName, state) {
 
-        console.log("Perform call:")
+        // First, try to find the function
+        let f = this.skaObject.functions.find((func) => func.name === functionName);
 
-        // For now just print the file
-        return this.skaObject.exampleValue;
+        // If there's no function called that, throw an error
+        if (f === undefined)
+            throw new Error("Couldn't find function: " + functionName);
+
+        console.log(f);
+
+        // Prepare the result
+        var result = "";
+
+        // Loop through the function's components and assemble a result
+        for (var i = 0; i < f.components.length; i++) {
+
+            // Get the component at this index
+            let component = f.components[i];
+
+            // TODO: All the random logic goes here
+            // For now, simply append the component to the result
+            result += component;
+        }
+
+        return result;
     }
 }
