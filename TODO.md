@@ -6,9 +6,6 @@ Next steps for developing the Skald interactive fiction scripting language.
 
 ## Current Objectives
 
-- Set up test project
-- Set up library folder
-- Add .ska importer
 - Define functions
 - Define base text
 - Define inline random swaps
