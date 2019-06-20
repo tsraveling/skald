@@ -4,20 +4,16 @@ Next steps for developing the Skald interactive fiction scripting language.
 
 ## On Deck
 
-Everything in current objectives has the hood open, both in `skald.js`, where the RNG stuff
-should go, and in `skald-parser.js`, where the syntax reading stuff should go.
+Get the optional + state and inserts working
 
 ## Current Objectives
 
 - Define inline random swaps
-    - Initial baseline usage
     - Optional tags
 - Define inserts
 - Optional include block
 - Pick sections
 - Switch sections
-- Comments
-- Interface between data object and outside world
 
 ## Next Phase
 

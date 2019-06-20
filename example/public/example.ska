@@ -2,10 +2,14 @@
 
     // This is a comment. Ignore it.
 
+    [Beginning line / second]Test line with [option a / option B] and [(pickerSwitch): option a / option b] and {insert} and { (shouldShowInclude): Inserted text }[together / with friends]
+
     Note: Any variables will be assumed to be present in the 'state' object passed in the optional argument in Skald. If a variable is not found, the value 'ERR' will be used instead.
 
     A line of plaintext will be returned as part of the result, verbatim, with no mutation. A newline is treated like a space unless it is the final one.
+    Test line with [option a / option B] and [(pickerSwitch): option a, option b] and {insert} and { (shouldShowInclude): Inserted text }[together, with friends]
     An optional can be defined using brackets. One of the following will be chosen: [option a / option B]
+    You can also include conditionals: [(pickerSwitch): option a, option b]. Note: If there's no option available, ERR will be returned.
     A conditional will only be included if the passed state requirement is met: { (shouldShowInclude): Inserted text }
     An insert is inserted as-is: {insert}
 

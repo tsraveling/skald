@@ -20,6 +20,70 @@ export default class Skald {
         return new Skald(skaObject);
     }
 
+    drawFrom(array) {
+        return array[Math.floor((Math.random() * array.length))];
+    }
+
+    validateOptional(optional) {
+
+        // TODO: Actually process the optional here
+        return true;
+    }
+
+    performComponent(component) {
+
+        // A string just is what it is
+        if (typeof component === "string")
+            return component;
+
+        // If it's not an object, return ERR
+        if (typeof component !== "object")
+            return "ERR";
+
+        // If it's a picker, do the pick
+        if (component.type === SkaldParser.BracketType.Pick) {
+
+            let deck = [];
+
+            // Build the deck out of qualified options
+            component.options.forEach((option) => {
+
+                // If it's a string, just add it
+                if (typeof option === "string")
+                    deck.push(option);
+                else {
+                    if (this.validateOptional(option.optional))
+                        deck.push(option.str);
+                }
+            });
+
+            // If there are no options, return ERR
+            if (deck.length === 0)
+                return "ERR";
+
+            // Otherwise, draw and return!
+            return this.drawFrom(deck);
+        }
+
+        // If it's an insert, do the insert
+        if (component.type === SkaldParser.BracketType.Insert) {
+
+            // TODO: perform the insert
+            return "<TODO: -> " + component.insert + ">";
+        }
+
+        // If it's an optional, process and continue
+        if (component.type === SkaldParser.BracketType.Optional) {
+            if (this.validateOptional(component.optional))
+                return component.value;
+            else
+                return "";
+        }
+
+        // If it's something else, return ERR
+        return "ERR";
+    }
+
     perform(functionName, state) {
 
         // First, try to find the function
@@ -42,7 +106,7 @@ export default class Skald {
 
             // TODO: All the random logic goes here
             // For now, simply append the component to the result
-            result += component;
+            result += this.performComponent(component);
         }
 
         return result;

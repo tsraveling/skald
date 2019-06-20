@@ -18,6 +18,123 @@ let exampleSkaObject = {
 
 export default class SkaldParser {
 
+    static BracketType = {
+        Pick: "pick",
+        Insert: "insert",
+        Optional: "optional"
+    };
+
+    static getOptional(clause) {
+
+        // Try to find the optional clause
+        let find = clause.match(/\(.*?\): /s);
+
+        // If there's nothing:
+        if (find === null) {
+            return {
+                str: clause,
+                optional: null
+            };
+        }
+
+        // If there is, return both:
+        let realString = clause.replace(find, "");
+        return {
+            str: realString,
+            optional: find[0].substring(1, find[0].length - 3)
+        };
+    }
+
+    static parseBracket(bracket) {
+
+        let contents = bracket.substring(1, bracket.length - 1);
+        let result = {};
+
+        // Picker
+        if (bracket[0] === "[") {
+            result.type = this.BracketType.Pick;
+
+            // Split them up
+            result.options = contents.split(" / ").map((option) => {
+
+                // Return an optional if there is one
+                let ob = SkaldParser.getOptional(option);
+                return (ob.optional === null) ? ob.str : ob;
+            });
+        }
+
+        // Insert
+        if (bracket[0] === "{") {
+
+            // Attempt to get an optional, which defines whether this is an optional or an insert
+            let ob = SkaldParser.getOptional(contents);
+
+            if (ob.optional === null) {
+
+                // If there's no optional, it's an insert
+                result.type = this.BracketType.Insert;
+                result.insert = contents;
+
+            } else {
+
+                result.type = this.BracketType.Optional;
+                result.optional = ob.optional;
+                result.value = ob.str;
+            }
+        }
+
+        return result;
+    }
+
+    static parseStringIntoComponents(source) {
+
+        // Get the results array ready
+        var components = [];
+
+        // Set up the working string
+        let workingString = source.slice();
+
+        // Then, look for any curly or square bracket arrays
+        var brackets = workingString.match(/\[.*?\]|\{.*?\}/g);
+
+        // If there's nothing, just return the source string
+        if (brackets === null)
+            return [source];
+
+        // Iterate through the results
+        for (var index in brackets) {
+            if (brackets.hasOwnProperty(index)) {
+
+                // Get the bracket
+                let bracket = brackets[index];
+
+                // Split the remaining string by this bracket
+                let splitString = workingString.split(bracket);
+
+                // Get the section of the string before the bracket
+                let prefix = splitString[0];
+
+                // Add it if it's long enough
+                if (prefix.length > 0)
+                    components.push(prefix);
+
+                // Parse and add the bracket
+                let parsedBracket = SkaldParser.parseBracket(bracket);
+                components.push(parsedBracket);
+
+                // Cut the string down
+                let chop = prefix.length + bracket.length;
+
+                // Cut the string down
+                workingString = workingString.substring(chop);
+            }
+        }
+
+        // Return the result
+        return components;
+
+    }
+
     static parseSkaText(skaText) {
 
         console.log(">>> BEGIN PARSE");
@@ -41,17 +158,6 @@ export default class SkaldParser {
         // Set up our error handler
         let error = (string, lineNumber) => {
             throw new Error(`${string} (line ${lineNumber})\n   -> ${lines[lineNumber]}`);
-        };
-
-        // Set up our inline parser
-        let parseInline = (line) => {
-            var components = [];
-
-            // TODO: parse more from here
-            // For now we're just putting the whole line in
-            components.push(line);
-
-            return components;
         };
 
         // Step through the lines
@@ -113,7 +219,7 @@ export default class SkaldParser {
                 error("Tried to define content outside of a function");
 
             // If no further work needs to be done, parse the inline text and add the results to the components. Add a space to the end.
-            let parsedLineComponents = parseInline(line + ' ');
+            let parsedLineComponents = SkaldParser.parseStringIntoComponents(line + ' ');
             workingFunction.components = workingFunction.components.concat(parsedLineComponents)
         };
 
