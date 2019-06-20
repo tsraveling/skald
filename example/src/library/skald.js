@@ -53,7 +53,7 @@ export default class Skald {
                     deck.push(option);
                 else {
                     if (this.validateOptional(option.optional))
-                        deck.push(option.str);
+                        deck.push(option.value);
                 }
             });
 

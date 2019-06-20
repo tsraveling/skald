@@ -2,7 +2,7 @@
 
     // This is a comment. Ignore it.
 
-    [Beginning line / second]Test line with [option a / option B] and [(pickerSwitch): option a / option b] and {insert} and { (shouldShowInclude): Inserted text }[together / with friends]
+    [(thingOne, !thingTwo, thingThree=4, thingFour!=5): Beginning line / second]Test line
 
     Note: Any variables will be assumed to be present in the 'state' object passed in the optional argument in Skald. If a variable is not found, the value 'ERR' will be used instead.
 

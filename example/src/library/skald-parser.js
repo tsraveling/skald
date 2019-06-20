@@ -32,16 +32,74 @@ export default class SkaldParser {
         // If there's nothing:
         if (find === null) {
             return {
-                str: clause,
+                value: clause,
                 optional: null
             };
         }
 
+        // If there is an optional, get it:
+        let optionalString = find[0].substring(1, find[0].length - 3);
+
+        let optionals = [];
+
+        // Iterate through comma-separated clauses
+        let optionalClauses = optionalString.split(",");
+        optionalClauses.forEach((optionalClause) => {
+
+            // TODO: Add some linting here
+
+            // Trim the clause
+            let trimmedClause = optionalClause.trim();
+
+            // Handle !Bool:
+            if (trimmedClause[0]==="!") {
+                optionals.push({
+                    prop: trimmedClause.substring(1),
+                    comparison: true,
+                    negative: true
+                });
+
+                // Handle inequalities:
+            } else if (trimmedClause.search(/!=/s) > -1) {
+
+                // Split the clause
+                let parts = trimmedClause.split("!=");
+
+                // Return the optional
+                optionals.push({
+                    prop: parts[0],
+                    comparison: parts[1],
+                    negative: true
+                });
+
+                // Handle equalities:
+            } else if (trimmedClause.search(/=/s) > -1) {
+
+                // Split the clause
+                let parts = trimmedClause.split("=");
+
+                // Return the optional
+                optionals.push({
+                    prop: parts[0],
+                    comparison: parts[1],
+                    negative: false
+                });
+
+                // Handle simple bool check
+            } else {
+                optionals.push({
+                    prop: trimmedClause,
+                    comparison: true,
+                    negative: false
+                });
+            }
+        });
+
         // If there is, return both:
         let realString = clause.replace(find, "");
         return {
-            str: realString,
-            optional: find[0].substring(1, find[0].length - 3)
+            value: realString,
+            optional: { conditions: optionals }
         };
     }
 
@@ -59,7 +117,7 @@ export default class SkaldParser {
 
                 // Return an optional if there is one
                 let ob = SkaldParser.getOptional(option);
-                return (ob.optional === null) ? ob.str : ob;
+                return (ob.optional === null) ? ob.value : ob;
             });
         }
 
@@ -79,7 +137,7 @@ export default class SkaldParser {
 
                 result.type = this.BracketType.Optional;
                 result.optional = ob.optional;
-                result.value = ob.str;
+                result.value = ob.value;
             }
         }
 
