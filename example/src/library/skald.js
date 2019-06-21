@@ -4,6 +4,7 @@ export default class Skald {
 
     constructor(skaObject) {
         this.skaObject = skaObject;
+        this.currentState = {};
     }
 
     static async buildDynamically(skaFile) {
@@ -26,7 +27,29 @@ export default class Skald {
 
     validateOptional(optional) {
 
-        // TODO: Actually process the optional here
+        optional.conditions.forEach((condition) => {
+
+            // Split the prop into parts
+            let propParts = condition.prop.split(".");
+
+            // Set up the var
+            var stateProperty = this.currentState;
+
+            // Iterate down the line
+            propParts.forEach((part) => {
+                stateProperty = stateProperty[part];
+            });
+
+            // Perform the comparison
+            if (condition.negative) {
+                if (stateProperty === condition.comparison)
+                    console.log("NEGATIVE");//return false;
+            } else {
+                if (stateProperty !== condition.comparison)
+                    console.log("NEGATIVE");//return false;
+            }
+        });
+
         return true;
     }
 
@@ -85,6 +108,9 @@ export default class Skald {
     }
 
     perform(functionName, state) {
+
+        // Retain state
+        this.currentState = state;
 
         // First, try to find the function
         let f = this.skaObject.functions.find((func) => func.name === functionName);
