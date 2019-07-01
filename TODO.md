@@ -8,7 +8,6 @@ Get the optional + state and inserts working
 
 ## Current Objectives
 
-- Pick sections
 - Switch sections
 
 ## Next Phase
@@ -22,6 +21,7 @@ Get the optional + state and inserts working
 
 ## Future / Nice to Have
 
+- Inline comments
 - Better markup tools
 - IntelliJ plugin to suport Ska files
 - C# interpreter

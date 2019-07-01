@@ -225,6 +225,10 @@ export default class SkaldParser {
             throw new Error(`${string} (line ${lineNumber})\n   -> ${lines[lineNumber]}`);
         };
 
+        // Set up pick and switch systems
+        var currentPick = null;
+        var currentSwitch = null;
+
         // Step through the lines
         for (var i = 0; i < lines.length; i++) {
 
@@ -283,10 +287,55 @@ export default class SkaldParser {
             if (workingFunction === null)
                 error("Tried to define content outside of a function");
 
+            // Process Picks
+            if (currentPick != null) {
+                if (line[0] === '-') {
+
+                    let pickLine = line.substring(2);
+
+                    var item = {};
+
+                    // Check for an initial optional
+                    if (pickLine.search(/^\(.*?\): /s) > -1) {
+
+                        let parsedOptional = this.getOptional(pickLine);
+                        item.optional = parsedOptional.optional;
+                        item.components = this.parseStringIntoComponents(parsedOptional.value);
+                    } else {
+                        item.optional = null;
+                        item.components = this.parseStringIntoComponents(pickLine);
+                    }
+
+                    // Add the item to the current pick
+                    currentPick.push(item);
+
+                    continue;
+
+                } else {
+
+                    // If the next line doesn't match the initial hyphen pattern, end pick and reset to normal mode..
+                    workingFunction.components.push({
+                        type: this.BracketType.Pick,
+                        items: currentPick
+                    });
+
+                    currentPick = null;
+                }
+            }
+
+            // Look for Picks
+            if (line.search(/^pick:/s) > -1) {
+
+                // Start the pick
+                currentPick = [];
+                console.log("START PICK");
+                continue;
+            }
+
             // If no further work needs to be done, parse the inline text and add the results to the components. Add a space to the end.
             let parsedLineComponents = SkaldParser.parseStringIntoComponents(line + ' ');
             workingFunction.components = workingFunction.components.concat(parsedLineComponents)
-        };
+        }
 
         // For now just pass the raw text as an example value so we can make sure the wiring's working
         result.exampleValue = "Example";

@@ -118,7 +118,35 @@ export default class Skald {
 
         // If it's a full pick, pick a line, process it, and return the resulting string
         if (component.type === SkaldParser.BracketType.Pick) {
-            // findme
+
+            let deck = [];
+
+            // Build the deck out of qualified options
+            for (var i = 0; i < component.items.length; i++) {
+
+                let item = component.items[i];
+
+                if (item.optional === null)
+                    deck.push(item);
+                else {
+                    if (this.validateOptional(item.optional))
+                        deck.push(item);
+                }
+            }
+
+            // If there are no options, return ERR
+            if (deck.length === 0)
+                return "ERR";
+
+            // Otherwise, draw an item
+            let resultItem = this.drawFrom(deck);
+
+            // Compose the result item into a string (with a final space)
+            var result = "";
+            for (var x = 0; x < resultItem.components.length; x++) {
+                result += this.performComponent(resultItem.components[x]);
+            }
+            return result + ' ';
         }
 
         // If it's something else, return ERR

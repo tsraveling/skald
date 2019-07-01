@@ -2,14 +2,7 @@
 
     pick:
 
-        - First option
-        - Second option
-        - (pickerSwitch): Positive optional
-        - (!pickerSwitch): Negative optional
-        - (pickerSwitch, secondSwitch): multi-argument optional with [awesome / bad / okay] inline functionality
-        - (pickerSwitch, !secondSwitch): multi-argument including negative optional
-        - (specificValue=aValue): equality check -- note lack of quotes etc
-        - (specificValue!=aValue): inequality check
+        - multi-argument optional with [awesome / bad / okay] inline functionality
 
     // This is a comment. Ignore it.
 
