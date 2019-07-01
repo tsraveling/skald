@@ -96,10 +96,10 @@ You can perform a switch on a given state property like this:
 
 ```
 switch(switchValue):
-        1: The answer was one
-        2: The answer was two
-        3: The answer was three
-        default: There was some other answer.
+    1: The answer was one
+    2: The answer was two
+    3: The answer was three
+    default: There was some other answer.
 ```
 
 The `default` option will be used if the passed property doesn't match one of the options. If there are no matches at all, `ERR` will be returned.
