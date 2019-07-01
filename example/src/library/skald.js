@@ -66,6 +66,16 @@ export default class Skald {
         return true;
     }
 
+    compileComponentsIntoString(components) {
+
+        // Compose the result item into a string
+        var result = "";
+        for (var i = 0; i < components.length; i++) {
+            result += this.performComponent(components[i]);
+        }
+        return result;
+    }
+
     performComponent(component) {
 
         // A string just is what it is
@@ -122,7 +132,7 @@ export default class Skald {
             let deck = [];
 
             // Build the deck out of qualified options
-            for (var i = 0; i < component.items.length; i++) {
+            for (let i = 0; i < component.items.length; i++) {
 
                 let item = component.items[i];
 
@@ -142,11 +152,40 @@ export default class Skald {
             let resultItem = this.drawFrom(deck);
 
             // Compose the result item into a string (with a final space)
-            var result = "";
-            for (var x = 0; x < resultItem.components.length; x++) {
-                result += this.performComponent(resultItem.components[x]);
+            return this.compileComponentsIntoString(resultItem.components) + ' ';
+        }
+
+        // If it's a switch, find the match and return the resulting string. ERR if there is no match.
+        if (component.type === SkaldParser.BracketType.Switch) {
+
+            // Get the value to check against
+            let comparison = this.valueOfOptional(component.prop).toString();
+
+            // Prepare a default option
+            var defaultOption = null;
+
+            // Iterate through the items
+            for (let switchIndex = 0; switchIndex < component.items.length; switchIndex++) {
+
+                let switchItem = component.items[switchIndex];
+
+                // Check for default
+                if (switchItem.value === "default") {
+                    defaultOption = switchItem.result;
+                }
+
+                // Check for a match ...
+                if (comparison === switchItem.value) {
+
+                    // Compose the result item into a string (with a final space)
+                    return this.compileComponentsIntoString(switchItem.result) + ' ';
+                }
             }
-            return result + ' ';
+
+            // If there's a default, use that
+            if (defaultOption !== null) {
+                return this.compileComponentsIntoString(defaultOption) + ' ';
+            }
         }
 
         // If it's something else, return ERR

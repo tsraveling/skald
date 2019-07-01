@@ -1,13 +1,5 @@
 @define introParagraph
 
-    pick:
-
-        - multi-argument optional with [awesome / bad / okay] inline functionality
-
-    // This is a comment. Ignore it.
-
-    Test: { (shouldShowInclude): should include }{ (!shouldShowInclude): should not include}
-
     Note: Any variables will be assumed to be present in the 'state' object passed in the optional argument in Skald. If a variable is not found, the value 'ERR' will be used instead.
 
     A line of plaintext will be returned as part of the result, verbatim, with no mutation. A newline is treated like a space unless it is the final one.
@@ -48,7 +40,7 @@
 
     As with the pick statement, a switch statement ends when a line does not begin with the `someKey: result` pattern.
 
-    Finally, to try this out, set up a Skald object on this file and run `skaldExample.perform('introParagraph', state)` with the values found in this repositories README file.
+    Finally, to try this out, set up a Skald object on this file and run `skaldExample.perform('introParagraph', state)` with the values found in the example App.js file.
 @end
 
 @define secondFunction

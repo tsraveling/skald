@@ -228,6 +228,7 @@ export default class SkaldParser {
         // Set up pick and switch systems
         var currentPick = null;
         var currentSwitch = null;
+        var switchProp = null;
 
         // Step through the lines
         for (var i = 0; i < lines.length; i++) {
@@ -323,12 +324,56 @@ export default class SkaldParser {
                 }
             }
 
+            // Process Switches
+            if (currentSwitch != null) {
+
+                // Attempt to split the string by the switch colon
+                let switchElements = line.split(": ");
+
+                // If there are exactly two elements, keep processing the switch
+                if (switchElements.length === 2) {
+
+                    // Add the item to the current switch
+                    currentSwitch.push({
+                        value : switchElements[0],
+                        result : this.parseStringIntoComponents(switchElements[1])
+                    });
+
+                    continue;
+
+                } else {
+
+                    // If the next line doesn't match the initial hyphen pattern, end pick and reset to normal mode..
+                    workingFunction.components.push({
+                        type: this.BracketType.Switch,
+                        items: currentSwitch,
+                        prop: switchProp
+                    });
+
+                    currentSwitch = null;
+                }
+            }
+
             // Look for Picks
             if (line.search(/^pick:/s) > -1) {
 
                 // Start the pick
                 currentPick = [];
-                console.log("START PICK");
+                continue;
+            }
+
+            // Look for Switches
+            if (line.search(/^switch\(.*?\):/s) > -1) {
+
+                // Get the property we're switching on
+                switchProp = line.substring(7, line.length - 2);
+
+                // Make sure the property is valid
+                if (typeof switchProp !== "string" || switchProp.length < 1)
+                    error("Tried to switch with an invalid switch property")
+
+                // Start the switch
+                currentSwitch = [];
                 continue;
             }
 

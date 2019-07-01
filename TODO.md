@@ -8,7 +8,7 @@ Get the optional + state and inserts working
 
 ## Current Objectives
 
-- Switch sections
+Stage one complete!
 
 ## Next Phase
 
