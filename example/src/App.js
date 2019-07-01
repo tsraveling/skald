@@ -16,7 +16,12 @@ class App extends React.Component {
             pickerSwitch: true,
             secondSwitch: false,
             specificValue: 'aValue',
-            switchValue: 2
+            switchValue: 2,
+            childObject: {
+                one: 1,
+                two: 2,
+                three: 3
+            }
         };
 
         // Generate the Skald object from the file

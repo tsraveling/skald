@@ -19,9 +19,11 @@ let exampleSkaObject = {
 export default class SkaldParser {
 
     static BracketType = {
-        Pick: "pick",
+        Draw: "draw",
         Insert: "insert",
-        Optional: "optional"
+        Optional: "optional",
+        Pick: "pick",
+        Switch: "switch"
     };
 
     static getOptional(clause) {
@@ -110,7 +112,7 @@ export default class SkaldParser {
 
         // Picker
         if (bracket[0] === "[") {
-            result.type = this.BracketType.Pick;
+            result.type = this.BracketType.Draw;
 
             // Split them up
             result.options = contents.split(" / ").map((option) => {
@@ -186,6 +188,11 @@ export default class SkaldParser {
                 // Cut the string down
                 workingString = workingString.substring(chop);
             }
+        }
+
+        // If there's anything left, add that as well
+        if (workingString.length > 0) {
+            components.push(workingString);
         }
 
         // Return the result

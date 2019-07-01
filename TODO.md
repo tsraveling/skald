@@ -8,10 +8,6 @@ Get the optional + state and inserts working
 
 ## Current Objectives
 
-- Define inline random swaps
-    - Optional tags
-- Define inserts
-- Optional include block
 - Pick sections
 - Switch sections
 

@@ -25,30 +25,43 @@ export default class Skald {
         return array[Math.floor((Math.random() * array.length))];
     }
 
+    valueOfOptional(prop) {
+
+        // Split the prop into parts
+        let propParts = prop.split(".");
+
+        // Set up the var
+        var stateProperty = this.currentState;
+
+        // Iterate down the line
+        propParts.forEach((part) => {
+            stateProperty = stateProperty[part];
+        });
+
+        return stateProperty;
+    }
+
     validateOptional(optional) {
 
-        optional.conditions.forEach((condition) => {
+        // Iterate through the conditions and check them out one by one
+        for (var i = 0; i < optional.conditions.length; i++) {
 
-            // Split the prop into parts
-            let propParts = condition.prop.split(".");
+            let condition = optional.conditions[i];
 
-            // Set up the var
-            var stateProperty = this.currentState;
-
-            // Iterate down the line
-            propParts.forEach((part) => {
-                stateProperty = stateProperty[part];
-            });
+            // Get the value of the property
+            let stateProperty = this.valueOfOptional(condition.prop);
 
             // Perform the comparison
             if (condition.negative) {
-                if (stateProperty === condition.comparison)
-                    console.log("NEGATIVE");//return false;
+                if (stateProperty === condition.comparison) {
+                    return false;
+                }
             } else {
-                if (stateProperty !== condition.comparison)
-                    console.log("NEGATIVE");//return false;
+                if (stateProperty !== condition.comparison) {
+                    return false;
+                }
             }
-        });
+        }
 
         return true;
     }
@@ -63,8 +76,8 @@ export default class Skald {
         if (typeof component !== "object")
             return "ERR";
 
-        // If it's a picker, do the pick
-        if (component.type === SkaldParser.BracketType.Pick) {
+        // If it's an inline draw, return one of the available options
+        if (component.type === SkaldParser.BracketType.Draw) {
 
             let deck = [];
 
@@ -91,16 +104,21 @@ export default class Skald {
         // If it's an insert, do the insert
         if (component.type === SkaldParser.BracketType.Insert) {
 
-            // TODO: perform the insert
-            return "<TODO: -> " + component.insert + ">";
+            return this.valueOfOptional(component.insert);
         }
 
         // If it's an optional, process and continue
         if (component.type === SkaldParser.BracketType.Optional) {
-            if (this.validateOptional(component.optional))
+            let val = this.validateOptional(component.optional);
+            if (val)
                 return component.value;
             else
                 return "";
+        }
+
+        // If it's a full pick, pick a line, process it, and return the resulting string
+        if (component.type === SkaldParser.BracketType.Pick) {
+            // findme
         }
 
         // If it's something else, return ERR
