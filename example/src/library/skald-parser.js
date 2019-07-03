@@ -16,15 +16,9 @@ let exampleSkaObject = {
 };
 */
 
-export default class SkaldParser {
+var BracketType = require("./skald-bracket-types");
 
-    static BracketType = {
-        Draw: "draw",
-        Insert: "insert",
-        Optional: "optional",
-        Pick: "pick",
-        Switch: "switch"
-    };
+module.exports = class SkaldParser {
 
     static getOptional(clause) {
 
@@ -112,7 +106,7 @@ export default class SkaldParser {
 
         // Picker
         if (bracket[0] === "[") {
-            result.type = this.BracketType.Draw;
+            result.type = BracketType.Draw;
 
             // Split them up
             result.options = contents.split(" / ").map((option) => {
@@ -132,12 +126,12 @@ export default class SkaldParser {
             if (ob.optional === null) {
 
                 // If there's no optional, it's an insert
-                result.type = this.BracketType.Insert;
+                result.type = BracketType.Insert;
                 result.insert = contents;
 
             } else {
 
-                result.type = this.BracketType.Optional;
+                result.type = BracketType.Optional;
                 result.optional = ob.optional;
                 result.value = ob.value;
             }
@@ -316,7 +310,7 @@ export default class SkaldParser {
 
                     // If the next line doesn't match the initial hyphen pattern, end pick and reset to normal mode..
                     workingFunction.components.push({
-                        type: this.BracketType.Pick,
+                        type: BracketType.Pick,
                         items: currentPick
                     });
 
@@ -345,7 +339,7 @@ export default class SkaldParser {
 
                     // If the next line doesn't match the initial hyphen pattern, end pick and reset to normal mode..
                     workingFunction.components.push({
-                        type: this.BracketType.Switch,
+                        type: BracketType.Switch,
                         items: currentSwitch,
                         prop: switchProp
                     });

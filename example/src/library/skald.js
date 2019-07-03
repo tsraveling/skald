@@ -1,6 +1,7 @@
-import SkaldParser from './skald-parser'
+var SkaldParser = require("./skald-parser.js");
+var BracketType = require("./skald-bracket-types");
 
-export default class Skald {
+module.exports = class Skald {
 
     constructor(skaObject) {
         this.skaObject = skaObject;
@@ -87,7 +88,7 @@ export default class Skald {
             return "ERR";
 
         // If it's an inline draw, return one of the available options
-        if (component.type === SkaldParser.BracketType.Draw) {
+        if (component.type === BracketType.Draw) {
 
             let deck = [];
 
@@ -112,13 +113,13 @@ export default class Skald {
         }
 
         // If it's an insert, do the insert
-        if (component.type === SkaldParser.BracketType.Insert) {
+        if (component.type === BracketType.Insert) {
 
             return this.valueOfOptional(component.insert);
         }
 
         // If it's an optional, process and continue
-        if (component.type === SkaldParser.BracketType.Optional) {
+        if (component.type === BracketType.Optional) {
             let val = this.validateOptional(component.optional);
             if (val)
                 return component.value;
@@ -127,7 +128,7 @@ export default class Skald {
         }
 
         // If it's a full pick, pick a line, process it, and return the resulting string
-        if (component.type === SkaldParser.BracketType.Pick) {
+        if (component.type === BracketType.Pick) {
 
             let deck = [];
 
@@ -156,7 +157,7 @@ export default class Skald {
         }
 
         // If it's a switch, find the match and return the resulting string. ERR if there is no match.
-        if (component.type === SkaldParser.BracketType.Switch) {
+        if (component.type === BracketType.Switch) {
 
             // Get the value to check against
             let comparison = this.valueOfOptional(component.prop).toString();
