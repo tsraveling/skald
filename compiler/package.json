@@ -1,22 +1,19 @@
 {
-  "name": "skald-compiler",
-  "version": "0.0.1",
+  "name": "skald",
+  "version": "0.1.0",
   "description": "Command line compiler from .ska to .json",
   "main": "index.js",
+  "bin": {
+    "skald": "bin/skald"
+  },
   "scripts": {
-    "babel": "babel --presets es6 js/main.js -o build/main.bundle.js",
-    "test": "node index.js compile test"
+    "test": "./bin/skald compile test.ska"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
+    "chalk": "^2.4.2",
     "commander": "^2.20.0"
   },
-  "devDependencies": {
-    "@babel/cli": "^7.4.4",
-    "@babel/core": "^7.4.5",
-    "@babel/node": "^7.4.5",
-    "@babel/preset-env": "^7.4.5",
-    "nodemon": "^1.19.1"
-  }
+  "devDependencies": {}
 }

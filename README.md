@@ -1,6 +1,36 @@
 # skald
 A procedural narrative scripting language and toolset used for interactive fiction projects.
 
+## Compiler
+
+The Node command-line compiler is in the `/compiler` folder. You can install it to your machine by
+running `npm link` from within that folder. Basic usage is like this:
+
+```
+skald compile some-file.ska
+```
+
+This will create `some-file.json` in the same directory, containing the compiled Skald object.
+
+You can also compile all files in a folder like this:
+
+```
+skald compile .
+skald compile ./some-folder
+```
+
+If you like, you can set a custom output directory like this:
+
+```
+skald compile . -d ./output
+```
+
+This will save the compiled JSON to the `/output` subfolder. If the folder doesn't exist,
+the compiler will throw an error.
+
+Note: The compiler overwrites previous JSON files when it runs. It's best to not modify the
+JSON output files directly.
+
 ## Example Project
 
 Run `npm start` from within the `example/src` directory to run the sample project. It will load `example/public/example.ska` as its source file.
@@ -21,7 +51,14 @@ You define a function using `@define functionName` and `@end`. You can indent ho
 @end
 ```
 
-At present, you will have to form the Skald object dynamically. This is done asynchronously, like this:
+If you've compiled your .ska files into JSON, you can load the resulting JSON object
+by using the default constructor of the Skald object, like this:
+
+```
+let skaObject = Skald(compiledJsonObject);
+```
+
+In addition to using the compiler referenced above, you have the option to form the Skald object dynamically. This is done asynchronously, like this:
 
 ```
 let skaObject = await Skald.buildDynamically('/example.ska');

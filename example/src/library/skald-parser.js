@@ -18,6 +18,13 @@ let exampleSkaObject = {
 
 var BracketType = require("./skald-bracket-types");
 
+let verboseLogging = false;
+function log(item) {
+    if (!verboseLogging)
+        return;
+    console.log(item);
+}
+
 module.exports = class SkaldParser {
 
     static getOptional(clause) {
@@ -196,7 +203,7 @@ module.exports = class SkaldParser {
 
     static parseSkaText(skaText) {
 
-        console.log(">>> BEGIN PARSE");
+        log(">>> BEGIN PARSE");
 
         // TODO: Parse the long file string into the JSON object format we will use to run the actual processing
 
@@ -379,9 +386,9 @@ module.exports = class SkaldParser {
         // For now just pass the raw text as an example value so we can make sure the wiring's working
         result.exampleValue = "Example";
 
-        console.log(">>> FINAL RESULT: ");
-        console.log(result);
-        console.log(">>> END PARSE");
+        log(">>> FINAL RESULT: ");
+        log(result);
+        log(">>> END PARSE");
 
         return result;
     }

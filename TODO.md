@@ -12,12 +12,9 @@ Stage one complete!
 
 ## Next Phase
 
-- Set up a Node command line compiler. [Commander might be useful.](https://www.freecodecamp.org/news/writing-command-line-applications-in-nodejs-2cf8327eee2/)
-    - Isolate the JS required to interpret a .ska file into a JS object
-    - Initialize a command line tool using the above tutorial
-    - Add Skald project file to define all of the .ska files in use
-    - Build individual file compiler
-    - Add project file support
+See the [/compiler/TODO.md](TODO file in the compiler) file for detailed tasks.
+
+- Add project file support
 
 ## Future / Nice to Have
 

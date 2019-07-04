@@ -1,0 +1,50 @@
+@define introParagraph
+
+    Note: Any variables will be assumed to be present in the 'state' object passed in the optional argument in Skald. If a variable is not found, the value 'ERR' will be used instead.
+
+    A line of plaintext will be returned as part of the result, verbatim, with no mutation. A newline is treated like a space unless it is the final one.
+    An optional can be defined using brackets. One of the following will be chosen: [option a / option B]
+    You can also include conditionals: [(pickerSwitch): option a / option b]. Note: If there's no option available, ERR will be returned.
+    A conditional will only be included if the passed state requirement is met: { (shouldShowInclude): Inserted text }
+    An insert is inserted as-is: {insert}
+
+    If you want **Markdown** to work, you'll have to process the text through a third-party library.
+
+    A pick statement is used to choose randomly from a longer list of options. A conditional can be placed at the beginning of the line to allow for greater filtration.
+    Note: Skald will trim whitespace off the front and end of a line. Indentation is not required, but may help script readability.
+
+    pick:
+
+        - First option
+        - Second option
+        - (pickerSwitch): Positive optional
+        - (!pickerSwitch): Negative optional
+        - (pickerSwitch, secondSwitch): multi-argument optional
+        - (pickerSwitch, !secondSwitch): multi-argument including negative optional
+        - (specificValue=aValue): equality check -- note lack of quotes etc
+        - (specificValue!=aValue): inequality check
+
+    A pick statement ends when there are no more '- ' lines.
+
+    Note: Newlines like the one above are ignored. To pass an actual newline, used the standard escape: \n
+
+    A switch statement takes an argument from the passed state object and provides separate answers based on the value. default: defines a default value in the absence of the value options given.
+    Failure to pass a default option will result in an ERR value if the condition is not met.
+
+    switch(switchValue):
+
+        1: The answer was one
+        2: The answer was two
+        3: The answer was three
+        default: There was some other answer.
+
+    As with the pick statement, a switch statement ends when a line does not begin with the `someKey: result` pattern.
+
+    Finally, to try this out, set up a Skald object on this file and run `skaldExample.perform('introParagraph', state)` with the values found in the example App.js file.
+@end
+
+@define secondFunction
+
+    // This is a second function
+    Some content.
+@end
