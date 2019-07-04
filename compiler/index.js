@@ -1,4 +1,4 @@
-const SkaldParser = require('../example/src/library/skald-parser');
+const SkaldParser = require('../library/skald-parser');
 const FileSystem = require('fs');
 const Util = require('util');
 const Chalk = require('chalk');

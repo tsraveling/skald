@@ -22,3 +22,6 @@ chrome-user-data
 .vscode
 *.swp
 *.swo
+
+# Ignore the copied example library folder
+example/src/library

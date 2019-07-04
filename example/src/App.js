@@ -1,8 +1,8 @@
 import React from 'react';
 import './App.css';
 
-// Within this repo we're pulling the library from the parent folder; preferably you'd use npm or put the files somewhere within
-// your extant project files.
+// Within this repo we're pulling the library from the library folder, which is updated from the root library folder on npm start; preferably you'd use npm
+// or put the files somewhere within your extant project files.
 import Skald from './library/skald'
 
 class App extends React.Component {
