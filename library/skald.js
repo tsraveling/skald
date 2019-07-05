@@ -160,7 +160,12 @@ module.exports = class Skald {
         if (component.type === BracketType.Switch) {
 
             // Get the value to check against
-            let comparison = this.valueOfOptional(component.prop).toString();
+            var comparison = null;
+            try {
+                comparison = this.valueOfOptional(component.prop).toString();
+            } catch (err) {
+                return "ERR: No property <" + component.prop + ">";
+            }
 
             // Prepare a default option
             var defaultOption = null;
@@ -189,8 +194,8 @@ module.exports = class Skald {
             }
         }
 
-        // If it's something else, return ERR
-        return "ERR";
+        // If it's something else, return an empty string
+        return "";
     }
 
     perform(functionName, state) {
