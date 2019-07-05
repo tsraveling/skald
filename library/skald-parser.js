@@ -329,15 +329,18 @@ module.exports = class SkaldParser {
             if (currentSwitch != null) {
 
                 // Attempt to split the string by the switch colon
-                let switchElements = line.split(": ");
+                let switchMatch = line.match(/^.*?\: /s);
 
                 // If there are exactly two elements, keep processing the switch
-                if (switchElements.length === 2) {
+                if (switchMatch !== null) {
+
+                    let switchProp = switchMatch[0].substring(0, switchMatch[0].length - 2);
+                    let switchLine = line.replace(switchMatch[0], "");
 
                     // Add the item to the current switch
                     currentSwitch.push({
-                        value : switchElements[0],
-                        result : this.parseStringIntoComponents(switchElements[1])
+                        value : switchProp,
+                        result : this.parseStringIntoComponents(switchLine)
                     });
 
                     continue;
