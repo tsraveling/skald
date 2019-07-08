@@ -8,8 +8,7 @@ Get the optional + state and inserts working
 
 ## Current: 0.2.0
 
-- Regular @if / @endif blocks
-- Make sure error reporting is working in the CLI compiler
+0.2.0 Complete!
 
 ## Next Phase
 
@@ -39,3 +38,8 @@ Completed command line compiler, parser, and logic engine.
 
 ### 0.2.0:
 
+- Added @if / @endif blocks
+- Modified `pick:` and `switch:` commands to @pick and @switch and allowed for 
+  multiline blocks
+- Added line breaks using '#'
+- Added better error handling to the compiler tool

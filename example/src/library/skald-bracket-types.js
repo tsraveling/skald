@@ -4,5 +4,6 @@ module.exports = {
     Optional: "optional",
     Pick: "pick",
     Switch: "switch",
-    Newline : "newline"
+    Newline : "newline",
+    If : "if"
 };

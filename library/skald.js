@@ -127,6 +127,14 @@ module.exports = class Skald {
                 return "";
         }
 
+        // If it's an If statement, process it and return the resulting string
+        if (component.type === BracketType.If) {
+
+            if (this.validateOptional(component.optional)) {
+                return this.compileComponentsIntoString(component.components);
+            }
+        }
+
         // If it's a full pick, pick a line, process it, and return the resulting string
         if (component.type === BracketType.Pick) {
 

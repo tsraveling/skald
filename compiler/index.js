@@ -34,7 +34,13 @@ async function processSkaldFile(filename) {
     let skaldString = await getFile(filename);
 
     // Process Skald string
-    let resultObject = SkaldParser.parseSkaText(skaldString);
+    try {
+        let resultObject = SkaldParser.parseSkaText(skaldString);
+    } catch (err) {
+        console.log(Chalk.red(err.message));
+        console.log("\n");
+        process.exit(1);
+    }
 
     // Get the new filename
     let newFilename = filename.replace(".ska",".json");

@@ -27,21 +27,7 @@ function log(item) {
 
 module.exports = class SkaldParser {
 
-    static getOptional(clause) {
-
-        // Try to find the optional clause
-        let find = clause.match(/\(.*?\): /s);
-
-        // If there's nothing:
-        if (find === null) {
-            return {
-                value: clause,
-                optional: null
-            };
-        }
-
-        // If there is an optional, get it:
-        let optionalString = find[0].substring(1, find[0].length - 3);
+    static processOptionalString(optionalString) {
 
         let optionals = [];
 
@@ -97,6 +83,28 @@ module.exports = class SkaldParser {
                 });
             }
         });
+
+        return optionals;
+    }
+
+    static getOptional(clause) {
+
+        // Try to find the optional clause
+        let find = clause.match(/\(.*?\): /s);
+
+        // If there's nothing:
+        if (find === null) {
+            return {
+                value: clause,
+                optional: null
+            };
+        }
+
+        // If there is an optional, get it:
+        let optionalString = find[0].substring(1, find[0].length - 3);
+
+        // Pull optionals out of the resulting string
+        let optionals = this.processOptionalString(optionalString);
 
         // If there is, return both:
         let realString = clause.replace(find, "");
@@ -205,8 +213,6 @@ module.exports = class SkaldParser {
 
         log(">>> BEGIN PARSE");
 
-        // TODO: Parse the long file string into the JSON object format we will use to run the actual processing
-
         // Stub out the object to use
         var result = {
             functions : []
@@ -222,17 +228,22 @@ module.exports = class SkaldParser {
         let lines = skaText.split("\n");
 
         // Set up our error handler
-        let error = (string, lineNumber) => {
+        var lineNumber = 0;
+        let error = (string) => {
             throw new Error(`${string} (line ${lineNumber})\n   -> ${lines[lineNumber]}`);
         };
 
         // Set up pick and switch systems
         var currentPick = null;
         var currentSwitch = null;
+        var currentIf = null;
         var switchProp = null;
 
         // Step through the lines
         for (var i = 0; i < lines.length; i++) {
+
+            // Store this for error logging
+            lineNumber = i;
 
             // Get the untrimmed base line
             let untrimmedLine = lines[i];
@@ -304,6 +315,24 @@ module.exports = class SkaldParser {
 
                 continue;
 
+            } else if (line.search(/^@endif/s) > -1) {
+
+                if (currentIf === null)
+                    error("Found an @endif without an active if statement");
+
+                // Check for the end of an if; if found, end if statement and reset to normal mode
+                workingFunction.components.push({
+                    type: BracketType.If,
+                    components: currentIf.components,
+                    optional: {
+                        conditions: currentIf.conditions
+                    }
+                });
+
+                currentIf = null;
+
+                continue;
+
             } else if (line.search(/^@end/s) > -1) {
 
                 // Check for the end of the function
@@ -327,6 +356,18 @@ module.exports = class SkaldParser {
                 workingFunction.components.push({
                     type: BracketType.Newline
                 });
+                continue;
+            }
+
+            // Process if statements
+            if (currentIf != null) {
+
+                // Parse the line into components
+                let parsedComponents = this.parseStringIntoComponents(line + ' ');
+
+                // Add them to the if array
+                currentIf.components = currentIf.components.concat(parsedComponents);
+
                 continue;
             }
 
@@ -432,6 +473,21 @@ module.exports = class SkaldParser {
 
                 // Start the switch
                 currentSwitch = [];
+                continue;
+            }
+
+            // Look for If statements
+            if (line.search(/^@if/s) > -1) {
+
+                // Get the optional clause
+                let optionalClause = line.substring(3).trim();
+
+                // Set up the object
+                currentIf = {
+                    components: [],
+                    conditions: this.processOptionalString(optionalClause)
+                };
+
                 continue;
             }
 

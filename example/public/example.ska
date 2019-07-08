@@ -19,6 +19,16 @@
     A pick statement is used to choose randomly from a longer list of options. A conditional can be placed at the beginning of the line to allow for greater filtration.
     Note: Skald will trim whitespace off the front and end of a line. Indentation is not required, but may help script readability.
 
+    #
+
+    @if shouldShowInclude, pickerSwitch
+
+        We have some
+        multiline options
+        when it comes to if statements
+
+    @endif
+
     # Pick:
 
     @pick
@@ -50,6 +60,7 @@
            And here's some other values including a [cool / dumbass] pick
            and so on
         2: The answer was two
+           Which can also handle multilines
         3: The answer was three
         default: There was some other answer.
 

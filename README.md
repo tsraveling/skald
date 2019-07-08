@@ -117,12 +117,22 @@ You can add comments (on their own lines only at present) using `//`:
 // This is a comment
 ```
 
-You can perform a random pick of larger blocks of text by defining `pick:` followed by items that begin with `- `. For example:
+You can use conditional blocks with `@if` and `@endif`:
+
+```
+@if someCondition=aValue, someSwitch
+    Line of content
+    Another line of content
+@endif
+```
+
+You can perform a random pick of larger blocks of text by defining `@pick` followed by items that begin with `- `, and 
+concluded with `@endpick`. For example:
 
 ```
 @pick
     - First option
-      You can add extra lines -- just don't use the initial hyphen!
+      You can add extra lines -- new items in the pick are defined by using that initial hyphen.
     - Second option
     - (pickerSwitch): Positive optional
     - (!pickerSwitch): Negative optional [inline option a / inline option b]

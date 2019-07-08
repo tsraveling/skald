@@ -13,7 +13,9 @@
     A pick statement is used to choose randomly from a longer list of options. A conditional can be placed at the beginning of the line to allow for greater filtration.
     Note: Skald will trim whitespace off the front and end of a line. Indentation is not required, but may help script readability.
 
-    pick:
+    @endpick
+
+    @pick
 
         - First option
         - Second option
@@ -24,6 +26,8 @@
         - (specificValue=aValue): equality check -- note lack of quotes etc
         - (specificValue!=aValue): inequality check
 
+    @endpick
+
     A pick statement ends when there are no more '- ' lines.
 
     Note: Newlines like the one above are ignored. To pass an actual newline, used the standard escape: \n
@@ -31,12 +35,14 @@
     A switch statement takes an argument from the passed state object and provides separate answers based on the value. default: defines a default value in the absence of the value options given.
     Failure to pass a default option will result in an ERR value if the condition is not met.
 
-    switch(switchValue):
+    @switch(switchValue)
 
         1: The answer was one
         2: The answer was two
         3: The answer was three
         default: There was some other answer.
+
+    @endswitch
 
     As with the pick statement, a switch statement ends when a line does not begin with the `someKey: result` pattern.
 
