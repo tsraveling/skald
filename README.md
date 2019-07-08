@@ -117,6 +117,9 @@ You can add comments (on their own lines only at present) using `//`:
 // This is a comment
 ```
 
+**Note:** As of `v0.2.0`, you **cannot** nest `@if`, `@pick`, or `@switch` blocks. This is planned
+for future versions.
+
 You can use conditional blocks with `@if` and `@endif`:
 
 ```
