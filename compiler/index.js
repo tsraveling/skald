@@ -34,8 +34,9 @@ async function processSkaldFile(filename) {
     let skaldString = await getFile(filename);
 
     // Process Skald string
+    var resultObject = null;
     try {
-        let resultObject = SkaldParser.parseSkaText(skaldString);
+        resultObject = SkaldParser.parseSkaText(skaldString);
     } catch (err) {
         console.log(Chalk.red(err.message));
         console.log("\n");
