@@ -160,7 +160,12 @@ module.exports = class Skald {
         if (component.type === BracketType.Switch) {
 
             // Get the value to check against
-            let comparison = this.valueOfOptional(component.prop).toString();
+            var comparison = null;
+            try {
+                comparison = this.valueOfOptional(component.prop).toString();
+            } catch (err) {
+                return "ERR: No property <" + component.prop + ">";
+            }
 
             // Prepare a default option
             var defaultOption = null;
@@ -189,8 +194,8 @@ module.exports = class Skald {
             }
         }
 
-        // If it's something else, return ERR
-        return "ERR";
+        // If it's something else, return an empty string
+        return "";
     }
 
     perform(functionName, state) {
@@ -208,7 +213,8 @@ module.exports = class Skald {
         console.log(f);
 
         // Prepare the result
-        var result = "";
+        let result = [];
+        var currentString = "";
 
         // Loop through the function's components and assemble a result
         for (var i = 0; i < f.components.length; i++) {
@@ -216,11 +222,18 @@ module.exports = class Skald {
             // Get the component at this index
             let component = f.components[i];
 
-            // TODO: All the random logic goes here
-            // For now, simply append the component to the result
-            result += this.performComponent(component);
+            // Check for newlines, which break the result into string arrays
+            if (component.type === BracketType.Newline) {
+                result.push(currentString);
+                currentString = "";
+                continue;
+            }
+
+            // Process the component
+            currentString += this.performComponent(component);
         }
 
+        result.push(currentString);
         return result;
     }
 }

@@ -272,8 +272,41 @@ module.exports = class SkaldParser {
                 continue;
             }
 
-            // Look for function ends
-            if (line.search(/^@end/s) > -1) {
+            if (line.search(/^@endpick/s) > -1) {
+
+                // Make sure there's a pick to end
+                if (currentPick === null)
+                    error("Found an @endpick without an active pick");
+
+                // Look for the end of a pick; if found, end pick and reset to normal mode.
+                workingFunction.components.push({
+                    type: BracketType.Pick,
+                    items: currentPick
+                });
+
+                currentPick = null;
+
+                continue;
+
+            } else if (line.search(/^@endswitch/s) > -1) {
+
+                if (currentSwitch === null)
+                    error("Found an @endswitch without an active switch");
+
+                // Check for the end of a switch; if found, end switch and reset to normal mode.
+                workingFunction.components.push({
+                    type: BracketType.Switch,
+                    items: currentSwitch,
+                    prop: switchProp
+                });
+
+                currentSwitch = null;
+
+                continue;
+
+            } else if (line.search(/^@end/s) > -1) {
+
+                // Check for the end of the function
 
                 // If there's no function open, throw an error
                 if (workingFunction === null)
@@ -289,11 +322,19 @@ module.exports = class SkaldParser {
             if (workingFunction === null)
                 error("Tried to define content outside of a function");
 
+            // Hash marks are for paragraph breaks; they can be followed by comments if desired
+            if (line[0] === '#') {
+                workingFunction.components.push({
+                    type: BracketType.Newline
+                });
+                continue;
+            }
+
             // Process Picks
             if (currentPick != null) {
                 if (line[0] === '-') {
 
-                    let pickLine = line.substring(2);
+                    let pickLine = line.substring(2) + ' ';
 
                     var item = {};
 
@@ -315,13 +356,20 @@ module.exports = class SkaldParser {
 
                 } else {
 
-                    // If the next line doesn't match the initial hyphen pattern, end pick and reset to normal mode..
-                    workingFunction.components.push({
-                        type: BracketType.Pick,
-                        items: currentPick
-                    });
+                    // Make sure there's something in here, otherwise throw an error
+                    if (currentPick.length === 0)
+                        error("Pick started with a non-hypen line.");
 
-                    currentPick = null;
+                    // Lines that don't include the opening hyphen just get added to the last pick item
+                    let last = currentPick[currentPick.length - 1];
+
+                    // Parse the line into components
+                    let parsedComponents = this.parseStringIntoComponents(line + ' ');
+
+                    // Add them to the last item
+                    last.components = last.components.concat(parsedComponents);
+
+                    continue;
                 }
             }
 
@@ -329,13 +377,13 @@ module.exports = class SkaldParser {
             if (currentSwitch != null) {
 
                 // Attempt to split the string by the switch colon
-                let switchMatch = line.match(/^.*?\: /s);
+                let switchMatch = line.match(/^.*?: /s);
 
                 // If there are exactly two elements, keep processing the switch
                 if (switchMatch !== null) {
 
                     let switchProp = switchMatch[0].substring(0, switchMatch[0].length - 2);
-                    let switchLine = line.replace(switchMatch[0], "");
+                    let switchLine = line.replace(switchMatch[0], "") + ' ';
 
                     // Add the item to the current switch
                     currentSwitch.push({
@@ -347,19 +395,25 @@ module.exports = class SkaldParser {
 
                 } else {
 
-                    // If the next line doesn't match the initial hyphen pattern, end pick and reset to normal mode..
-                    workingFunction.components.push({
-                        type: BracketType.Switch,
-                        items: currentSwitch,
-                        prop: switchProp
-                    });
+                    // Make sure there's something in here, otherwise throw an error
+                    if (currentSwitch.length === 0)
+                        error("Pick started with a non-hypen line.");
 
-                    currentSwitch = null;
+                    // Lines that don't include the opening hyphen just get added to the last pick item
+                    let last = currentSwitch[currentSwitch.length - 1];
+
+                    // Parse the line into components
+                    let parsedComponents = this.parseStringIntoComponents(line + ' ');
+
+                    // Add them to the last item
+                    last.result = last.result.concat(parsedComponents);
+
+                    continue;
                 }
             }
 
             // Look for Picks
-            if (line.search(/^pick:/s) > -1) {
+            if (line.search(/^@pick/s) > -1) {
 
                 // Start the pick
                 currentPick = [];
@@ -367,10 +421,10 @@ module.exports = class SkaldParser {
             }
 
             // Look for Switches
-            if (line.search(/^switch\(.*?\):/s) > -1) {
+            if (line.search(/^@switch\(.*?\)/s) > -1) {
 
                 // Get the property we're switching on
-                switchProp = line.substring(7, line.length - 2);
+                switchProp = line.substring(8, line.length - 1);
 
                 // Make sure the property is valid
                 if (typeof switchProp !== "string" || switchProp.length < 1)

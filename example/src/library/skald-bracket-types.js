@@ -3,5 +3,6 @@ module.exports = {
     Insert: "insert",
     Optional: "optional",
     Pick: "pick",
-    Switch: "switch"
+    Switch: "switch",
+    Newline : "newline"
 };

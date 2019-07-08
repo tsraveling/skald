@@ -36,7 +36,7 @@ class App extends React.Component {
     constructor() {
         super();
         this.state = {
-            skaldString : ''
+            skaldArray : []
         };
     }
 
@@ -45,7 +45,7 @@ class App extends React.Component {
             .then((skaldResponse) => {
                 console.log("Received response: " + skaldResponse);
                 this.setState({
-                    skaldString: skaldResponse
+                    skaldArray: skaldResponse
                 });
             });
     }
@@ -53,7 +53,9 @@ class App extends React.Component {
     render() {
         return (
             <div className="container">
-                {this.state.skaldString}
+                {this.state.skaldArray.map((str, index) => (
+                    <p key={index}>{str}</p>
+                ))}
             </div>
         );
     }

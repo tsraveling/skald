@@ -8,21 +8,32 @@
     A conditional will only be included if the passed state requirement is met: { (shouldShowInclude): Inserted text }
     An insert is inserted as-is: {insert}
 
+    # A paragraph break is added with a hash mark: Any text after it is treated as a comment
+
     If you want **Markdown** to work, you'll have to process the text through a third-party library.
+
+    P.S.: Newlines can also be added without a comment:
+
+    #
 
     A pick statement is used to choose randomly from a longer list of options. A conditional can be placed at the beginning of the line to allow for greater filtration.
     Note: Skald will trim whitespace off the front and end of a line. Indentation is not required, but may help script readability.
 
-    pick:
+    # Pick:
+
+    @pick
 
         - First option
+          Continues thusly
+          And so on
+
         - Second option
-        - (pickerSwitch): Positive optional
-        - (!pickerSwitch): Negative optional
-        - (pickerSwitch, secondSwitch): multi-argument optional
-        - (pickerSwitch, !secondSwitch): multi-argument including negative optional
-        - (specificValue=aValue): equality check -- note lack of quotes etc
-        - (specificValue!=aValue): inequality check
+          And some other stuff!
+          And some [inline / inside] picks!
+
+    @endpick
+
+    #
 
     A pick statement ends when there are no more '- ' lines.
 
@@ -31,12 +42,20 @@
     A switch statement takes an argument from the passed state object and provides separate answers based on the value. default: defines a default value in the absence of the value options given.
     Failure to pass a default option will result in an ERR value if the condition is not met.
 
-    switch(switchValue):
+    # Switch:
+
+    @switch(switchValue)
 
         1: The answer was one
+           And here's some other values including a [cool / dumbass] pick
+           and so on
         2: The answer was two
         3: The answer was three
         default: There was some other answer.
+
+    @endswitch
+
+    #
 
     As with the pick statement, a switch statement ends when a line does not begin with the `someKey: result` pattern.
 

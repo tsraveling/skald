@@ -120,11 +120,13 @@ You can add comments (on their own lines only at present) using `//`:
 You can perform a random pick of larger blocks of text by defining `pick:` followed by items that begin with `- `. For example:
 
 ```
-pick:
+@pick
     - First option
+      You can add extra lines -- just don't use the initial hyphen!
     - Second option
     - (pickerSwitch): Positive optional
     - (!pickerSwitch): Negative optional [inline option a / inline option b]
+@endpick
 ```
 
 Note that you can include optionals as well as the inline functions defined above.
@@ -132,11 +134,13 @@ Note that you can include optionals as well as the inline functions defined abov
 You can perform a switch on a given state property like this:
 
 ```
-switch(switchValue):
+@switch(switchValue)
     1: The answer was one
+       You can also add extra lines here.
     2: The answer was two
     3: The answer was three
     default: There was some other answer.
+@endswitch
 ```
 
 The `default` option will be used if the passed property doesn't match one of the options. If there are no matches at all, `ERR` will be returned.

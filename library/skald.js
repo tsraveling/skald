@@ -213,7 +213,8 @@ module.exports = class Skald {
         console.log(f);
 
         // Prepare the result
-        var result = "";
+        let result = [];
+        var currentString = "";
 
         // Loop through the function's components and assemble a result
         for (var i = 0; i < f.components.length; i++) {
@@ -221,11 +222,18 @@ module.exports = class Skald {
             // Get the component at this index
             let component = f.components[i];
 
-            // TODO: All the random logic goes here
-            // For now, simply append the component to the result
-            result += this.performComponent(component);
+            // Check for newlines, which break the result into string arrays
+            if (component.type === BracketType.Newline) {
+                result.push(currentString);
+                currentString = "";
+                continue;
+            }
+
+            // Process the component
+            currentString += this.performComponent(component);
         }
 
+        result.push(currentString);
         return result;
     }
 }
