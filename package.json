@@ -1,19 +1,19 @@
 {
   "name": "skald",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Command line compiler from .ska to .json",
   "main": "index.js",
   "bin": {
     "skald": "bin/skald"
   },
   "scripts": {
-    "test": "./bin/skald compile test.ska"
+    "test": "./bin/skald ./test/input ./test/output"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^2.4.2",
-    "commander": "^2.20.0"
+    "chalk": "^4.1.1",
+    "commander": "^8.0.0"
   },
   "devDependencies": {}
 }
