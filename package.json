@@ -1,6 +1,6 @@
 {
   "name": "skald",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Command line compiler from .ska to .json",
   "main": "index.js",
   "bin": {
