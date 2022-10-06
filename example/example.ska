@@ -1,7 +1,7 @@
-INPUT fuel: int
-CHAR bill
-CHAR bob
-INTERFACE swap
+// INPUT fuel: int
+// CHAR bill
+// CHAR bob
+// INTERFACE swap
 
 // int, bool, string
 
@@ -25,6 +25,7 @@ bob: This is the second bit of content
     -> south
 > Go east -> east
     ? !canClimb
+    END
 
 #east
 

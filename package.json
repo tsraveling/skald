@@ -7,7 +7,8 @@
     "skald": "bin/skald"
   },
   "scripts": {
-    "test": "./bin/skald ./test/input ./test/output"
+    "test-full": "./bin/skald ./test/input ./test/output",
+    "test": "./bin/skald ./example ./test/output"
   },
   "author": "",
   "license": "MIT",

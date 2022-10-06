@@ -1,9 +1,9 @@
 # SKALD
 A procedural narrative scripting language and toolset used for interactive fiction projects.
 
-## Compiler
+## Command Line Tool
 
-TODO: Fill this out.
+
 
 ## Language
 
