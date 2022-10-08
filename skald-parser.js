@@ -132,7 +132,36 @@ exports.parse = (content) => {
                 logger.error("Mutation found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
-            // TODO: Handle mutation logic
+
+            // Get the mutation operator
+            let mutationLine = line.replace('~', '').trim();
+            let mutation = {};
+            let operator = mutationLine.match(/[\+\-\=]+/s)
+            if (!operator) {
+                logger.error("No operator found for mutation:\n > ", chalk.red(line))
+                continue;
+            }
+            mutation.operator = operator[0];
+
+            // Get the left and righthand sides
+            let parts = mutationLine.split(operator[0]);
+            if (parts.length !== 2) {
+                logger.error("Mutation requires single part before and part after operator:\n > ", chalk.red(line))
+                continue;
+            }
+
+            // Check the left side
+            let input = parts[0].trim();
+            if (input.search(/^[a-zA-Z0-9]+$/s) === -1) {
+                logger.error("Input names are alphanumeric only:", chalk.bgRed(parts[0]), "\n > ", chalk.red(line))
+                continue;
+            }
+            mutation.input = input;
+
+            // Encode the right-side as-is for now
+            // TODO: Clean up right-side operators
+            mutation.value = parts[1].trim();
+            currentMeta.mutations.push(mutation);
             continue;
         }
 
