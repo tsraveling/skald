@@ -1,16 +1,20 @@
 {
-  "name": "skald",
+  "name": "skald-compile",
   "version": "0.4.0",
   "description": "Command line compiler from .ska to .json",
   "main": "index.js",
   "bin": {
-    "skald": "bin/skald"
+    "skald": "bin/skald-compile"
   },
   "scripts": {
-    "test-full": "./bin/skald ./test/input ./test/output",
-    "test": "./bin/skald ./example ./test/output"
+    "test-full": "./bin/skald-compile ./test/input ./test/output",
+    "test": "./bin/skald-compile ./example ./test/output"
   },
-  "author": "",
+  "author": "Tim Raveling",
+  "keywords": [
+    "cli",
+    "interactive fiction"
+  ],
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.1",
