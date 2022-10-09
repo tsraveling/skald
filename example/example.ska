@@ -5,8 +5,6 @@
 
 // int, bool, string
 
-import some-file.ska
-
 #intro-box
 
 bill: This is the first bit of content. It works thusly and so on and so forth.
@@ -17,6 +15,7 @@ bill: This is the first bit of content. It works thusly and so on and so forth.
 
 bob: This is the second bit of content
     ? fuel > 2
+    ? distance <= 10
 
 > Go south
     ? canDrive
@@ -28,9 +27,13 @@ bob: This is the second bit of content
 > Go east
     ? !canClimb
     ~ distance += 1
-    END
+    -> east
 
 #east
 
 bob: This is some other stuff
+END
 
+#south
+bill: Yup here as well
+END

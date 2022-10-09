@@ -2,8 +2,6 @@ const chalk = require('chalk');
 
 exports.parse = (content) => {
 
-    console.log(chalk.green("\n\n============\n\n"))
-
     // Templates
     const makeMeta = () => ({
         mutations: [],
@@ -18,7 +16,13 @@ exports.parse = (content) => {
     let lineNumber = 0;
     let numberOfErrors = 0;
     let numberOfWarnings = 0;
+    let numberOfEndings = 0;
     let characters = [];
+    let signals = [];
+    let inputs = [];
+    let sectionTags = [];
+    let transitions = [];
+    let transitionLineNumbers = [];
 
     let sections = [];
     let currentSection = null;
@@ -29,14 +33,14 @@ exports.parse = (content) => {
     const logger = {
         error: (...args) => {
             numberOfErrors += 1;
-            console.log(chalk.bgRed(lineNumber + " ERROR:"), ...args)
+            console.log(chalk.bgRed(lineNumber + ":"), ...args)
         },
         warn: (...args) => {
             numberOfWarnings += 1;
-            console.log(chalk.bgYellow(lineNumber + " WARNING:"), ...args)
+            console.log(chalk.bgYellow(lineNumber + ":"), ...args)
         },
         log: (...args) => {
-            console.log(chalk.gray(lineNumber + " WARNING:"), ...args)
+            console.log(chalk.gray(lineNumber + ":"), ...args)
         }
     }
 
@@ -61,13 +65,14 @@ exports.parse = (content) => {
         // Remove other comments
         line = line.replace(/\/\/(.*)$/s, '');
 
-        // >>>
-        logger.log(line)
-
         // Check for section header
         if (line[0] === '#') {
             if (line.search(/^#[a-zA-Z0-9\-]+$/s) > -1) {
                 const tag = line.replace('#', '');
+                if (sectionTags.includes(tag))
+                    logger.error("Duplicate tag:", tag)
+                else
+                    sectionTags.push(tag);
                 currentSection = {
                     tag,
                     blocks: [],
@@ -77,6 +82,7 @@ exports.parse = (content) => {
             } else {
                 logger.error("Improperly formatted section tag: \n > ", chalk.red(line))
             }
+            continue
         }
 
         if (!currentSection) {
@@ -84,7 +90,7 @@ exports.parse = (content) => {
             continue;
         }
 
-        // Look for function defines
+        // Text blocks
         const blockMatch = line.match(/^[a-zA-Z0-9]+:/s)
         if (blockMatch) {
             if (currentSection.choices.length > 0) {
@@ -122,7 +128,41 @@ exports.parse = (content) => {
                 logger.error("Condition found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
-            // TODO: Handle condition logic
+
+            // Get the condition operator
+            let conditionLine = line.replace('?', '').trim();
+            let condition = {};
+            let operator = conditionLine.match(/(<\=|\>=|>|<|\=\=|\!\=)/s)
+            let input;
+
+            if (operator) {
+                // In an operator line, capture the operator and split the line to separate input and value names.
+                condition.operator = operator[0];
+                let parts = conditionLine.split(operator[0]);
+                if (parts.length !== 2) {
+                    logger.error("Mutation requires single part before and part after operator:\n > ", chalk.red(line))
+                    continue;
+                }
+                input = parts[0].trim();
+
+                // Encode the right-side as-is for now
+                // TODO: Clean up right-side operators
+                condition.value = parts[1].trim();
+            } else {
+                // In a non-operator line, we're looking at a boolean condition
+                input = conditionLine.replace('!', '');
+                condition.operator = '==';
+                condition.value = conditionLine[0] !== '!';
+            }
+
+            if (input.search(/^[a-zA-Z0-9]+$/s) === -1) {
+                logger.error("Input names are alphanumeric only:", chalk.bgRed(input), "\n > ", chalk.red(line))
+                continue;
+            }
+            condition.input = input;
+            if (!inputs.includes(input))
+                inputs.push(input);
+            currentMeta.conditions.push(condition);
             continue;
         }
 
@@ -153,7 +193,7 @@ exports.parse = (content) => {
             // Check the left side
             let input = parts[0].trim();
             if (input.search(/^[a-zA-Z0-9]+$/s) === -1) {
-                logger.error("Input names are alphanumeric only:", chalk.bgRed(parts[0]), "\n > ", chalk.red(line))
+                logger.error("Input names are alphanumeric only:", chalk.bgRed(input), "\n > ", chalk.red(line))
                 continue;
             }
             mutation.input = input;
@@ -161,6 +201,8 @@ exports.parse = (content) => {
             // Encode the right-side as-is for now
             // TODO: Clean up right-side operators
             mutation.value = parts[1].trim();
+            if (!inputs.includes(input))
+                inputs.push(input);
             currentMeta.mutations.push(mutation);
             continue;
         }
@@ -171,7 +213,10 @@ exports.parse = (content) => {
                 logger.error("Signal found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
-            currentMeta.signals.push(line.replace(':', '').trim())
+            let signal = line.replace(':', '').trim();
+            if (!signals.includes(signal))
+                signals.push(signal);
+            currentMeta.signals.push(signal)
             continue;
         }
 
@@ -181,7 +226,12 @@ exports.parse = (content) => {
                 logger.error("Transition found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
-            currentMeta.transitions.push(line.replace('->', '').trim())
+            let transition = line.replace('->', '').trim();
+            currentMeta.transitions.push(transition); // findme
+            if (!transitions.includes(transition)) {
+                transitions.push(transition);
+                transitionLineNumbers.push(lineNumber)
+            }
             continue;
         }
 
@@ -191,16 +241,41 @@ exports.parse = (content) => {
                 logger.error("End found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
+            numberOfEndings += 1;
             currentMeta.isEnd = true;
+            continue;
+        }
+
+        // If we are still here, the line is unhandled
+        logger.error("Unhandled line:", chalk.red(line))
+    }
+
+    // Check transition matches
+    for (const index in transitions) {
+        let transition = transitions[index];
+        if (!sectionTags.includes(transition)) {
+            lineNumber = transitionLineNumbers[index];
+            logger.error("Tag not found for transition:", chalk.bgRed(transition));
         }
     }
 
-    console.log(chalk.yellow(">>> RESULT:\n"), sections);
+    // Check number of endings
+    if (numberOfEndings < 1) {
+        logger.error("No endings found!")
+    }
 
-    console.log(chalk.green("\n\n============\n\n"))
+    if (numberOfWarnings > 0)
+        console.log(chalk.yellow(numberOfWarnings), "warnings")
+    if (numberOfErrors > 0) {
+        console.log(chalk.red(numberOfErrors), "errors")
+        console.log(chalk.bgRed("Resolve errors before continuing."))
+        return null;
+    }
 
     return {
         characters,
+        inputs,
+        signals,
         sections
     };
 };
