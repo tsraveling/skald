@@ -3,6 +3,7 @@ const util = require('util');
 const chalk = require('chalk');
 const parser = require('./skald-parser')
 const package = require('./package.json')
+const yesno = require('yesno');
 
 // Convert fs.readFile into Promise version of same
 const readFile = util.promisify(fs.readFile);
@@ -70,7 +71,7 @@ function processPath(path) {
     }
 }
 
-module.exports = () => {
+module.exports = async () => {
     const program = require('commander');
 
     program
@@ -100,8 +101,12 @@ module.exports = () => {
         for (conflict of fileConflits) {
             console.log(chalk.red(" - " + conflict));
         }
-        console.log("Aborting.");
-        process.exit(0);
+        const cont = await yesno({
+            question: 'All extant files and folders in destination directory will be erased. Are you sure you want to continue? (Y/n)',
+            defaultValue: 'y'
+        });
+        if (!cont)
+            process.exit(0);
     }
 
     // Delete everything in current output directory
