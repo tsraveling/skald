@@ -6,7 +6,6 @@ exports.parse = (content) => {
     const makeMeta = () => ({
         mutations: [],
         conditions: [],
-        transitions: [],
         signals: [],
         isEnd: false
     });
@@ -103,8 +102,26 @@ exports.parse = (content) => {
                 characters.push(tag)
             currentMeta = makeMeta()
             currentBlock = {
+                type: 'attributed',
                 tag,
                 body,
+                meta: currentMeta
+            };
+            currentSection.blocks.push(currentBlock)
+            continue;
+        }
+
+        // Logic blocks
+        if (line[0] === '*') {
+            if (currentSection.choices.length > 0) {
+                logger.error("All blocks should come before choices in a given section.");
+                continue;
+            }
+            const label = line.replace('*', '').trim();
+            currentMeta = makeMeta()
+            currentBlock = {
+                type: 'logic',
+                label,
                 meta: currentMeta
             };
             currentSection.blocks.push(currentBlock)
@@ -227,7 +244,11 @@ exports.parse = (content) => {
                 continue
             }
             let transition = line.replace('->', '').trim();
-            currentMeta.transitions.push(transition); // findme
+            if (!!currentMeta.transition) {
+                logger.error("There can only be one transition on any given block or choice. Keeping first one, discarding", chalk.red(line))
+                continue
+            }
+            currentMeta.transition = transition;
             if (!transitions.includes(transition)) {
                 transitions.push(transition);
                 transitionLineNumbers.push(lineNumber)

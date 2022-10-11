@@ -5,6 +5,14 @@
 
 // int, bool, string
 
+#start
+
+* if we have fuel, go to next
+    ? fuel > 2
+    -> next-box
+* otherwise go to intro
+    -> intro-box
+
 #intro-box
 
 bill: This is the first bit of content. It works thusly and so on and so forth.
