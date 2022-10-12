@@ -4,6 +4,7 @@ const chalk = require('chalk');
 const parser = require('./skald-parser')
 const package = require('./package.json')
 const yesno = require('yesno');
+const testEngine = require('./test-engine')
 
 // Convert fs.readFile into Promise version of same
 const readFile = util.promisify(fs.readFile);
@@ -73,6 +74,7 @@ function processPath(path) {
 
 module.exports = async () => {
     const program = require('commander');
+    const test = program.command('test')
 
     program
         .version('0.3.0', '-v, --version')
@@ -81,6 +83,13 @@ module.exports = async () => {
             inputDirectory = input;
             outputDirectory = output;
         });
+
+    test
+        .arguments('<input>')
+        .action((input) => {
+            testEngine.runTest(input);
+            process.exit(0);
+        })
 
     program.parse(process.argv);
 

@@ -4,11 +4,12 @@
   "description": "Command line compiler from .ska to .json",
   "main": "index.js",
   "bin": {
-    "skald": "bin/skald-compile"
+    "skald": "bin/skald"
   },
   "scripts": {
-    "test-full": "./bin/skald-compile ./test/input ./test/output",
-    "test": "./bin/skald-compile ./example ./test/output"
+    "test-directory": "bin/skald ./test/input ./test/output",
+    "test-compile": "bin/skald ./example ./test/output",
+    "test-play": "bin/skald test ./example/example.ska"
   },
   "author": "Tim Raveling",
   "keywords": [
@@ -19,7 +20,7 @@
   "dependencies": {
     "chalk": "^4.1.1",
     "commander": "^8.0.0",
+    "prompt-sync": "^4.2.0",
     "yesno": "^0.4.0"
-  },
-  "devDependencies": {}
+  }
 }
