@@ -24,6 +24,8 @@ exports.parse = (content) => {
     let transitionLineNumbers = [];
 
     let sections = [];
+    let testbeds = [];
+    let currentTestBed = null;
     let currentSection = null;
     let currentBlock = null;
     let currentChoice = null;
@@ -41,6 +43,14 @@ exports.parse = (content) => {
         log: (...args) => {
             console.log(chalk.gray(lineNumber + ":"), ...args)
         }
+    }
+
+    const interpretValue = value => {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        if (value === 'null' || value === 'nil') return null;
+        if (isNaN(value)) return value;
+        return Number(value);
     }
 
     // Step through the lines
@@ -63,6 +73,31 @@ exports.parse = (content) => {
 
         // Remove other comments
         line = line.replace(/\/\/(.*)$/s, '');
+
+        // Check for testbed
+        if (line.substr(0, 8) === '@testbed') {
+            currentTestBed = {
+                tag: line.replace('@testbed', '').trim(),
+                sets: {}
+            }
+            continue;
+        }
+
+        // Testbed context:
+        if (!!currentTestBed) {
+            if (line === '@end') {
+                testbeds.push(currentTestBed);
+                currentTestBed = null;
+                continue;
+            }
+            let parts = line.split('=');
+            if (parts.length !== 2) {
+                logger.error("Testbed can only have simple = statements:", chalk.red(line))
+                continue;
+            }
+            currentTestBed.sets[parts[0].trim()] = interpretValue(parts[1].trim());
+            continue;
+        }
 
         // Check for section header
         if (line[0] === '#') {
@@ -162,9 +197,8 @@ exports.parse = (content) => {
                 }
                 input = parts[0].trim();
 
-                // Encode the right-side as-is for now
-                // TODO: Clean up right-side operators
-                condition.value = parts[1].trim();
+                // Encode the right-side (currently no variable / input support)
+                condition.value = interpretValue(parts[1].trim());
             } else {
                 // In a non-operator line, we're looking at a boolean condition
                 input = conditionLine.replace('!', '');
@@ -216,8 +250,7 @@ exports.parse = (content) => {
             mutation.input = input;
 
             // Encode the right-side as-is for now
-            // TODO: Clean up right-side operators
-            mutation.value = parts[1].trim();
+            mutation.value = interpretValue(parts[1].trim());
             if (!inputs.includes(input))
                 inputs.push(input);
             currentMeta.mutations.push(mutation);
@@ -297,6 +330,7 @@ exports.parse = (content) => {
         characters,
         inputs,
         signals,
+        testbeds,
         sections
     };
 };

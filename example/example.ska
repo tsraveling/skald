@@ -5,6 +5,13 @@
 
 // int, bool, string
 
+@testbed default
+    fuel = 10
+    canDrive = true
+    canClimb = true
+    distance = 0
+@end
+
 #start
 
 * if we have fuel, go to next
