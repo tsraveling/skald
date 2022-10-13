@@ -124,16 +124,29 @@ const printBlocks = (characters, section, state) => {
         // Apply mutation
         newState = processMeta(block.meta, newState);
 
+        // Print logic blocks
+        if (block.type === 'logic') {
+            console.log(chalk.gray("[" + chalk.bgYellow(chalk.black("LOGIC:")) + " " + block.label + "]"))
+        }
+
         // Print attributed blocks
         if (block.type === 'attributed') {
             let index = characters.findIndex(char => char === block.tag);
             let i = index % colorFunc.length;
             console.log(colorFunc[i](block.tag + ":"), block.body);
         }
+
+        // If this block contained a transition, don't process the remaining blocks
+        if (block.meta.transition) {
+            console.log(chalk.gray("-> " + block.meta.transition))
+            break;
+        }
     }
 
     return newState;
 }
+
+let updatesSinceLastChoice = 0;
 
 const printChoices = (section, state) => {
     if (section.choices.length > 0) {
@@ -166,6 +179,7 @@ const runSession = (json) => {
     let lastStates = [];
 
     const updateState = state => {
+        updatesSinceLastChoice += 1;
         lastStates.push({ ...gameState});
         gameState = state;
     }
@@ -173,7 +187,9 @@ const runSession = (json) => {
     const stepBack = (steps = 1) => {
         if (lastStates.length > 0) {
             for (let i=0; i<steps; i++) {
-                gameState = lastStates.pop();
+                if (lastStates.length > 0) {
+                    gameState = lastStates.pop();
+                }
             }
         } else
             console.log(chalk.bgRed("State history is empty."))
@@ -202,6 +218,10 @@ const runSession = (json) => {
             console.log(chalk.gray('#' + currentSection.tag));
             let newState = printBlocks(characters, currentSection, gameState);
             updateState(newState);
+
+            // If the block transition the user just start the loop over again.
+            if (newState.currentSection !== currentSection.tag)
+                continue;
             printChoices(currentSection, gameState);
         }
 
@@ -216,6 +236,7 @@ const runSession = (json) => {
             if (choiceNumber <= currentSection.choices.length) {
                 let selectedChoice = currentSection.choices[choiceNumber - 1];
                 if (checkConditions(selectedChoice.meta, gameState)) {
+                    updatesSinceLastChoice = 0;
                     updateState(processMeta(selectedChoice.meta, gameState));
                 } else {
                     console.log(chalk.bgRed("Your game state is not qualified for that choice:\n"), selectedChoice.meta.conditions);
@@ -244,12 +265,23 @@ const runSession = (json) => {
             continue;
         }
 
+        // Command: Restart
+        if (val === 'restart') {
+            return
+        }
+
+        // Command: back
+        if (val === 'back') {
+            stepBack(updatesSinceLastChoice);
+            continue;
+        }
+
         // Command: exit
         if (val === 'exit') {
             process.exit(0);
         }
 
-        // If you hit enter on a section with no choices, go to the next section
+        // If you hit enter on a section with no choices, and we haven't already transitioned somewhere else, go to the next section
         if (currentSection.choices.length < 1) {
             let nextIndex = sections.findIndex(s => s === currentSection)
             if (nextIndex >= 0 && nextIndex < sections.length - 1) {
@@ -294,7 +326,7 @@ exports.runTest = filename => {
     while (true) {
         runSession(json);
         console.log("\n\n");
-        const cont = prompt("Press enter to run again, or type 'exit' to exit").toLowerCase();
+        const cont = prompt("Press enter to run again, or type 'exit' to exit\n > ").toLowerCase();
         if (cont === 'exit')
             break;
     }
