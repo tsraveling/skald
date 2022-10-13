@@ -10,11 +10,57 @@ const printHelp = () => {
     console.log(chalk.green("set {input} = {value}:"), "Sets the value of a given input to the value on the right side of the equal sign")
     console.log(chalk.green("goto {section tag}:"), "Jump to the supplied section tag")
     console.log(chalk.green("status:"), "Prints the value of all saved inputs")
-    console.log(chalk.green("testbed {testbed tag}:"), "Loads the specififed testbed")
     console.log(chalk.green("testbeds"), "Lists available testbeds and their values")
+    console.log(chalk.green("restart {testbed?}:"), "Restart the game. Second argument optionally restarts with a specific testbed, or with the first testbed if none is supplied.")
+    console.log(chalk.green("exit:"), "Exit the engine")
 }
 
 const checkConditions = (meta, state) => {
+    for (let condition of meta.conditions) {
+        const {input, operator, value} = condition;
+        if (state[input] === undefined) {
+            console.log(chalk.bgRed('Error: Condition check on input not in state (counts as false):' + chalk.black(input)))
+            return false;
+        }
+
+        let cur = state[input];
+        switch (operator) {
+            case "==":
+                if (cur !== value) return false;
+                break;
+            case "!=":
+                if (cur === value) return false;
+                break;
+            case ">":
+                if (isNaN(cur)) {
+                    console.log(chalk.bgRed('Error: > only viable on numbers (return false):' + chalk.black(input)))
+                    return false;
+                }
+                if (cur <= value) return false;
+                break;
+            case "<":
+                if (isNaN(cur)) {
+                    console.log(chalk.bgRed('Error: < only viable on numbers (return false):' + chalk.black(input)))
+                    return false;
+                }
+                if (cur >= value) return false;
+                break;
+            case ">=":
+                if (isNaN(cur)) {
+                    console.log(chalk.bgRed('Error: >= only viable on numbers (return false):' + chalk.black(input)))
+                    return false;
+                }
+                if (cur < value) return false;
+                break;
+            case "<=":
+                if (isNaN(cur)) {
+                    console.log(chalk.bgRed('Error: <= only viable on numbers (return false):' + chalk.black(input)))
+                    return false;
+                }
+                if (cur > value) return false;
+                break;
+        }
+    }
     return true;
 }
 
@@ -34,13 +80,12 @@ const processMeta = (meta, state) => {
 
     // Handle mutations
     for (let mutation of meta.mutations) {
-        console.log(chalk.gray(mutation.input), chalk.gray(mutation.operator), mutation.value)
         const {input, operator, value} = mutation;
         switch (operator) {
             case "=":
                 // Handle boolean flip
                 if (value === '!') {
-                    if (typeof value !== 'boolean')
+                    if (typeof newState[input] !== 'boolean')
                         console.log(chalk.bgRed('Error: Trying to flip (= !) a non-boolean state variable:' + chalk.black(input)))
                     else
                         newState[input] = !newState[input];
@@ -49,12 +94,20 @@ const processMeta = (meta, state) => {
                 }
                 break;
             case "+=":
-                if (!newState[input]) {
+                if (newState[input] === undefined) {
                     console.log(chalk.yellow("Warning: trying to add to value not in state:"), chalk.bgYellow(chalk.black(mutation.input)));
                     newState[input] = 0;
                 }
-                // NEXT: complete mutations here
+                newState[input] += value;
+                break;
+            case "-=":
+                if (newState[input] === undefined) {
+                    console.log(chalk.yellow("Warning: trying to subtract from value not in state:"), chalk.bgYellow(chalk.black(mutation.input)));
+                    newState[input] = 0;
+                }
+                newState[input] -= value;
         }
+        console.log(chalk.gray(mutation.input), chalk.gray(mutation.operator), mutation.value, "=", newState[input]);
     }
     return newState;
 }
@@ -101,24 +154,7 @@ const loadTestbed = (testbed, inputs) => ({
     ...testbed.sets
 })
 
-exports.runTest = filename => {
-
-    // First, load the file
-    const stats = fs.statSync(filename);
-    if (stats.isDirectory()) {i
-        console.log(chalk.bgRed("This is a directory. You can only test individual files."))
-        return;
-    }
-    if (filename.substring(filename.length - 4) !== ".ska") {
-        console.log(chalk.bgRed("This is not a Skald file."))
-        return;
-    }
-    const content = fs.readFileSync(filename, {encoding: 'utf8'});
-
-    // Parse the content
-    console.log(chalk.bgGreen(chalk.black("Parsing for test: " + filename)));
-    const json = parser.parse(content)
-    if (!json) return;
+const runSession = (json) => {
     const { characters, inputs, signals, testbeds, sections } = json;
 
     // Print help
@@ -208,6 +244,11 @@ exports.runTest = filename => {
             continue;
         }
 
+        // Command: exit
+        if (val === 'exit') {
+            process.exit(0);
+        }
+
         // If you hit enter on a section with no choices, go to the next section
         if (currentSection.choices.length < 1) {
             let nextIndex = sections.findIndex(s => s === currentSection)
@@ -227,5 +268,34 @@ exports.runTest = filename => {
         // Invalid input
         console.log(chalk.gray("Invalid input."))
         skipProcess = true;
+    }
+}
+
+exports.runTest = filename => {
+
+    // First, load the file
+    const stats = fs.statSync(filename);
+    if (stats.isDirectory()) {i
+        console.log(chalk.bgRed("This is a directory. You can only test individual files."))
+        return;
+    }
+    if (filename.substring(filename.length - 4) !== ".ska") {
+        console.log(chalk.bgRed("This is not a Skald file."))
+        return;
+    }
+    const content = fs.readFileSync(filename, {encoding: 'utf8'});
+
+    // Parse the content
+    console.log(chalk.bgGreen(chalk.black("Parsing for test: " + filename)));
+    const json = parser.parse(content)
+    if (!json) return;
+
+    // Repeat the game until the user wants to exit, using the loaded json
+    while (true) {
+        runSession(json);
+        console.log("\n\n");
+        const cont = prompt("Press enter to run again, or type 'exit' to exit").toLowerCase();
+        if (cont === 'exit')
+            break;
     }
 }
