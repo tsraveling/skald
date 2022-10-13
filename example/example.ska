@@ -1,14 +1,16 @@
-// INPUT fuel: int
-// CHAR bill
-// CHAR bob
-// INTERFACE swap
-
-// int, bool, string
+// This is a comment
 
 @testbed default
     fuel = 10
     canDrive = true
     canClimb = true
+    distance = 0
+@end
+
+@testbed second
+    fuel = 100
+    canDrive = false
+    canClimb = false
     distance = 0
 @end
 

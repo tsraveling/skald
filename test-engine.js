@@ -73,6 +73,10 @@ const processMeta = (meta, state) => {
     if (meta.transition)
         newState.currentSection = meta.transition;
 
+    // Check ending
+    if (meta.isEnd)
+        newState.isEnd = true;
+
     // Print signals, as the test engine does not use them direclty
     for (let signal of meta.signals) {
         console.log(chalk.bgYellow(chalk.black("---->", signal)))
@@ -149,6 +153,10 @@ const printBlocks = (characters, section, state) => {
 let updatesSinceLastChoice = 0;
 
 const printChoices = (section, state) => {
+    if (state.isEnd) {
+        console.log(chalk.gray("[Script finished, press enter to exit]"))
+        return;
+    }
     if (section.choices.length > 0) {
         for (let i=0; i<section.choices.length; i++) {
             let choice = section.choices[i];
@@ -166,6 +174,8 @@ const loadTestbed = (testbed, inputs) => ({
     ...inputs,
     ...testbed.sets
 })
+
+let activeTestbed = null;
 
 const runSession = (json) => {
     const { characters, inputs, signals, testbeds, sections } = json;
@@ -197,13 +207,18 @@ const runSession = (json) => {
 
     // Load the first testbed if there is one
     if (testbeds.length > 0) {
-        gameState = loadTestbed(testbeds[0], gameState)
-        console.log(chalk.gray("Initialized state with testbed:"), chalk.green(testbeds[0].tag));
+        let testbed
+        if (activeTestbed) {
+            testbed = testbeds.find(tb => tb.tag === activeTestbed);
+        } else {
+            testbed = testbeds[0];
+        }
+        gameState = loadTestbed(testbed, gameState)
+        console.log(chalk.yellow("Initialized state with testbed:"), chalk.green(testbed.tag));
     }
 
-    let val ='';
     let skipProcess = false
-    while (val !== 'exit') {
+    while (true) {
         console.log("");
 
         // Get the section from state
@@ -222,12 +237,14 @@ const runSession = (json) => {
             // If the block transition the user just start the loop over again.
             if (newState.currentSection !== currentSection.tag)
                 continue;
-            printChoices(currentSection, gameState);
         }
+
+        // Print choices
+        printChoices(currentSection, gameState);
 
         // Get user input
         skipProcess = false
-        val = prompt('> ').toLowerCase().trim();
+        let val = prompt('> ').trim();
         console.log("");
 
         // Handle choices
@@ -243,6 +260,12 @@ const runSession = (json) => {
                 }
                 continue;
             }
+        }
+
+        // End if wrapped
+        if (gameState.isEnd) {
+            console.log(chalk.red("Reached end of script; exiting."))
+            return;
         }
 
         // Command: get help
@@ -261,13 +284,59 @@ const runSession = (json) => {
 
         // Command: repeat current block
         if (val === 're') {
+            console.log(chalk.bgYellow(chalk.black("Going back one step")))
             stepBack();
             continue;
         }
 
+        if (val === 'testbeds') {
+            for (let testbed of testbeds) {
+                console.log(chalk.yellow(testbed.tag + ':'), testbed.sets)
+            }
+            skipProcess = true;
+            continue;
+        }
+
         // Command: Restart
-        if (val === 'restart') {
+        if (val.substr(0, 7) === 'restart') {
+            let test_tag = val.replace('restart', '').trim();
+            if (test_tag.length > 0 && testbeds.find(tb => tb.tag === test_tag))
+                activeTestbed = test_tag;
             return
+        }
+
+        // Command: Set
+        if (val.substr(0, 3) === 'set') {
+            skipProcess = true
+            let parts = val.replace("set", "").trim().split("=");
+            if (parts.length !== 2) {
+                console.log(chalk.bgRed("Invalid value statement, should be {input} = {value}"));
+                continue;
+            }
+
+            let input = parts[0].trim();
+            let newVal = parser.interpretValue(parts[1].trim());
+            console.log(chalk.bgYellow(chalk.black("SET " + input + " = " + newVal)))
+            updateState({
+                ...gameState,
+                [input]: newVal
+            })
+            continue;
+        }
+
+        // Command: Goto
+        if (val.substr(0, 4) === 'goto') {
+            let tag = val.replace('goto', '').trim();
+            if (!sections.find(section => section.tag === tag)) {
+                console.log(chalk.bgRed("Section tag not found."));
+                skipProcess = true;
+                continue;
+            }
+            updateState({
+                ...gameState,
+                currentSection: tag
+            });
+            continue;
         }
 
         // Command: back
@@ -326,6 +395,8 @@ exports.runTest = filename => {
     while (true) {
         runSession(json);
         console.log("\n\n");
+        if (activeTestbed)
+            console.log(chalk.yellow("Active testbed selected: ") + chalk.green(activeTestbed));
         const cont = prompt("Press enter to run again, or type 'exit' to exit\n > ").toLowerCase();
         if (cont === 'exit')
             break;

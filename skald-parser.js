@@ -1,5 +1,15 @@
 const chalk = require('chalk');
 
+const interpretValue = value => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    if (value === 'null' || value === 'nil') return null;
+    if (isNaN(value)) return value;
+    return Number(value);
+}
+
+exports.interpretValue = interpretValue
+
 exports.parse = (content) => {
 
     // Templates
@@ -43,14 +53,6 @@ exports.parse = (content) => {
         log: (...args) => {
             console.log(chalk.gray(lineNumber + ":"), ...args)
         }
-    }
-
-    const interpretValue = value => {
-        if (value === 'true') return true;
-        if (value === 'false') return false;
-        if (value === 'null' || value === 'nil') return null;
-        if (isNaN(value)) return value;
-        return Number(value);
     }
 
     // Step through the lines
