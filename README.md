@@ -147,3 +147,30 @@ other logic in code.
 
 If a meta hits the single word `END`, this will signal the software to leave the conversation here. The other meta
 in the block or choice (not including transitions ) will be processed first.
+
+# Testing
+
+You can test any script by using `skald test {filename}`. This will compile the Skald file on
+the fly, and will inform you of any compiler errors. From within the test interface, you can
+type `help` for an extended list of commands.
+
+## Testbeds
+
+You can define **testbeds** right in your Skald file to make testing easier. A testbed looks
+like this:
+
+```
+@testbed example-bed
+    someValue = 10
+    someBoolean = true
+    someString = happy
+@end
+```
+
+A testbed **must** be opened with `@testbed {tag}` and closed with `@end`. Indentation is up to
+the implementer. Within the testbeds, use simple `{input} = {value}` syntax. When using the
+testing tool, the first testbed will be loaded by default. You can then restart with a
+different testbed by using the `restart {testbed}` command. You can also list testbeds
+with the `testbeds` command.
+
+This can be used to mock various potential game states.
