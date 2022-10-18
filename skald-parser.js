@@ -127,7 +127,7 @@ exports.parse = (content) => {
         }
 
         // Text blocks
-        const blockMatch = line.match(/^[a-zA-Z0-9]+:/s)
+        const blockMatch = line.match(/^[a-zA-Z0-9\-]+:/s)
         if (blockMatch) {
             if (currentSection.choices.length > 0) {
                 logger.error("All blocks should come before choices in a given section.");
