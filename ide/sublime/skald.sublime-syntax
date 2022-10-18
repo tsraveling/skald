@@ -52,6 +52,9 @@ contexts:
     # Tags
     - match: '^(#.*)$'
       scope: "variable.parameter.skald, markup.bold"
+      # Tags
+    - match: '^[ \t]*END$'
+      scope: "variable.language.skald, markup.bold"
 
     # Choices
     - match: '^\s*>\s*'
