@@ -126,7 +126,12 @@ in some way. For instance:
 Tells the software to process the input `totalDistance` with the operator `+=` and the value `10`. How those
 operators work is up to the software.
 
-Valid operators for mutations include the characters `+`, `-`, and `=`, in any configuration. 
+Syntactically valid operators for mutations include the characters `+`, `-`, and `=`, in any configuration, however,
+the operators that work in the CLI testbed and the Godot plugin are:
+
+- `=!` flips a boolean flag
+- `=` sets the value of an input
+- `+=` and `-=` increment and decrement an input's value
 
 **Note on boolean values:** by convention, doing this with a boolean flag: `~ someFlag = !` will reverse the
 value of that flag.
