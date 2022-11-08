@@ -208,8 +208,8 @@ exports.parse = (content) => {
                 condition.value = conditionLine[0] !== '!';
             }
 
-            if (input.search(/^[a-zA-Z0-9]+$/s) === -1) {
-                logger.error("Input names are alphanumeric only:", chalk.bgRed(input), "\n > ", chalk.red(line))
+            if (input.search(/^[a-zA-Z0-9_]+$/s) === -1) {
+                logger.error("Input names are alphanumeric + underscore only:", chalk.bgRed(input), "\n > ", chalk.red(line))
                 continue;
             }
             condition.input = input;
@@ -245,8 +245,8 @@ exports.parse = (content) => {
 
             // Check the left side
             let input = parts[0].trim();
-            if (input.search(/^[a-zA-Z0-9]+$/s) === -1) {
-                logger.error("Input names are alphanumeric only:", chalk.bgRed(input), "\n > ", chalk.red(line))
+            if (input.search(/^[a-zA-Z0-9_]+$/s) === -1) {
+                logger.error("Input names are alphanumeric + underscore only:", chalk.bgRed(input), "\n > ", chalk.red(line))
                 continue;
             }
             mutation.input = input;
