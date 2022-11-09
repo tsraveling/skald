@@ -9,7 +9,8 @@
   "scripts": {
     "test-directory": "bin/skald ./test/input ./test/output",
     "test-compile": "bin/skald ./example ./test/output",
-    "test-play": "bin/skald test ./example/example.ska"
+    "test-play": "bin/skald test ./example/example.ska",
+    "test-play-example": "bin/skald test ./test/input/example.ska"
   },
   "author": "Tim Raveling",
   "keywords": [

@@ -188,6 +188,7 @@ const printChoices = (section, state) => {
         console.log(chalk.gray("[Script finished, press enter to exit]"))
         return;
     }
+    console.log("")
     if (section.choices.length > 0) {
         for (let i=0; i<section.choices.length; i++) {
             let choice = section.choices[i];
@@ -252,8 +253,6 @@ const runSession = (json) => {
     while (true) {
         console.log("");
 
-        // NEXT: Finish converting from the block / section index system to step through array.
-
         // Get the section from state
         let currentSection = sections.find(sec => sec.tag === gameState.currentSection);
         if (!currentSection) {
@@ -269,13 +268,13 @@ const runSession = (json) => {
             // Go through and print each one with a continue
             for (let i=0; i<sectionResponse.blocks.length; i++) {
 
-                // Don't prompt at the end of the blocks
-                if (i === sectionResponse.blocks.length - 1 && !sectionResponse.transition)
-                    continue;
-
                 let block = sectionResponse.blocks[i]
 
                 printBlock(block, characters)
+
+                // Don't prompt at the end of the blocks
+                if (i === sectionResponse.blocks.length - 1 && !sectionResponse.transition)
+                    continue;
 
                 if (block.type !== "logic")
                     promptContinue()
@@ -296,18 +295,28 @@ const runSession = (json) => {
         let val = prompt('> ').trim();
         console.log("");
 
+        // If a choice doesn't have a transition, we will transition to the next section automatically.
+        let didTransition = false
+
         // Handle choices
-        if (!isNaN(val)) {
-            let choiceNumber = parseInt(val);
+        if (!isNaN(val) && currentSection.choices.length > 0) {
+            let choiceNumber = parseInt(val) || 1;
             if (choiceNumber <= currentSection.choices.length) {
                 let selectedChoice = currentSection.choices[choiceNumber - 1];
                 if (checkConditions(selectedChoice.meta, gameState)) {
                     updatesSinceLastChoice = 0;
                     updateState(processMeta(selectedChoice.meta, gameState));
+                    if (!!selectedChoice.meta.transition)
+                        didTransition = true
                 } else {
                     console.log(chalk.bgRed("Your game state is not qualified for that choice:\n"), selectedChoice.meta.conditions);
                 }
-                continue;
+                if (didTransition)
+                    continue;
+            } else {
+                console.log(chalk.gray("Please select a valid choice."));
+                skipProcess = true;
+                continue
             }
         }
 
@@ -400,11 +409,11 @@ const runSession = (json) => {
         }
 
         // If you hit enter on a section with no choices, and we haven't already transitioned somewhere else, go to the next section
-        if (currentSection.choices.length < 1) {
+        if (currentSection.choices.length < 1 || !didTransition) {
             let nextIndex = sections.findIndex(s => s === currentSection)
+            console.log("next index is", nextIndex, "length is", sections.length)
             if (nextIndex >= 0 && nextIndex < sections.length - 1) {
                 console.log(chalk.gray(' -> auto-transition to next block'))
-                promptContinue()
                 updateState({
                     ...gameState,
                     currentSection: sections[nextIndex + 1].tag
@@ -447,8 +456,11 @@ exports.runTest = filename => {
         console.log("\n\n");
         if (activeTestbed)
             console.log(chalk.yellow("Active testbed selected: ") + chalk.green(activeTestbed));
-        const cont = prompt("Press enter to run again, or type 'exit' to exit\n > ").toLowerCase();
-        if (cont === 'exit')
+
+        let cont = prompt("Press enter to run again, or type 'exit' to exit\n > ");
+        console.log("")
+
+        if (cont.toLowerCase() === 'exit')
             break;
     }
 }
