@@ -111,15 +111,28 @@ const processMeta = (meta, state) => {
                 }
                 newState[input] -= value;
         }
-        console.log(chalk.gray(mutation.input), chalk.gray(mutation.operator), mutation.value, "=", newState[input]);
+        console.log(chalk.yellow("~"), chalk.gray(mutation.input), chalk.gray(mutation.operator), mutation.value, "=", newState[input]);
     }
     return newState;
 }
 
-const printBlocks = (characters, section, state) => {
-    let newState = {...state}
+/*
+ * Return schema:
+ * {
+ *   state: ... updated state
+ *   blocks: [{
+ *     ... block (only if conditions are met)
+ *   }]
+ *   transition: (if there is one)
+ * }
+ */
+const processBlocks = (section, state) => {
+    let newState = {...state};
+    let transition = undefined;
+    let blocks = [];
 
-    for (block of section.blocks) {
+    for (let i=0; i<section.blocks.length; i++) {
+        let block = section.blocks[i]
 
         // Ensure we can see the block
         if (!checkConditions(block.meta, newState))
@@ -128,26 +141,43 @@ const printBlocks = (characters, section, state) => {
         // Apply mutation
         newState = processMeta(block.meta, newState);
 
-        // Print logic blocks
-        if (block.type === 'logic') {
-            console.log(chalk.gray("[" + chalk.bgYellow(chalk.black("LOGIC:")) + " " + block.label + "]"))
-        }
-
-        // Print attributed blocks
-        if (block.type === 'attributed') {
-            let index = characters.findIndex(char => char === block.tag);
-            let i = index % colorFunc.length;
-            console.log(colorFunc[i](block.tag + ":"), block.body);
-        }
+        // Add block
+        blocks.push(block)
 
         // If this block contained a transition, don't process the remaining blocks
         if (block.meta.transition) {
-            console.log(chalk.gray("-> " + block.meta.transition))
+            transition = block.meta.transition;
             break;
         }
     }
 
-    return newState;
+    return {
+        state: newState,
+        blocks,
+        transition
+    };
+}
+
+const promptContinue = () => {
+    prompt('(CONTINUE) > ');
+}
+
+/*
+ * Prints the block out to the console
+ */
+const printBlock = (block, characters) => {
+    if (block.type === 'logic') {
+        console.log(chalk.gray("[" + chalk.bgYellow(chalk.black("LOGIC:")) + " " + block.label + "]"))
+    } else {
+        let index = characters.findIndex(char => char === block.tag);
+        let i = index % colorFunc.length;
+        console.log(colorFunc[i](block.tag + ":"), block.body);
+    }
+
+    // If this block contained a transition, don't process the remaining blocks
+    if (block.meta.transition) {
+        console.log(chalk.gray("-> " + block.meta.transition))
+    }
 }
 
 let updatesSinceLastChoice = 0;
@@ -221,6 +251,8 @@ const runSession = (json) => {
     while (true) {
         console.log("");
 
+        // NEXT: Finish converting from the block / section index system to step through array.
+
         // Get the section from state
         let currentSection = sections.find(sec => sec.tag === gameState.currentSection);
         if (!currentSection) {
@@ -228,14 +260,30 @@ const runSession = (json) => {
             break;
         }
 
-        // If we aren't skipping processing this loop, process all blocks and print output.
+        // If we aren't skipping processing this loop, process all blocks and step through the output.
         if (!skipProcess) {
             console.log(chalk.gray('#' + currentSection.tag));
-            let newState = printBlocks(characters, currentSection, gameState);
-            updateState(newState);
+            let sectionResponse = processBlocks(currentSection, gameState);
+
+            // Go through and print each one with a continue
+            for (let i=0; i<sectionResponse.blocks.length; i++) {
+
+                // Don't prompt at the end of the blocks
+                if (i === sectionResponse.blocks.length - 1 && !sectionResponse.transition)
+                    continue;
+
+                let block = sectionResponse.blocks[i]
+
+                printBlock(block, characters)
+
+                if (block.type !== "logic")
+                    promptContinue()
+            }
+
+            updateState(sectionResponse.state);
 
             // If the block transition the user just start the loop over again.
-            if (newState.currentSection !== currentSection.tag)
+            if (sectionResponse.state.currentSection !== currentSection.tag)
                 continue;
         }
 
