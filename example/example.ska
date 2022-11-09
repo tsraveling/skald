@@ -26,9 +26,22 @@
 
 bill: This is the first bit of content. It works thusly and so on and so forth.
 
+ted: I am chiming in with another block.
+
+bill: and here, yet another.
+
+narrator: There will be no decisions in this section; we continued directly on to next-box.
+
 #next-box
 
 // These are some comments
+
+bill: This is a specific block.
+
+narrator: This block will only appear if there is more than 50 fuel available -- as in the second testbed, above.
+    ? fuel > 50
+
+ted: This is another block.
 
 bob: This is the second bit of content
     ? fuel > 2

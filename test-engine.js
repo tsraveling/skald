@@ -159,7 +159,8 @@ const processBlocks = (section, state) => {
 }
 
 const promptContinue = () => {
-    prompt('(CONTINUE) > ');
+    prompt(chalk.gray('\ncontinue -> '));
+    console.log("")
 }
 
 /*
@@ -403,6 +404,7 @@ const runSession = (json) => {
             let nextIndex = sections.findIndex(s => s === currentSection)
             if (nextIndex >= 0 && nextIndex < sections.length - 1) {
                 console.log(chalk.gray(' -> auto-transition to next block'))
+                promptContinue()
                 updateState({
                     ...gameState,
                     currentSection: sections[nextIndex + 1].tag
