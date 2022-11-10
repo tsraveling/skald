@@ -16,8 +16,7 @@ exports.parse = (content) => {
     const makeMeta = () => ({
         mutations: [],
         conditions: [],
-        signals: [],
-        isEnd: false
+        signals: []
     });
 
     // Get our individual lines
@@ -265,10 +264,13 @@ exports.parse = (content) => {
                 logger.error("Signal found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
-            let signal = line.replace(':', '').trim();
+            let signalLine = line.substr(1) // Removes colon
+            let parts = signalLine.split(' ')
+            let signal = parts.length > 0 ? parts[0] : signalLine
+            let value = parts.length > 1 ? interpretValue(signalLine.replace(signal, '').trim()) : undefined
             if (!signals.includes(signal))
                 signals.push(signal);
-            currentMeta.signals.push(signal)
+            currentMeta.signals.push({signal, value})
             continue;
         }
 
@@ -292,13 +294,14 @@ exports.parse = (content) => {
         }
 
         // End
-        if (line === 'END') {
+        if (line.substr(0, 3) === 'END') {
             if (!currentMeta) {
                 logger.error("End found, not on open block or choice:\n > ", chalk.red(line))
                 continue
             }
             numberOfEndings += 1;
-            currentMeta.isEnd = true;
+            let endRemainder = line.replace('END', '').trim()
+            currentMeta.endWith = interpretValue(endRemainder) || true;
             continue;
         }
 

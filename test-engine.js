@@ -74,8 +74,8 @@ const processMeta = (meta, state) => {
         newState.currentSection = meta.transition;
 
     // Check ending
-    if (meta.isEnd)
-        newState.isEnd = true;
+    if (meta.endWith)
+        newState.endWith = meta.endWith;
 
     // Print signals, as the test engine does not use them direclty
     for (let signal of meta.signals) {
@@ -184,7 +184,8 @@ const printBlock = (block, characters) => {
 let updatesSinceLastChoice = 0;
 
 const printChoices = (section, state) => {
-    if (state.isEnd) {
+    if (state.endWith) {
+        console.log(chalk.yellow("ENDED WITH:", state.endWith))
         console.log(chalk.gray("[Script finished, press enter to exit]"))
         return;
     }
@@ -321,7 +322,7 @@ const runSession = (json) => {
         }
 
         // End if wrapped
-        if (gameState.isEnd) {
+        if (gameState.endWith) {
             console.log(chalk.red("Reached end of script; exiting."))
             return;
         }
