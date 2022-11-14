@@ -201,6 +201,11 @@ exports.parse = (content) => {
                 // Encode the right-side (currently no variable / input support)
                 condition.value = interpretValue(parts[1].trim());
             } else {
+                // Make sure it's just one word
+                if (conditionLine.split(' ').length > 1) {
+                    logger.error("Improperly formatted conditional line:\n > ", chalk.red(line));
+                    continue;
+                }
                 // In a non-operator line, we're looking at a boolean condition
                 input = conditionLine.replace('!', '');
                 condition.operator = '==';

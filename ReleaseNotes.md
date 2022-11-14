@@ -36,3 +36,7 @@ Initial working release.
     value: (optional value, of input type -- int, string, or bool)
   }, ...]
   ```
+
+## 0.6.4
+
+- Clarified error messaging for improperly formatted conditional lines
