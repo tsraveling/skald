@@ -153,6 +153,10 @@ other logic in code.
 If a meta hits the single word `END`, this will signal the software to leave the conversation here. The other meta
 in the block or choice (not including transitions ) will be processed first.
 
+## Input Injection
+
+You can inject the value of an input into block or choice text using the simple syntax `{input_name}`.
+
 # Testing
 
 You can test any script by using `skald test {filename}`. This will compile the Skald file on

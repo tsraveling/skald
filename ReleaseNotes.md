@@ -40,3 +40,7 @@ Initial working release.
 ## 0.6.4
 
 - Clarified error messaging for improperly formatted conditional lines
+
+## 0.6.5
+
+- Added input injection

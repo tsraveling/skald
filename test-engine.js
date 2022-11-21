@@ -164,15 +164,34 @@ const promptContinue = () => {
 }
 
 /*
+ * Processes text content, e.g., input injection
+ */
+const processText = (text, state) => {
+    let str = text;
+
+    // Process input injections
+    let injectionMatches = str.match(/{[a-zA-Z0-9_]+}/g)
+    if (injectionMatches) {
+        console.log(">>> ", injectionMatches)
+        for (let match of injectionMatches) {
+            let key = match.substring(1, match.length - 1);
+            str = str.replace(match, state[key] || 'ERR')
+        }
+    }
+
+    return str
+}
+
+/*
  * Prints the block out to the console
  */
-const printBlock = (block, characters) => {
+const printBlock = (block, characters, state) => {
     if (block.type === 'logic') {
         console.log(chalk.gray("[" + chalk.bgYellow(chalk.black("LOGIC:")) + " " + block.label + "]"))
     } else {
         let index = characters.findIndex(char => char === block.tag);
         let i = index % colorFunc.length;
-        console.log(colorFunc[i](block.tag + ":"), block.body);
+        console.log(colorFunc[i](block.tag + ":"), processText(block.body, state));
     }
 
     // If this block contained a transition, don't process the remaining blocks
@@ -194,9 +213,9 @@ const printChoices = (section, state) => {
         for (let i=0; i<section.choices.length; i++) {
             let choice = section.choices[i];
             if (checkConditions(choice.meta, state))
-                console.log(chalk.green((i + 1)+":"), choice.body)
+                console.log(chalk.green((i + 1)+":"), processText(choice.body, state))
             else
-                console.log(chalk.gray("x " + (i + 1) + ": " + choice.body))
+                console.log(chalk.gray("x " + (i + 1) + ": " + processText(choice.body, state)))
         }
     } else {
         console.log(chalk.gray("[Continue]"))
@@ -271,7 +290,7 @@ const runSession = (json) => {
 
                 let block = sectionResponse.blocks[i]
 
-                printBlock(block, characters)
+                printBlock(block, characters, gameState)
 
                 // Don't prompt at the end of the blocks
                 if (i === sectionResponse.blocks.length - 1 && !sectionResponse.transition)
