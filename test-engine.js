@@ -451,6 +451,30 @@ const runSession = (json) => {
     }
 }
 
+exports.echoParsed = filename => {
+    // First, load the file
+    const stats = fs.statSync(filename);
+    if (stats.isDirectory()) {i
+        console.log(JSON.stringify({error: "That path is a directory"}))
+        return
+    }
+    if (filename.substring(filename.length - 4) !== ".ska") {
+        console.log(JSON.stringify({error: "Not a Skald file"}))
+        return;
+    }
+    const content = fs.readFileSync(filename, {encoding: 'utf8'});
+
+    // Parse the content
+    const json = parser.parse(content)
+    if (!json) {
+        console.log(JSON.stringify({error: "Invalid JSON"}))
+        return
+    }
+
+    // Echo it out
+    console.log(JSON.stringify(json))
+}
+
 exports.runTest = filename => {
 
     // First, load the file

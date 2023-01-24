@@ -10,7 +10,7 @@ const interpretValue = value => {
 
 exports.interpretValue = interpretValue
 
-exports.parse = (content) => {
+exports.parse = (content, forJson = false) => {
 
     // Templates
     const makeMeta = () => ({
@@ -40,17 +40,27 @@ exports.parse = (content) => {
     let currentChoice = null;
     let currentMeta = null;
 
+    let jsonErrors = []
+    let jsonWarnings = []
+
     const logger = {
         error: (...args) => {
             numberOfErrors += 1;
-            console.log(chalk.bgRed(lineNumber + ":"), ...args)
+            if (forJson)
+                jsonErrors.push(args.join(' '))
+            else
+                console.log(chalk.bgRed(lineNumber + ":"), ...args)
         },
         warn: (...args) => {
             numberOfWarnings += 1;
-            console.log(chalk.bgYellow(lineNumber + ":"), ...args)
+            if (forJson)
+                jsonWarnings.push(args.join(' '))
+            else
+                console.log(chalk.bgYellow(lineNumber + ":"), ...args)
         },
         log: (...args) => {
-            console.log(chalk.gray(lineNumber + ":"), ...args)
+            if (!forJson)
+                console.log(chalk.gray(lineNumber + ":"), ...args)
         }
     }
 
@@ -329,10 +339,19 @@ exports.parse = (content) => {
     }
 
     if (numberOfWarnings > 0)
-        console.log(chalk.yellow(numberOfWarnings), "warnings")
+        if (!forJson)
+            console.log(chalk.yellow(numberOfWarnings), "warnings")
     if (numberOfErrors > 0) {
-        console.log(chalk.red(numberOfErrors), "errors")
-        console.log(chalk.bgRed("Resolve errors before continuing."))
+        if (forJson) {
+            return {
+                error: "Parse errors: " + numberOfErrors + ". Resolve before continuing.",
+                errors: jsonErrors,
+                warnings: jsonWarnings
+            }
+        } else {
+            console.log(chalk.red(numberOfErrors), "errors")
+            console.log(chalk.bgRed("Resolve errors before continuing."))
+        }
         return null;
     }
 

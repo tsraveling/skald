@@ -75,6 +75,7 @@ function processPath(path) {
 module.exports = async () => {
     const program = require('commander');
     const test = program.command('test')
+    const echo = program.command('echo')
 
     program
         .version('0.3.0', '-v, --version')
@@ -89,6 +90,13 @@ module.exports = async () => {
         .action((input) => {
             testEngine.runTest(input);
             process.exit(0);
+        })
+
+    echo
+        .arguments('<input>')
+        .action(input => {
+            testEngine.echoParsed(input);
+            process.exit(0)
         })
 
     program.parse(process.argv);
