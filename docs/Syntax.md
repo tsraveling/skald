@@ -24,7 +24,9 @@ This is a beat [but this text will not appear in it] -- cool, huh?
 ```
 
 This only works in beats though, don't try it anywhere else.
+
 # 2. Blocks
+
 ## 2.1 Block Tags and Beats
 
 Core dialogue is composed of **Blocks**, which in turn is composed of **Beats**. A block is defined with a tag (kebab-case preferred, but to your taste) like this:
@@ -165,6 +167,7 @@ If you immediately follow a conditional logic block with `* (else)`, that will d
 ```
 
 This can be useful for places where the narrative branches due to choices made previous to the current block.
+
 # 3. Logic
 
 ## 3.1 Operations
@@ -189,6 +192,7 @@ Multiple operations are indented under the calling element, forming an **operati
   ~set_var = 2
   -> transition-block
 ```
+
 ### 3.1.1 Transitions
 
 A **transition** will finish the other operations in its group, then immediately send the player to the indicated block. If that block doesn't exist, an error will be thrown.
@@ -255,6 +259,7 @@ Variables are scoped within a narrative chain: so if a variable is defined in `M
 This syntax informs the compiler to expect a variable from the previous module; it will throw a runtime error if that variable is not found. The initialization value is **only used for testing** (see XX below).
 
 Likewise, if you declare a module-specific variable that is already scoped, the API will throw a runtime error that you are overwriting something.
+
 ### 3.1.5 Variable Types
 
 Variables can either be **boolean**, **integer**, or **string**.
@@ -492,6 +497,7 @@ A testbed is declared after the initial variable definition, and before the firs
 You can define as many testbeds as you like. If a variable is not set within a testbed, the test value (5.1) will be used.
 
 You can also overwrite local module variables using testbeds. This is useful to try some different configurations without committing them, or for testing entrypoints (5.3) that may be deeper into the module.
+
 ## 5.3 Entrypoints
 
 Finally, you can define any block as an entrypoint for testing. So if you wanted to jump into a dungeon crawl as a wizard, right after the player enters the throne room, you might invoke the command line tool like this:
