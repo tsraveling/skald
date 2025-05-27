@@ -1,4 +1,7 @@
 #include "../include/skald.h"
+#include "skald_actions.h"
+#include "skald_grammar.h"
+#include "tao/pegtl/parse.hpp"
 #include <tao/pegtl.hpp>
 
 namespace pegtl = tao::pegtl;
@@ -9,7 +12,8 @@ namespace Skald {
 
 void Skald::load(std::string path) {
   pegtl::file_input in(path);
-  // STUB: Build out parser
+  std::cout << "Loaded file: " << path << "\n";
+  pegtl::parse<grammar, action>(in);
 }
 
 void Skald::trace() {

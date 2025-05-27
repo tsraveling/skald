@@ -5,7 +5,6 @@
 using namespace tao::pegtl;
 
 namespace Skald {
-namespace grammar {
 
 struct comment : seq<string<'-', '-'>, until<eolf>> {};
 
@@ -30,5 +29,4 @@ struct grammar
            plus<seq<block_tag, star<ignored>, plus<seq<beat, star<ignored>>>>>,
            eof> {};
 
-} // namespace grammar
 } // namespace Skald

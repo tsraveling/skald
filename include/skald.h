@@ -7,6 +7,7 @@
 namespace Skald {
 
 struct Beat {
+  std::string something;
   std::string text = "";
 };
 
