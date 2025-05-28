@@ -32,7 +32,7 @@ private:
 
 public:
   void load(std::string path);
-  void trace();
+  void trace(std::string path);
 };
 
 } // namespace Skald

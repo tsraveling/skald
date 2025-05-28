@@ -4,13 +4,22 @@
 #include <iostream>
 
 namespace Skald {
+
 template <typename Rule> struct action {};
 
-template <> struct action<block_tag> {
+// This should fire when the # character is matched
+template <> struct action<one<'#'>> {
   template <typename ActionInput>
   static void apply(const ActionInput &in, std::string &v) {
-    v = in.string();
-    std::cout << "block tag: " << v << "\n";
+    std::cout << "FOUND HASH: " << in.string() << "\n";
+  }
+};
+
+// This should fire for the tag name part
+template <> struct action<tag_name> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &in, std::string &v) {
+    std::cout << "FOUND TAG NAME: " << in.string() << "\n";
   }
 };
 
