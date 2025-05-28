@@ -13,17 +13,17 @@ struct blank_line : seq<star<blank>, eol> {};
 struct ws : star<space> {};
 
 // Block tag
-struct tag_name : plus<identifier_other> {};
-struct block_tag : seq<one<'#'>, tag_name, eol> {};
+struct block_tag_name : plus<identifier_other> {};
+struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
 
 // Beat
 struct beat_content : plus<not_one<'\n'>> {};
-struct beat : seq<beat_content, eol> {};
+struct beat_line : seq<beat_content, eol> {};
 
 // Skip these
 struct ignored : sor<comment, blank_line> {};
 
-struct block : seq<block_tag, star<sor<ignored, beat>>> {};
+struct block : seq<block_tag_line, star<sor<ignored, beat_line>>> {};
 
 struct grammar : seq<star<ignored>, // Skip initial comments/blanks
                      plus<block>,   // One or more blocks

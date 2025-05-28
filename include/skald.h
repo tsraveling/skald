@@ -17,6 +17,7 @@ struct Block {
 };
 
 class Module {
+public:
   std::string filename;
   std::map<std::string, Block> blocks;
 

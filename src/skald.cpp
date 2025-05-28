@@ -1,4 +1,5 @@
 #include "../include/skald.h"
+#include "parse_state.h"
 #include "skald_actions.h"
 #include "skald_grammar.h"
 #include "tao/pegtl/parse.hpp"
@@ -16,12 +17,21 @@ void Skald::load(std::string path) {
     pegtl::file_input in(path);
     std::cout << "Loaded file: " << path << "\n";
 
-    std::string state;
+    ParseState state(path);
+
     if (pegtl::parse<grammar, action>(in, state)) {
       std::cout << "Parse successful!\n";
     } else {
       std::cout << "Parse failed!\n";
     }
+
+    std::cout << ">>> Parse results:";
+    // Print details about each block
+    for (const auto &[tag, block] : state.module.blocks) {
+      std::cout << "   - Block '" << tag << "': " << block.beats.size()
+                << " beats" << std::endl;
+    }
+
   } catch (const pegtl::parse_error &e) {
     std::cout << "Parse error: " << e.what() << "\n";
   } catch (const std::exception &e) {

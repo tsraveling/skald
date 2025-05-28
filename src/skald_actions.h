@@ -1,5 +1,6 @@
 #pragma once
 
+#include "parse_state.h"
 #include "skald_grammar.h"
 #include <iostream>
 
@@ -7,19 +8,19 @@ namespace Skald {
 
 template <typename Rule> struct action {};
 
-// This should fire when the # character is matched
-template <> struct action<one<'#'>> {
+template <> struct action<block_tag_name> {
   template <typename ActionInput>
-  static void apply(const ActionInput &in, std::string &v) {
-    std::cout << "FOUND HASH: " << in.string() << "\n";
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto tag = input.string();
+    state.start_block(tag);
   }
 };
 
-// This should fire for the tag name part
-template <> struct action<tag_name> {
+template <> struct action<beat_content> {
   template <typename ActionInput>
-  static void apply(const ActionInput &in, std::string &v) {
-    std::cout << "FOUND TAG NAME: " << in.string() << "\n";
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    state.add_beat(text);
   }
 };
 
