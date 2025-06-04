@@ -6,9 +6,14 @@
 
 namespace Skald {
 
+struct BeatInsertion {
+  std::string variable_name;
+};
+
+using BeatPart = std::variant<std::string, BeatInsertion>;
+
 struct Beat {
-  std::string something;
-  std::string text = "";
+  std::vector<BeatPart> parts;
 };
 
 struct Block {

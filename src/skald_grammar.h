@@ -15,15 +15,17 @@ struct blank_line : seq<star<blank>, eol> {};
 
 struct ws : star<space> {};
 
-// Block tag
+/* Block tag */
 struct block_tag_name : plus<identifier_other> {};
 struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
 
-// Beat
-struct beat_text : not_one<'\n'> {};
+/* Beat */
+struct beat_text : plus<seq<not_at<string<'{'>>, not_at<eol>, any>> {};
 struct beat_content_part : sor<inline_comment, beat_text> {};
 struct beat_content : plus<beat_content_part> {};
-struct beat_line : seq<beat_content, eol> {};
+
+// Rules out blank lines
+struct beat_line : seq<not_at<seq<star<blank>, eol>>, beat_content, eol> {};
 
 // Skip these
 struct ignored : sor<line_comment, blank_line> {};
