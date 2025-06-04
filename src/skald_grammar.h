@@ -30,6 +30,13 @@ struct beat_content : plus<beat_content_part> {};
 struct beat_line : seq<not_at<seq<star<blank>, eol>>, opt<beat_attribution>,
                        beat_content, eol> {};
 
+/* Choices */
+struct choice_text : until<eol> {};
+struct choice_line : seq<star<blank>, one<'>'>, star<blank>, choice_text> {};
+// STUB: put optional indented "operations" here later
+struct choice_clause : seq<choice_line> {};
+struct choice_block : plus<choice_clause> {};
+
 // Skip these
 struct ignored : sor<line_comment, blank_line> {};
 
