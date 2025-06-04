@@ -13,6 +13,7 @@ struct BeatInsertion {
 using BeatPart = std::variant<std::string, BeatInsertion>;
 
 struct Beat {
+  std::string attribution;
   std::vector<BeatPart> parts;
 };
 

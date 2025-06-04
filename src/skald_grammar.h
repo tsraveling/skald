@@ -20,12 +20,15 @@ struct block_tag_name : plus<identifier_other> {};
 struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
 
 /* Beat */
+struct beat_attribution
+    : seq<star<blank>, plus<identifier_other>, one<':'>, star<blank>> {};
 struct beat_text : plus<seq<not_at<string<'{'>>, not_at<eol>, any>> {};
 struct beat_content_part : sor<inline_comment, beat_text> {};
 struct beat_content : plus<beat_content_part> {};
 
 // Rules out blank lines
-struct beat_line : seq<not_at<seq<star<blank>, eol>>, beat_content, eol> {};
+struct beat_line : seq<not_at<seq<star<blank>, eol>>, opt<beat_attribution>,
+                       beat_content, eol> {};
 
 // Skip these
 struct ignored : sor<line_comment, blank_line> {};

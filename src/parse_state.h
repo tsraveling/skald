@@ -15,6 +15,9 @@ struct ParseState {
   /** The current beat stack */
   std::vector<BeatPart> beat_queue;
 
+  /** Tag holder, might be used by multiple entities */
+  std::string current_tag;
+
   /** Construct with filename */
   ParseState(const std::string &filename) { module.filename = filename; }
 
@@ -46,11 +49,15 @@ struct ParseState {
   /** Creates a beat and adds it to the current block */
   void add_beat() {
     if (current_block) {
-      Log::verbose("Adding beat to block.");
+      Log::verbose("Adding beat to block with", beat_queue.size(), "parts",
+                   current_tag.length() > 0 ? "(tag: " + current_tag + ")"
+                                            : "(no tag)");
 
       Beat beat;
       beat.parts = std::move(beat_queue);
+      beat.attribution = current_tag;
       current_block->beats.push_back(beat);
+      current_tag = "";
     } else {
       Log::err("Found beat but there is no current block!");
     }
