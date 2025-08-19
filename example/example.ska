@@ -33,7 +33,7 @@ You could be enjoying an ale by the fire by nightfall if you start walking now.
 But with no risk, comes no glory.
 
 (? has_torch) Besides, you have a torch. What could go wrong?
-(? else) You only wish you had something to light your way ...
+(else) You only wish you had something to light your way ...
 
 > Enter the crypt -> crypt
 > Check out the shack -> shack
@@ -63,7 +63,7 @@ Within the shack, you find a torch!
 #crypt
 
 * (? has_torch) -> crypt_dark
-* (? else) -> crypt_torch
+* (else) -> crypt_torch
 
 
 -- DARK CRYPT BRANCH --
@@ -156,6 +156,7 @@ Just as poor, but feeling more alive than ever.
 Not a bad thing to be.
 
 END
+
 
 #leave_booty
 

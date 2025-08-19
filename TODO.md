@@ -11,3 +11,4 @@
 ## Considerations
 
 - [ ] String handling in ternaries etc needs clarification
+- [ ] We have to figure out a good way of handling localization
