@@ -134,6 +134,35 @@ You can also do a **switch ternary** using an integer variable like this:
 My pet is a {pet_type ? 1:dog 2:cat 3:donkey}.
 ```
 
+### 2.3.4 Chance Ternaries
+
+You can use a **chance ternary** to inject an option at random:
+
+```
+I prefer {% ? "dark" : "light"} roast coffee.
+```
+
+You can also make a **chance switch ternary**:
+
+```
+Her pet is a {% ? :"dog" :"cat" :"donkey"} -- these choices are evenly weighted
+```
+
+You can weight options like this:
+
+```
+Her pet is a {% ? :"dog" 3:"cat" 5:"donkey"} -- This pet has a 5/9 chance of being a donkey
+```
+
+Finally, you can mark some options as conditional with paren syntax:
+
+```
+Her pet is a {% ? :"dog" :"cat" 3(?is_pirate): "parrot"}.
+```
+
+In this example, if `is_pirate` is not set, it's a coin-flip between dog and cat. If she is a pirate, however, the pet has a 3/5 chance of being a parrot.
+
+
 ## 2.4 Logic Beats
 
 Sometimes in a narrative flow, you may want to perform logic that is not directly attached to a text beat. To do that, you can use a **logic beat:**
@@ -167,6 +196,70 @@ If you immediately follow a conditional logic block with `* (else)`, that will d
 ```
 
 This can be useful for places where the narrative branches due to choices made previous to the current block.
+
+### 2.4.3 Inline Logic Beats
+
+If a logic beat has only one operation, it can be written inline:
+
+```
+* ~ money -= 5
+* (? brave) -> road_less_traveled
+* (else) -> road_more_traveled
+```
+
+This matters in terms of execution order. For instance, if you have this:
+
+```
+The shopkeeper takes your money.
+    ~ money -= 20
+
+* shopkeeping += 1
+```
+
+The signal for the money mutation would be sent as that text appears; the shopkeeping +1 mutation would be sent after the player "continues" the conversation.
+
+## 2.5 Chance Blocks
+
+If successive blocks are prefixed with (%), the engine will pick one to present at random:
+
+```
+(%) Hi there!
+(%) Why hello.
+(%) Sup?
+```
+
+You can mark some chances as conditional. Conditionals will only be included in the "draw pile" if the conditional is met:
+
+```
+(%) Hello, stranger.
+(%) Greetings!
+(%? has_met) Nice to see you again.
+```
+
+Chance blocks can be weighted with an integer prefix:
+
+```
+(2%) Ahoy!      -- This has a 2/3 chance of printing
+(%) Hoy!        -- This has a 1/3 chance of printing
+```
+
+As with any other kind of block, logic can be added:
+
+```
+You roll the dice.
+
+(5%) You miss, and pay up.
+    ~ money -= 100
+(%) You hit six!
+    ~ money += 300
+```
+
+This also works with logic blocks (`*`):
+
+```
+(%) * -> find_way
+(3%) * -> get_lost
+```
 
 # 3. Logic
 
