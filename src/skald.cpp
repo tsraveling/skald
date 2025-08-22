@@ -3,6 +3,7 @@
 #include "skald_actions.h"
 #include "skald_grammar.h"
 #include "tao/pegtl/parse.hpp"
+#include <iostream>
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/trace.hpp>
 
@@ -30,6 +31,17 @@ void Skald::load(std::string path) {
     for (const auto &[tag, block] : state.module.blocks) {
       std::cout << "   - Block '" << tag << "': " << block.beats.size()
                 << " beats" << std::endl;
+      for (const auto &beat : block.beats) {
+        std::cout << "     - Beat: " << beat.attribution << ": ";
+        for (const auto &beat_part : beat.parts) {
+          if (std::holds_alternative<std::string>(beat_part)) {
+            std::cout << std::get<std::string>(beat_part);
+          } else {
+            std::cout << "<insertion>";
+          }
+        }
+        std::cout << "\n";
+      }
     }
 
   } catch (const pegtl::parse_error &e) {
