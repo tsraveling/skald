@@ -32,15 +32,8 @@ void Skald::load(std::string path) {
       std::cout << "   - Block '" << tag << "': " << block.beats.size()
                 << " beats" << std::endl;
       for (const auto &beat : block.beats) {
-        std::cout << "     - Beat: " << beat.attribution << ": ";
-        for (const auto &beat_part : beat.parts) {
-          if (std::holds_alternative<std::string>(beat_part)) {
-            std::cout << std::get<std::string>(beat_part);
-          } else {
-            std::cout << "<insertion>";
-          }
-        }
-        std::cout << "\n";
+        std::cout << "     - Beat: " << beat.attribution << ": "
+                  << beat.content.dbg_desc() << "\n";
       }
     }
 

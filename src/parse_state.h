@@ -13,7 +13,7 @@ struct ParseState {
   Block *current_block = nullptr;
 
   /** The current beat stack */
-  std::vector<BeatPart> beat_queue;
+  std::vector<TextPart> beat_queue;
 
   /** Tag holder, might be used by multiple entities */
   std::string current_tag;
@@ -30,7 +30,9 @@ struct ParseState {
       beat_queue.push_back(str);
     } else {
       std::string &last_str = std::get<std::string>(beat_queue.back());
-      last_str += str;
+      // Eliminate double spaces for comment joins
+      last_str +=
+          (last_str.back() == ' ' && str.front() == ' ') ? str.substr(1) : str;
     }
   }
 
@@ -54,7 +56,7 @@ struct ParseState {
                                             : "(no tag)");
 
       Beat beat;
-      beat.parts = std::move(beat_queue);
+      beat.content.parts = std::move(beat_queue);
       beat.attribution = current_tag;
       current_block->beats.push_back(beat);
       current_tag = "";

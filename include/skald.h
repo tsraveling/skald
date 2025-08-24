@@ -6,15 +6,35 @@
 
 namespace Skald {
 
-struct BeatInsertion {
+struct TextInsertion {
   std::string variable_name;
 };
 
-using BeatPart = std::variant<std::string, BeatInsertion>;
+using TextPart = std::variant<std::string, TextInsertion>;
+
+struct TextContent {
+  std::vector<TextPart> parts;
+  std::string dbg_desc() const {
+    std::string ret = "";
+    for (auto &part : parts) {
+      if (std::holds_alternative<std::string>(part)) {
+        ret += std::get<std::string>(part);
+      } else {
+        auto ins = std::get<TextInsertion>(part);
+        ret += "{" + ins.variable_name + "}";
+      }
+    }
+    return ret;
+  }
+};
+
+struct ChoiceBlock {};
+
+struct Choice {};
 
 struct Beat {
   std::string attribution;
-  std::vector<BeatPart> parts;
+  TextContent content;
 };
 
 struct Block {
