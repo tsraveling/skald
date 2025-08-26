@@ -10,6 +10,7 @@ add_subdirectory(deps/pegtl)
 
 # Main library
 add_library(skald STATIC
+    src/debug.cpp
     src/skald.cpp
     include/skald.h
     # Add other source files as needed
