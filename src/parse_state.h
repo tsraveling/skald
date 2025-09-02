@@ -13,6 +13,8 @@ struct ParseState {
   /** The block currently under construction */
   Block *current_block = nullptr;
 
+  // STUB: We will put an "operations queue" here as well
+
   /** The current beat stack */
   std::vector<TextPart> text_content_queue;
 
@@ -58,19 +60,27 @@ struct ParseState {
   /** Creates a beat and adds it to the current block */
   void add_beat() {
     dbg_out(">>> add_beat()");
-    if (current_block) {
-      Log::verbose(
-          "Adding beat to block with", text_content_queue.size(), "parts",
-          current_tag.length() > 0 ? "(tag: " + current_tag + ")" : "(no tag)");
-
-      Beat beat;
-      beat.content.parts = std::move(text_content_queue);
-      beat.attribution = current_tag;
-      current_block->beats.push_back(beat);
-      current_tag = "";
-    } else {
+    if (!current_block) {
       Log::err("Found beat but there is no current block!");
     }
+    Log::verbose(" - Adding beat.");
+
+    Beat beat;
+    beat.content.parts = std::move(text_content_queue);
+    beat.attribution = current_tag;
+    current_block->beats.push_back(beat);
+  }
+
+  void add_choice() {
+    if (!current_block) {
+      Log::err("Found choice but there is no current block!");
+      return;
+    }
+    Log::verbose(" - Adding choice.");
+    Choice choice;
+    choice.content.parts = std::move(text_content_queue);
+    // STUB: Move operations here as well
+    current_block->choices.push_back(choice);
   }
 };
 

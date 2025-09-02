@@ -28,18 +28,22 @@ struct TextContent {
   }
 };
 
-struct ChoiceBlock {};
-
-struct Choice {};
+struct Choice {
+  TextContent content;
+  // STUB: Operations will go here
+};
 
 struct Beat {
   std::string attribution;
   TextContent content;
 };
 
+// TODO: Support the "auto-continue" block
+// (that is untagged and follows an inline choice block)
 struct Block {
   std::string tag;
   std::vector<Beat> beats{};
+  std::vector<Choice> choices;
 };
 
 class Module {

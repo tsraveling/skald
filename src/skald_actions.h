@@ -23,7 +23,6 @@ template <> struct action<beat_attribution> {
 
     // Grab everything before the colon
     std::string tag = text.substr(0, text.find(':'));
-    state.current_tag = input.string();
 
     // Trim leading whitespace
     auto start = tag.find_first_not_of(" \t");
@@ -59,7 +58,15 @@ template <> struct action<beat_line> {
 template <> struct action<choice_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> choice_clause");
+    dbg_out(">>> choice_clause: " << input.string());
+    state.add_choice();
+  }
+};
+
+template <> struct action<choice_block> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> choice block: " << input.string());
     // state.add_beat();
   }
 };

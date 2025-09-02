@@ -35,6 +35,9 @@ void Skald::load(std::string path) {
         std::cout << "     - Beat: " << beat.attribution << ": "
                   << beat.content.dbg_desc() << "\n";
       }
+      for (const auto &choice : block.choices) {
+        std::cout << "      - Choice: " << choice.content.dbg_desc() << "\n";
+      }
     }
 
   } catch (const pegtl::parse_error &e) {

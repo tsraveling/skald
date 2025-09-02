@@ -1,5 +1,8 @@
 # Skald TODO
 
+NEXT: for text queue, decide if we should stick in a beat or a choice. the text queue should be there when either is done, so just grab the queue and inject it as content into the appropriate entity then.
+- And then also add choice block support.
+
 - [ ] Embedded comments: `some text [and this is embedded] here`
 - [ ] Attributed beats
 - [ ] Choices and choice sets

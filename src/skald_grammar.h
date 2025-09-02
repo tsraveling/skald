@@ -48,7 +48,7 @@ struct beat_line : seq<not_at<seq<star<blank>, eol>>, not_at<choice_prefix>,
 /** The initial line e.g. `> Some choice` */
 struct choice_line : seq<choice_prefix, star<blank>, text_content> {};
 // STUB: put optional indented "operations" here later
-struct choice_clause : seq<choice_line> {};
+struct choice_clause : seq<choice_line, eol> {};
 struct choice_block : plus<choice_clause> {};
 
 // SECTION: EXCLUDED
