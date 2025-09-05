@@ -16,6 +16,24 @@ template <> struct action<block_tag_name> {
   }
 };
 
+template <> struct action<identifier> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    state.last_identfier = text;
+    dbg_out(">>> last_id: " << text);
+  }
+};
+
+template <> struct action<inline_choice_move> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+
+    dbg_out(">>> inline_choice_move: " << text);
+  }
+};
+
 template <> struct action<beat_attribution> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

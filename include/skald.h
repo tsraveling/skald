@@ -6,6 +6,12 @@
 
 namespace Skald {
 
+struct Move {
+  std::string target_tag;
+};
+
+using Operation = std::variant<Move>;
+
 struct TextInsertion {
   std::string variable_name;
 };
@@ -30,7 +36,7 @@ struct TextContent {
 
 struct Choice {
   TextContent content;
-  // STUB: Operations will go here
+  std::vector<Operation> operations;
 };
 
 struct Beat {

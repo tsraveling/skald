@@ -10,6 +10,8 @@ struct ParseState {
   /** The module attached to the parsed file */
   Module module;
 
+  // STUB: Add "context" e.g. in_choice
+
   /** The block currently under construction */
   Block *current_block = nullptr;
 
@@ -20,6 +22,9 @@ struct ParseState {
 
   /** Tag holder, might be used by multiple entities */
   std::string current_tag;
+
+  /** The last-parsed identifier */
+  std::string last_identfier;
 
   /** Construct with filename */
   ParseState(const std::string &filename) { module.filename = filename; }

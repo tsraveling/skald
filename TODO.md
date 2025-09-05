@@ -3,12 +3,22 @@
 NEXT: for text queue, decide if we should stick in a beat or a choice. the text queue should be there when either is done, so just grab the queue and inject it as content into the appropriate entity then.
 - And then also add choice block support.
 
-- [ ] Embedded comments: `some text [and this is embedded] here`
-- [ ] Attributed beats
-- [ ] Choices and choice sets
-- [ ] Choice redirects
+- [x] Embedded comments: `some text [and this is embedded] here`
+- [x] Attributed beats
+- [x] Choices and choice sets
+- [ ] Choice redirects (see below)
 
-- [ ] This covers up to 2.2.1 in the syntax doc. Plan the rest of it in 003.
+## Choice Redirects (2.2.1)
+
+- [ ] First set up the operations queue and overall structure
+
+An inline redirect is really just an inline operation; we should support any of these
+
+- [x] So set up grammar for operations
+- [x] Then have that as an optional one on the end of the choice
+- [ ] Then figure out how to determine if it is present, and if it is present, add it as the only member of the choice's operations stack
+
+# PEGTL Notes
 
 ## Patterns
 
