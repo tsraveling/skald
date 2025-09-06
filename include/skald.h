@@ -41,6 +41,7 @@ struct Choice {
 
 struct Beat {
   std::string attribution;
+  std::vector<Operation> operations;
   TextContent content;
 };
 

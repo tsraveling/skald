@@ -20,7 +20,7 @@ template <> struct action<identifier> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
-    state.last_identfier = text;
+    state.last_identifier = text;
     dbg_out(">>> last_id: " << text);
   }
 };
@@ -29,7 +29,7 @@ template <> struct action<inline_choice_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
-
+    state.operation_queue.push_back(Move{state.pop_id()});
     dbg_out(">>> inline_choice_move: " << text);
   }
 };

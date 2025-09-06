@@ -2,6 +2,9 @@
 #include "debug.h"
 #include "logger.h"
 #include "skald.h"
+#include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace Skald {
@@ -10,12 +13,11 @@ struct ParseState {
   /** The module attached to the parsed file */
   Module module;
 
-  // STUB: Add "context" e.g. in_choice
-
   /** The block currently under construction */
   Block *current_block = nullptr;
 
-  // STUB: We will put an "operations queue" here as well
+  /** Current operations stack */
+  std::vector<Operation> operation_queue;
 
   /** The current beat stack */
   std::vector<TextPart> text_content_queue;
@@ -24,10 +26,30 @@ struct ParseState {
   std::string current_tag;
 
   /** The last-parsed identifier */
-  std::string last_identfier;
+  std::string last_identifier;
 
   /** Construct with filename */
   ParseState(const std::string &filename) { module.filename = filename; }
+
+  /** This will return an identifier string if one is present.
+   *  Use it like:
+   *  `if (auto value = pop_id()) { std::cout  << *value; }`
+   */
+  std::optional<std::string> pop_id_cond() {
+    if (last_identifier.length() < 1) {
+      return std::nullopt;
+    }
+    return pop_id();
+  }
+
+  /** This returns whatever is in last_identifier and sets that value to an
+   *  empty string.
+   */
+  std::string pop_id() {
+    auto r = last_identifier;
+    last_identifier = "";
+    return r;
+  }
 
   /** Will either append to the last string if also a simple string, or add it
    * to the stack if not. */
@@ -72,6 +94,7 @@ struct ParseState {
 
     Beat beat;
     beat.content.parts = std::move(text_content_queue);
+    beat.operations = std::move(operation_queue);
     beat.attribution = current_tag;
     current_block->beats.push_back(beat);
   }
@@ -84,7 +107,7 @@ struct ParseState {
     Log::verbose(" - Adding choice.");
     Choice choice;
     choice.content.parts = std::move(text_content_queue);
-    // STUB: Move operations here as well
+    choice.operations = std::move(operation_queue);
     current_block->choices.push_back(choice);
   }
 };

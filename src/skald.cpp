@@ -1,4 +1,5 @@
 #include "../include/skald.h"
+#include "debug.h"
 #include "parse_state.h"
 #include "skald_actions.h"
 #include "skald_grammar.h"
@@ -6,10 +7,25 @@
 #include <iostream>
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/trace.hpp>
+#include <vector>
 
 namespace pegtl = tao::pegtl;
 
 namespace Skald {
+
+/* DEBUG OUTPUT STUFF TO DELETE LATER */
+
+struct OpDebugProcessor {
+  void operator()(const Move &move) {
+    dbg_out("        * MOVE TO: " << move.target_tag);
+  }
+};
+
+void dbg_desc_ops(const std::vector<Operation> &ops) {
+  for (auto &op : ops) {
+    std::visit(OpDebugProcessor{}, op);
+  }
+}
 
 /* EXTERNAL API */
 
@@ -37,6 +53,7 @@ void Skald::load(std::string path) {
       }
       for (const auto &choice : block.choices) {
         std::cout << "      - Choice: " << choice.content.dbg_desc() << "\n";
+        dbg_desc_ops(choice.operations);
       }
     }
 
