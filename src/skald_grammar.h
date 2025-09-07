@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tao/pegtl.hpp>
-#include <tao/pegtl/contrib/json.hpp>
 
 using namespace tao::pegtl;
 
@@ -13,12 +12,15 @@ struct blank_line : seq<star<blank>, eol> {};
 struct ws : star<space> {};
 
 // SECTION: ABSTRACT STRUCTURE
-//
+
+// Parentheses
 template <typename ParenContent>
 struct paren : seq<one<'('>, ParenContent, one<')'>> {};
+
+// Indentation
 using two_or_more_spaces = seq<space, space, star<space>>;
 using one_or_more_tabs = plus<one<'\t'>>;
-// STUB: Define indent here
+using indent = sor<two_or_more_spaces, one_or_more_tabs>;
 
 // SECTION: PREFIXES
 
@@ -26,7 +28,9 @@ struct choice_prefix : seq<star<blank>, one<'>'>> {};
 
 // SECTION: BASIC VALUE TYPES
 
-struct val_string : json::string {};
+struct escaped_char : seq<one<'\\'>, one<'"', '\\', 'n'>> {};
+struct string_content : star<not_one<'"'>> {};
+struct val_string : seq<one<'"'>, string_content, one<'"'>> {};
 struct val_bool_true : string<'t', 'r', 'u', 'e'> {};
 struct val_bool_false : string<'f', 'a', 'l', 's', 'e'> {};
 struct val_bool : sor<val_bool_true, val_bool_false> {};
@@ -63,9 +67,10 @@ struct arg_list : list<argument, arg_separator> {};
 
 // SECTION: OPERATIONS
 
-// struct argument: identifier
 struct op_move : seq<move_marker, star<blank>, identifier, star<blank>> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
+struct operation : sor<op_move, op_method> {};
+struct op_line : seq<indent, operation, eol> {};
 
 // SECTION: BEATS
 
