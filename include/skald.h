@@ -2,15 +2,52 @@
 
 #include <map>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace Skald {
+
+struct Variable {
+  std::string name;
+};
+
+using RValue = std::variant<std::string, bool, int, float, Variable>;
+
+inline std::string rval_to_string(const RValue &val) {
+  return std::visit(
+      [](const auto &value) -> std::string {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, std::string>) {
+          return value;
+        } else if constexpr (std::is_same_v<T, bool>) {
+          return value ? "true" : "false";
+        } else if constexpr (std::is_arithmetic_v<T>) {
+          return std::to_string(value);
+        } else {
+          return value.name;
+        }
+      },
+      val);
+}
 
 struct Move {
   std::string target_tag;
 };
 
-using Operation = std::variant<Move>;
+struct MethodCall {
+  std::string method;
+  std::vector<RValue> args;
+
+  std::string dbg_desc() const {
+    std::string ret = "CALL " + method + ": ";
+    for (const auto &arg : args) {
+      ret += rval_to_string(arg) + " ";
+    }
+    return ret;
+  }
+};
+
+using Operation = std::variant<Move, MethodCall>;
 
 struct TextInsertion {
   std::string variable_name;

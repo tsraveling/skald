@@ -38,3 +38,7 @@ An inline redirect is really just an inline operation; we should support any of 
 
 - [ ] String handling in ternaries etc needs clarification
 - [ ] We have to figure out a good way of handling localization
+
+# Future Features
+
+- [ ] Define an interface of methods we can use up front

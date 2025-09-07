@@ -16,6 +16,9 @@ struct ws : star<space> {};
 //
 template <typename ParenContent>
 struct paren : seq<one<'('>, ParenContent, one<')'>> {};
+using two_or_more_spaces = seq<space, space, star<space>>;
+using one_or_more_tabs = plus<one<'\t'>>;
+// STUB: Define indent here
 
 // SECTION: PREFIXES
 
