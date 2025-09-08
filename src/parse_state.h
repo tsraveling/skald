@@ -28,6 +28,13 @@ struct ParseState {
   /** The last-parsed identifier */
   std::string last_identifier;
 
+  /* Raw value buffers */
+  std::string string_buffer;
+  bool bool_buffer;
+
+  /** Buffers the last-held rvalue */
+  RValue rval_buffer;
+
   /** Construct with filename */
   ParseState(const std::string &filename) { module.filename = filename; }
 

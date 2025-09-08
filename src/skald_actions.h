@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "parse_state.h"
 #include "skald_grammar.h"
+#include <string>
 
 namespace Skald {
 
@@ -25,28 +26,59 @@ template <> struct action<identifier> {
   }
 };
 
-template <> struct action<inline_choice_move> {
+// SECTION: RAW VALUES
+
+template <> struct action<val_bool_true> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    state.operation_queue.push_back(Move{state.pop_id()});
-    dbg_out(">>> inline_choice_move: " << text);
+    state.bool_buffer = true;
+  }
+};
+template <> struct action<val_bool_false> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.bool_buffer = false;
+  }
+};
+template <> struct action<string_content> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.string_buffer = input.string();
   }
 };
 
-template <> struct action<beat_attribution> {
+// SECTION: RVALUES AND ARGS
+
+template <> struct action<val_bool> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-
-    // Grab everything before the colon
-    std::string tag = text.substr(0, text.find(':'));
-
-    // Trim leading whitespace
-    auto start = tag.find_first_not_of(" \t");
-    state.current_tag = (start != std::string::npos) ? tag.substr(start) : tag;
+    state.rval_buffer = state.bool_buffer;
+    dbg_out("<<< val_bool: " << state.bool_buffer);
   }
 };
+template <> struct action<val_int> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.rval_buffer = std::stoi(input.string());
+    dbg_out("<<< val_int: " << input.string());
+  }
+};
+template <> struct action<val_float> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.rval_buffer = std::stof(input.string());
+    dbg_out("<<< val_float: " << input.string());
+  }
+};
+template <> struct action<val_string> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.rval_buffer = state.string_buffer;
+    dbg_out("<<< val_string: " << state.string_buffer);
+  }
+};
+
+// SECTION: TEXT
 
 template <> struct action<inline_text_segment> {
   template <typename ActionInput>
@@ -65,11 +97,40 @@ template <> struct action<text_content> {
   }
 };
 
-template <> struct action<beat_line> {
+// SECTION: OPERATION LINES
+
+template <> struct action<operation> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> beat_line");
-    state.add_beat();
+    auto text = input.string();
+    dbg_out(">>> operation: " << text);
+  }
+};
+
+template <> struct action<op_line> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out(">>> op_line: " << text);
+  }
+};
+
+// SECTION: CHOICES
+
+template <> struct action<inline_choice_move> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    state.operation_queue.push_back(Move{state.pop_id()});
+    dbg_out(">>> inline_choice_move: " << text);
+  }
+};
+
+// FIXME: Delete this later
+template <> struct action<choice_line> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> choice_line: " << input.string());
   }
 };
 
@@ -89,6 +150,28 @@ template <> struct action<choice_block> {
   }
 };
 
-// template <> struct action<choic
+// SECTION: BEATS
+
+template <> struct action<beat_attribution> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+
+    // Grab everything before the colon
+    std::string tag = text.substr(0, text.find(':'));
+
+    // Trim leading whitespace
+    auto start = tag.find_first_not_of(" \t");
+    state.current_tag = (start != std::string::npos) ? tag.substr(start) : tag;
+  }
+};
+
+template <> struct action<beat_line> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> beat_line");
+    state.add_beat();
+  }
+};
 
 } // namespace Skald

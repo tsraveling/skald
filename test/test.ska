@@ -13,4 +13,9 @@ some_tag: This one is attributed!
 > This is a choice
 > Another is this
 > This one goes -> to_school
+> This one has operations in lines
+  -> to_park
+  :baseMethod()
+  :methodWithArg(5)
+  :methodWithAllArgs(5, true, 2.3, false, "some string content!", a_variable)
 

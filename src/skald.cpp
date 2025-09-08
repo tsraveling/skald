@@ -19,6 +19,9 @@ struct OpDebugProcessor {
   void operator()(const Move &move) {
     dbg_out("        * MOVE TO: " << move.target_tag);
   }
+  void operator()(const MethodCall &method_call) {
+    dbg_out("        * CALL: " << method_call.dbg_desc());
+  }
 };
 
 void dbg_desc_ops(const std::vector<Operation> &ops) {

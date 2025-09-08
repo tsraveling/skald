@@ -36,11 +36,12 @@ struct val_bool_false : string<'f', 'a', 'l', 's', 'e'> {};
 struct val_bool : sor<val_bool_true, val_bool_false> {};
 struct identifier : plus<identifier_other> {};
 struct move_marker : seq<star<blank>, string<'-', '>'>> {};
-struct sign_indicator : one<'+', '-'> {};
+struct sign_indicator : opt<one<'+', '-'>> {};
 struct signed_float
     : seq<opt<sign_indicator>, plus<digit>, one<'.'>, plus<digit>> {};
 struct signed_int : seq<sign_indicator, plus<digit>> {};
-struct val_number : sor<signed_float, signed_int> {};
+struct val_int : signed_int {};
+struct val_float : signed_float {};
 
 // SECTION: TEXT
 
@@ -60,7 +61,10 @@ struct text_content : plus<text_content_part> {};
 // SECTION: LOGIC FUNDAMENTALS
 
 struct variable_name : identifier {};
-struct rvalue : sor<val_bool, val_string, val_number, variable_name> {};
+
+/** A variable name used as an rvalue */
+struct r_variable : variable_name {};
+struct rvalue : sor<val_bool, val_string, val_float, val_int, r_variable> {};
 struct arg_separator : seq<star<blank>, one<','>, star<blank>> {};
 struct argument : rvalue {};
 struct arg_list : list<argument, arg_separator> {};
@@ -84,13 +88,14 @@ struct beat_line : seq<not_at<seq<star<blank>, eol>>, not_at<choice_prefix>,
 
 // SECTION: CHOICES
 
-// STUB: put optional one-line choice ops here
-/** The initial line e.g. `> Some choice` */
 struct inline_choice_move : op_move {};
+
+/** The initial line e.g. `> Some choice` */
 struct choice_line : seq<choice_prefix, star<blank>, text_content,
                          opt<inline_choice_move>, eol> {};
-// STUB: put optional indented "operations" here later
-struct choice_clause : seq<choice_line> {};
+
+/** The choice line with optional indented operation lines */
+struct choice_clause : seq<choice_line, star<op_line>> {};
 struct choice_block : plus<choice_clause> {};
 
 // SECTION: EXCLUDED
