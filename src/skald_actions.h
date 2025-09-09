@@ -2,6 +2,7 @@
 
 #include "debug.h"
 #include "parse_state.h"
+#include "skald.h"
 #include "skald_grammar.h"
 #include <string>
 
@@ -77,6 +78,21 @@ template <> struct action<val_string> {
     dbg_out("<<< val_string: " << state.string_buffer);
   }
 };
+template <> struct action<r_variable> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.rval_buffer = Variable{input.string()};
+    dbg_out("<<< r_variable: " << input.string());
+  }
+};
+
+template <> struct action<argument> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.argument_queue.push_back(state.rval_buffer);
+    dbg_out("<<< argument (adding to queue): " << input.string());
+  }
+};
 
 // SECTION: TEXT
 
@@ -104,6 +120,23 @@ template <> struct action<operation> {
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
     dbg_out(">>> operation: " << text);
+  }
+};
+
+template <> struct action<op_move> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.operation_queue.push_back(Move{state.pop_id()});
+    dbg_out(">>> op_move: " << input.string());
+  }
+};
+
+template <> struct action<op_method> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.operation_queue.push_back(
+        MethodCall{state.pop_id(), std::move(state.argument_queue)});
+    dbg_out(">>> op_method: " << input.string());
   }
 };
 

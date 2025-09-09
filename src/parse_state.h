@@ -35,6 +35,9 @@ struct ParseState {
   /** Buffers the last-held rvalue */
   RValue rval_buffer;
 
+  /** Argument stack for method calls etc */
+  std::vector<RValue> argument_queue;
+
   /** Construct with filename */
   ParseState(const std::string &filename) { module.filename = filename; }
 
