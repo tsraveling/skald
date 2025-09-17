@@ -8,8 +8,8 @@ namespace Skald {
 
 // Line comment using the same comment marker style
 struct line_comment : seq<string<'-', '-'>, until<eol>> {};
-struct blank_line : seq<star<blank>, eol> {};
-struct ws : star<space> {};
+struct ws : star<blank> {};
+struct blank_line : seq<ws, eol> {};
 
 // SECTION: ABSTRACT STRUCTURE
 
@@ -24,7 +24,7 @@ using indent = sor<two_or_more_spaces, one_or_more_tabs>;
 
 // SECTION: PREFIXES
 
-struct choice_prefix : seq<star<blank>, one<'>'>> {};
+struct choice_prefix : seq<ws, one<'>'>> {};
 
 // SECTION: BASIC VALUE TYPES
 
@@ -35,7 +35,7 @@ struct val_bool_true : string<'t', 'r', 'u', 'e'> {};
 struct val_bool_false : string<'f', 'a', 'l', 's', 'e'> {};
 struct val_bool : sor<val_bool_true, val_bool_false> {};
 struct identifier : plus<identifier_other> {};
-struct move_marker : seq<star<blank>, string<'-', '>'>> {};
+struct move_marker : seq<ws, string<'-', '>'>> {};
 struct sign_indicator : opt<one<'+', '-'>> {};
 struct signed_float
     : seq<opt<sign_indicator>, plus<digit>, one<'.'>, plus<digit>> {};
@@ -65,13 +65,31 @@ struct variable_name : identifier {};
 /** A variable name used as an rvalue */
 struct r_variable : variable_name {};
 struct rvalue : sor<val_bool, val_string, val_float, val_int, r_variable> {};
-struct arg_separator : seq<star<blank>, one<','>, star<blank>> {};
+struct arg_separator : seq<ws, one<','>, ws> {};
 struct argument : rvalue {};
 struct arg_list : list<argument, arg_separator> {};
 
+// These are used for inline computation
+struct operator_plus_equals : string<'+', '='> {};
+struct operator_minus_equals : string<'-', '='> {};
+struct operator_equals : string<'='> {};
+struct operator_equals_switch : string<'=', '!'> {};
+struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
+                          operator_equals_switch, operator_equals> {};
+
 // SECTION: OPERATIONS
 
-struct op_move : seq<move_marker, star<blank>, identifier, star<blank>> {};
+struct mutation_lvalue : variable_name {};
+struct op_mutate_start : seq<ws, one<'~'>, ws, mutation_lvalue, ws> {};
+struct op_mutate_equate
+    : seq<op_mutate_start, ws, operator_equals, ws, rvalue> {};
+struct op_mutate_switch : seq<op_mutate_start, ws, operator_equals_switch> {};
+struct math_operator : sor<operator_plus_equals, operator_minus_equals> {};
+struct math_rvalue : sor<r_variable, val_int, val_float> {};
+struct op_mutate_math
+    : seq<op_mutate_start, ws, math_operator, ws, math_rvalue> {};
+
+struct op_move : seq<move_marker, ws, identifier, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method> {};
 struct op_line : seq<indent, operation, eol> {};
@@ -79,11 +97,10 @@ struct op_line : seq<indent, operation, eol> {};
 // SECTION: BEATS
 
 /** The `some_tag: ...` part of a beat */
-struct beat_attribution : seq<star<blank>, identifier, one<':'>, star<blank>> {
-};
+struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
 
 /** A line with an optional attribution that is not indented or blank */
-struct beat_line : seq<not_at<seq<star<blank>, eol>>, not_at<choice_prefix>,
+struct beat_line : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>,
                        opt<beat_attribution>, text_content, eol> {};
 
 // SECTION: CHOICES
@@ -91,8 +108,8 @@ struct beat_line : seq<not_at<seq<star<blank>, eol>>, not_at<choice_prefix>,
 struct inline_choice_move : op_move {};
 
 /** The initial line e.g. `> Some choice` */
-struct choice_line : seq<choice_prefix, star<blank>, text_content,
-                         opt<inline_choice_move>, eol> {};
+struct choice_line
+    : seq<choice_prefix, ws, text_content, opt<inline_choice_move>, eol> {};
 
 /** The choice line with optional indented operation lines */
 struct choice_clause : seq<choice_line, star<op_line>> {};
