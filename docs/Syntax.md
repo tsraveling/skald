@@ -304,7 +304,7 @@ A **method** communicates via the api to call a method on the game side:
 
 ```
 > Do something
-  :some_method
+  :some_method()
 ```
 
 This will inform the game that `some_method` needs to be processed. A method may optionally return a boolean value for use in a conditional (see 3.2.3):
@@ -317,12 +317,18 @@ Note that `check_method` must return either `true` or `false` on the API side.
 
 For now, methods cannot be used for anything other than booleans, or used in any other operations (e.g. you can't add a method response to a variable).
 
-Finally, methods can include simple **arguments** of the three variable types (string, int, or bool):
+Finally, methods can include simple **arguments** of the three types (string, int, or bool):
 
 ```
-:some_method 1           -- Calls `some_method` with (int)1
-:some_method 1, "hello"  -- Calls with two args, 1 and "hello"
-:some_method false       -- Calls with bool false
+:some_method(1)             -- Calls `some_method` with (int)1
+:some_method(1, "hello")    -- Calls with two args, 1 and "hello"
+:some_method(false)         -- Calls with bool false
+```
+
+Or a variable:
+
+```
+:some_method(is_traveling)  -- Calls with the contents of the "is_traveling" variable
 ```
 
 Methods are not strongly typed, and arguments are not counted. From the Skald side, you can currently send any number of any of the three types of arguments to any method -- so script with care!
@@ -459,19 +465,26 @@ You can compare integers using **more and less than operators**:
 (? num_var <= 10) Less than or equal to ten
 ```
 
-### 3.2.3 Methods
+### 3.2.3 Methods as Conditions
 
 Any method can be used as a **boolean check**. If the method does not return a response, that will be treated as a **false** value.
 
 ```
-(? :check_method) This beat will fire if check_method() returns true via the API.
+(? :check_method()) -- This will fire if check_method() returns true via the API.
 ```
 
 Likewise the false boolean check syntax applies to methods:
 
 ```
-(? :check_method) This beat will fire if check_method() returns false via the API.
+(? !:check_method()) -- This will fire if check_method() returns false via the API.
 ```
+
+You can also pass arguments to conditional methods:
+
+```
+(? :check_method(some_variable)) -- This will pass `some_variable` to `check_method`, where it can be used in determining the calculation
+```
+
 
 # 4. Modules
 
