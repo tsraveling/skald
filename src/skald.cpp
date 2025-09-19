@@ -22,6 +22,9 @@ struct OpDebugProcessor {
   void operator()(const MethodCall &method_call) {
     dbg_out("        * CALL: " << method_call.dbg_desc());
   }
+  void operator()(const Mutation &mutation) {
+    dbg_out("        * MUTATE: " << mutation.dbg_desc());
+  }
 };
 
 void dbg_desc_ops(const std::vector<Operation> &ops) {

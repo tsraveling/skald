@@ -30,6 +30,34 @@ inline std::string rval_to_string(const RValue &val) {
       val);
 }
 
+struct Mutation {
+  enum Type { EQUATE, SWITCH, ADD, SUBTRACT };
+  std::string lvalue;
+  Type type;
+  std::optional<RValue> rvalue;
+  std::string dbg_desc() const {
+    std::string ret = "<" + lvalue + " ";
+    switch (type) {
+    case EQUATE:
+      ret += "EQUALS";
+      break;
+    case SWITCH:
+      ret += "SWITCH";
+      break;
+    case ADD:
+      ret += "ADD";
+      break;
+    case SUBTRACT:
+      ret += "SUBTRACT";
+      break;
+    }
+    if (rvalue) {
+      ret += " " + rval_to_string(*rvalue);
+    }
+    return ret + ">";
+  }
+};
+
 struct Move {
   std::string target_tag;
 };
@@ -47,7 +75,7 @@ struct MethodCall {
   }
 };
 
-using Operation = std::variant<Move, MethodCall>;
+using Operation = std::variant<Move, MethodCall, Mutation>;
 
 struct TextInsertion {
   std::string variable_name;

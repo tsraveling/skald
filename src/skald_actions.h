@@ -140,6 +140,42 @@ template <> struct action<op_method> {
   }
 };
 
+/// MUTATIONS ///
+
+template <> struct action<op_mutate_subtract> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> op_mutate_subtract: " << input.string());
+    state.operation_queue.push_back(
+        Mutation{state.pop_id(), Mutation::SUBTRACT, state.rval_buffer});
+  }
+};
+template <> struct action<op_mutate_add> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> op_mutate_add: " << input.string());
+    state.operation_queue.push_back(
+        Mutation{state.pop_id(), Mutation::ADD, state.rval_buffer});
+  }
+};
+template <> struct action<op_mutate_equate> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> op_mutate_equate: " << input.string());
+    state.operation_queue.push_back(
+        Mutation{state.pop_id(), Mutation::EQUATE, state.rval_buffer});
+  }
+};
+template <> struct action<op_mutate_switch> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.operation_queue.push_back(
+        Mutation{state.pop_id(), Mutation::SWITCH, {}});
+  }
+};
+
+/// OPERATION CORE ///
+
 template <> struct action<op_line> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

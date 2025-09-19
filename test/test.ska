@@ -18,4 +18,10 @@ some_tag: This one is attributed!
   :baseMethod()
   :methodWithArg(5)
   :methodWithAllArgs(5, true, 2.3, false, "some string content!", a_variable)
+> This one mutates
+  ~ equate = 3
+  ~ add += 4
+  ~ subtract -= 5
+  ~ flip =!
+  ~ equate_var = some_other_var
 

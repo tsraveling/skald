@@ -34,7 +34,7 @@ struct val_string : seq<one<'"'>, string_content, one<'"'>> {};
 struct val_bool_true : string<'t', 'r', 'u', 'e'> {};
 struct val_bool_false : string<'f', 'a', 'l', 's', 'e'> {};
 struct val_bool : sor<val_bool_true, val_bool_false> {};
-struct identifier : plus<identifier_other> {};
+struct identifier : seq<identifier_first, star<identifier_other>> {};
 struct move_marker : seq<ws, string<'-', '>'>> {};
 struct sign_indicator : opt<one<'+', '-'>> {};
 struct signed_float
@@ -79,19 +79,22 @@ struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
 
 // SECTION: OPERATIONS
 
-struct mutation_lvalue : variable_name {};
-struct op_mutate_start : seq<ws, one<'~'>, ws, mutation_lvalue, ws> {};
+struct op_mutate_start : seq<ws, one<'~'>, ws, identifier, ws> {};
 struct op_mutate_equate
     : seq<op_mutate_start, ws, operator_equals, ws, rvalue> {};
 struct op_mutate_switch : seq<op_mutate_start, ws, operator_equals_switch> {};
-struct math_operator : sor<operator_plus_equals, operator_minus_equals> {};
 struct math_rvalue : sor<r_variable, val_int, val_float> {};
-struct op_mutate_math
-    : seq<op_mutate_start, ws, math_operator, ws, math_rvalue> {};
+struct op_mutate_add
+    : seq<op_mutate_start, ws, operator_plus_equals, ws, math_rvalue> {};
+struct op_mutate_subtract
+    : seq<op_mutate_start, ws, operator_minus_equals, ws, math_rvalue> {};
+
+struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
+                         op_mutate_subtract> {};
 
 struct op_move : seq<move_marker, ws, identifier, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
-struct operation : sor<op_move, op_method> {};
+struct operation : sor<op_move, op_method, op_mutation> {};
 struct op_line : seq<indent, operation, eol> {};
 
 // SECTION: BEATS
