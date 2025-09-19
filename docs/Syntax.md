@@ -2,6 +2,14 @@
 
 ## 1.1 Basic Syntax
 
+Skald is designed to be readable and flexible, and adaptable to whatever spacing and organizational conventions you prefer. That being said, there are a few rules:
+
+### 1.1.1 Identifiers
+
+Identifiers must start with `a-z`, `A-Z`, or `_`. After the first character, they can also use numbers. Identifiers are used for tags (2.1) and variables (3.1.3).
+
+### 1.1.2 Whitespace and Indentation
+
 For the most part, Skald is whitespace agnostic. You don't need to include blank newlines between beats (2.1) for instance. However, you should indent operations under a beat or logic beat.
 
 ## 1.2 Line Comments
@@ -29,7 +37,7 @@ This only works in beats though, don't try it anywhere else.
 
 ## 2.1 Block Tags and Beats
 
-Core dialogue is composed of **Blocks**, which in turn is composed of **Beats**. A block is defined with a tag (kebab-case preferred, but to your taste) like this:
+Core dialogue is composed of **Blocks**, which in turn is composed of **Beats**. A block is defined with a tag (see Identifiers, 1.1.1) like this:
 
 ```
 #some-block

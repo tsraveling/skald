@@ -15,7 +15,7 @@ some_tag: This one is attributed!
 > This one goes -> to_school
 > This one has operations in lines
   -> to_park
-  :baseMethod()
+  :baseMethod() -- this one has a comment on it!
   :methodWithArg(5)
   :methodWithAllArgs(5, true, 2.3, false, "some string content!", a_variable)
 > This one mutates

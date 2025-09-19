@@ -8,6 +8,7 @@ namespace Skald {
 
 // Line comment using the same comment marker style
 struct line_comment : seq<string<'-', '-'>, until<eol>> {};
+struct end_line_comment : seq<string<'-', '-'>, star<not_one<'\r', '\n'>>> {};
 struct ws : star<blank> {};
 struct blank_line : seq<ws, eol> {};
 
@@ -95,7 +96,7 @@ struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
 struct op_move : seq<move_marker, ws, identifier, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation> {};
-struct op_line : seq<indent, operation, eol> {};
+struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 
 // SECTION: BEATS
 
