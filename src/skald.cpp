@@ -54,11 +54,10 @@ void Skald::load(std::string path) {
       std::cout << "   - Block '" << tag << "': " << block.beats.size()
                 << " beats" << std::endl;
       for (const auto &beat : block.beats) {
-        std::cout << "     - Beat: " << beat.attribution << ": "
-                  << beat.content.dbg_desc() << "\n";
+        std::cout << "     - Beat: " << beat.dbg_desc() << "\n";
       }
       for (const auto &choice : block.choices) {
-        std::cout << "      - Choice: " << choice.content.dbg_desc() << "\n";
+        std::cout << "      - Choice: " << choice.dbg_desc() << "\n";
         dbg_desc_ops(choice.operations);
       }
     }

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <map>
+#include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -29,6 +31,34 @@ inline std::string rval_to_string(const RValue &val) {
       },
       val);
 }
+
+struct ConditionalAtom {
+  enum Comparison {
+    TRUTHY,
+    NOT_TRUTHY,
+    EQUALS,
+    NOT_EQUALS,
+    MORE,
+    LESS,
+    MORE_EQUAL,
+    LESS_EQUAL
+  };
+  RValue a;
+  Comparison comparison;
+  std::optional<RValue> b;
+};
+
+struct Conditional;
+using ConditionalItem =
+    std::variant<ConditionalAtom, std::shared_ptr<Conditional>>;
+
+struct Conditional {
+  enum Type { AND, OR };
+  Type type = Type::AND;
+  std::vector<ConditionalItem> items;
+
+  std::string dbg_desc() const { return "[IF: x]"; }
+};
 
 struct Mutation {
   enum Type { EQUATE, SWITCH, ADD, SUBTRACT };
@@ -100,14 +130,26 @@ struct TextContent {
 };
 
 struct Choice {
+  std::optional<Conditional> condition;
   TextContent content;
   std::vector<Operation> operations;
+
+  std::string dbg_desc() const {
+    return (condition ? condition->dbg_desc() + " " : "") + content.dbg_desc();
+  }
 };
 
 struct Beat {
+  std::optional<Conditional> condition;
   std::string attribution;
   std::vector<Operation> operations;
   TextContent content;
+
+  std::string dbg_desc() const {
+    return (condition ? condition->dbg_desc() + " " : "") +
+           (attribution.length() > 0 ? attribution + ": " : "") +
+           content.dbg_desc();
+  }
 };
 
 // TODO: Support the "auto-continue" block
