@@ -32,8 +32,8 @@ struct choice_prefix : seq<ws, one<'>'>> {};
 struct escaped_char : seq<one<'\\'>, one<'"', '\\', 'n'>> {};
 struct string_content : star<not_one<'"'>> {};
 struct val_string : seq<one<'"'>, string_content, one<'"'>> {};
-struct val_bool_true : string<'t', 'r', 'u', 'e'> {};
-struct val_bool_false : string<'f', 'a', 'l', 's', 'e'> {};
+struct val_bool_true : keyword<'t', 'r', 'u', 'e'> {};
+struct val_bool_false : keyword<'f', 'a', 'l', 's', 'e'> {};
 struct val_bool : sor<val_bool_true, val_bool_false> {};
 struct identifier : seq<identifier_first, star<identifier_other>> {};
 struct move_marker : seq<ws, string<'-', '>'>> {};
@@ -73,10 +73,46 @@ struct arg_list : list<argument, arg_separator> {};
 // These are used for inline computation
 struct operator_plus_equals : string<'+', '='> {};
 struct operator_minus_equals : string<'-', '='> {};
-struct operator_equals : string<'='> {};
+struct operator_equals : one<'='> {};
 struct operator_equals_switch : string<'=', '!'> {};
+struct operator_more : one<'>'> {};
+struct operator_less : one<'<'> {};
+struct operator_more_equal : string<'>', '='> {};
+struct operator_less_equal : string<'<', '='> {};
 struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
                           operator_equals_switch, operator_equals> {};
+
+// SECTION: CONDITIONALS
+
+/// CHECKABLE SYNTAX ///
+struct checkable_truthy : rvalue {};
+struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
+struct checkable_equal : seq<rvalue, ws, one<'='>, ws, rvalue> {};
+struct checkable_not_equal : seq<rvalue, ws, string<'!', '='>, ws, rvalue> {};
+struct checkable_more : seq<rvalue, ws, operator_more, ws, rvalue> {};
+struct checkable_less : seq<rvalue, ws, operator_less, ws, rvalue> {};
+struct checkable_more_equal : seq<rvalue, ws, operator_more_equal, ws, rvalue> {
+};
+struct checkable_less_equal : seq<rvalue, ws, operator_less_equal, ws, rvalue> {
+};
+
+/// SPECIFIC CONSTRUCTIONS ///
+struct checkable_subclause;
+struct checkable_atom
+    : sor<checkable_more_equal, checkable_less_equal, checkable_more,
+          checkable_less, checkable_equal, checkable_not_equal,
+          checkable_truthy, checkable_not_truthy, checkable_subclause> {};
+struct checkable_and_list
+    : list<checkable_atom,
+           seq<plus<blank>, keyword<'a', 'n', 'd'>, plus<blank>>> {};
+struct checkable_or_list
+    : list<checkable_atom, seq<plus<blank>, keyword<'o', 'r'>, plus<blank>>> {};
+struct checkable_clause
+    : sor<checkable_and_list, checkable_or_list, checkable_atom> {};
+struct checkable_subclause : paren<seq<ws, checkable_clause, ws>> {};
+
+/// PUTTING IT TOGETHER ///
+struct conditional : paren<seq<one<'?'>, ws, checkable_clause, ws>> {};
 
 // SECTION: OPERATIONS
 
@@ -104,16 +140,17 @@ struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
 
 /** A line with an optional attribution that is not indented or blank */
-struct beat_line : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>,
-                       opt<beat_attribution>, text_content, eol> {};
+struct beat_line
+    : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>, opt<conditional>, ws,
+          opt<beat_attribution>, text_content, eol> {};
 
 // SECTION: CHOICES
 
 struct inline_choice_move : op_move {};
 
 /** The initial line e.g. `> Some choice` */
-struct choice_line
-    : seq<choice_prefix, ws, text_content, opt<inline_choice_move>, eol> {};
+struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
+                         opt<inline_choice_move>, eol> {};
 
 /** The choice line with optional indented operation lines */
 struct choice_clause : seq<choice_line, star<op_line>> {};
