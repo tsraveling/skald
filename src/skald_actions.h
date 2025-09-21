@@ -113,6 +113,41 @@ template <> struct action<text_content> {
   }
 };
 
+// SECTION: CONDITIONALS
+
+template <> struct action<checkable_left_factor> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_left_factor: " << input.string());
+  }
+};
+template <> struct action<checkable_right_factor> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_right_factor: " << input.string());
+  }
+};
+template <> struct action<checkable_truthy> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_truthy: " << input.string());
+    state.checkable_queue.push_back(ConditionalAtom{
+        state.rval_buffer, ConditionalAtom::Comparison::TRUTHY, {}});
+  }
+};
+template <> struct action<checkable_atom> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_atom: " << input.string());
+  }
+};
+template <> struct action<conditional> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> conditional: " << input.string());
+  }
+};
+
 // SECTION: OPERATION LINES
 
 template <> struct action<operation> {

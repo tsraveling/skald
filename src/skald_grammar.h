@@ -85,16 +85,24 @@ struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
 // SECTION: CONDITIONALS
 
 /// CHECKABLE SYNTAX ///
-struct checkable_truthy : rvalue {};
-struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
-struct checkable_equal : seq<rvalue, ws, one<'='>, ws, rvalue> {};
-struct checkable_not_equal : seq<rvalue, ws, string<'!', '='>, ws, rvalue> {};
-struct checkable_more : seq<rvalue, ws, operator_more, ws, rvalue> {};
-struct checkable_less : seq<rvalue, ws, operator_less, ws, rvalue> {};
-struct checkable_more_equal : seq<rvalue, ws, operator_more_equal, ws, rvalue> {
-};
-struct checkable_less_equal : seq<rvalue, ws, operator_less_equal, ws, rvalue> {
-};
+struct checkable_left_factor : rvalue {};
+struct checkable_right_factor : rvalue {};
+struct checkable_truthy : checkable_left_factor {};
+struct checkable_not_truthy : seq<one<'!'>, checkable_left_factor> {};
+struct checkable_equal
+    : seq<checkable_left_factor, ws, one<'='>, ws, checkable_right_factor> {};
+struct checkable_not_equal : seq<checkable_left_factor, ws, string<'!', '='>,
+                                 ws, checkable_right_factor> {};
+struct checkable_more : seq<checkable_left_factor, ws, operator_more, ws,
+                            checkable_right_factor> {};
+struct checkable_less : seq<checkable_left_factor, ws, operator_less, ws,
+                            checkable_right_factor> {};
+struct checkable_more_equal
+    : seq<checkable_left_factor, ws, operator_more_equal, ws,
+          checkable_right_factor> {};
+struct checkable_less_equal
+    : seq<checkable_left_factor, ws, operator_less_equal, ws,
+          checkable_right_factor> {};
 
 /// SPECIFIC CONSTRUCTIONS ///
 struct checkable_subclause;

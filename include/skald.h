@@ -46,6 +46,26 @@ struct ConditionalAtom {
   RValue a;
   Comparison comparison;
   std::optional<RValue> b;
+  std::string dbg_desc() const {
+    switch (comparison) {
+    case TRUTHY:
+      return "IS " + rval_to_string(a) + "?";
+    case NOT_TRUTHY:
+      return "IS NOT " + rval_to_string(a) + "?";
+    case EQUALS:
+      return "IS " + rval_to_string(a) + " = " + rval_to_string(*b) + "?";
+    case NOT_EQUALS:
+      return "IS " + rval_to_string(a) + " != " + rval_to_string(*b) + "?";
+    case MORE:
+      return "IS " + rval_to_string(a) + " > " + rval_to_string(*b) + "?";
+    case LESS:
+      return "IS " + rval_to_string(a) + " < " + rval_to_string(*b) + "?";
+    case MORE_EQUAL:
+      return "IS " + rval_to_string(a) + " >= " + rval_to_string(*b) + "?";
+    case LESS_EQUAL:
+      return "IS " + rval_to_string(a) + " <= " + rval_to_string(*b) + "?";
+    }
+  }
 };
 
 struct Conditional;
@@ -57,7 +77,28 @@ struct Conditional {
   Type type = Type::AND;
   std::vector<ConditionalItem> items;
 
-  std::string dbg_desc() const { return "[IF: x]"; }
+  std::string dbg_desc() const {
+    std::string ret = "[IF: ";
+    int i = 0;
+    for (auto item : items) {
+      if (i > 0)
+        ret += type == Type::AND ? " AND " : " OR ";
+      std::string desc = std::visit(
+          [](const auto &value) -> std::string {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, ConditionalAtom>) {
+              return value.dbg_desc();
+            } else if constexpr (std::is_same_v<T,
+                                                std::shared_ptr<Conditional>>) {
+              return value->dbg_desc();
+            }
+          },
+          item);
+      i++;
+    }
+    ret += "]";
+    return ret;
+  }
 };
 
 struct Mutation {

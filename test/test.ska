@@ -9,16 +9,16 @@ Second beat
 Third {-- with inline comment} test
 
 (? check_val) This one is conditional with a truthy value!
-(? check_val and (more_check > 10 or less_check <= 9)) This one is a combo clause
-(? !check_val) This one shows up if check val is not true
-(? val_a and val_b and val_c and val_d) This one checks a long and clause.
+-- (? check_val and (more_check > 10 or less_check <= 9)) This one is a combo clause
+-- (? !check_val) This one shows up if check val is not true
+-- (? val_a and val_b and val_c and val_d) This one checks a long and clause.
 
 some_tag: This one is attributed!
 
-(? eq_check = some_other_val) some_tag: this is a conditional attributed beat
+-- (? eq_check = some_other_val) some_tag: this is a conditional attributed beat
 
 > This is a choice
-> (? some_condition = "test") This choice is conditional
+-- > (? some_condition = "test") This choice is conditional
 > This one goes -> to_school
 > This one has operations in lines
   -> to_park

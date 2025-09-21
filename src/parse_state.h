@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "logger.h"
 #include "skald.h"
+#include "skald_grammar.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -34,6 +35,10 @@ struct ParseState {
 
   /** Buffers the last-held rvalue */
   RValue rval_buffer;
+
+  /** Buffer for nesting conditionals */
+  std::vector<ConditionalItem> checkable_queue;
+  std::optional<Conditional> conditional_buffer;
 
   /** Argument stack for method calls etc */
   std::vector<RValue> argument_queue;

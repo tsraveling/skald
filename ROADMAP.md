@@ -9,12 +9,12 @@
 - [x]     1.2 Line Comments
 - [x]     1.3 Embedded Comments
 - [ ]   2. Blocks
-- [ ]     2.1 Block Tags and Beats
+- [x]     2.1 Block Tags and Beats
 - [ ]       2.1.1 Block Entry
 - [ ]       2.1.2 Block Resolution
-- [ ]     2.2 Choices
-- [ ]       2.2.1 Choice Redirects
-- [ ]       2.2.2 Choice Operations
+- [x]     2.2 Choices
+- [x]       2.2.1 Choice Redirects
+- [x]       2.2.2 Choice Operations
 - [ ]     2.3 Insertions
 - [ ]       2.3.1 Direct Insertion
 - [ ]       2.3.2 Boolean Ternaries
@@ -27,13 +27,13 @@
 - [ ]     2.5 Chance Blocks
 - [ ]   3. Logic
 - [ ]     3.1 Operations
-- [ ]       3.1.1 Transitions
-- [ ]       3.1.2 Methods
-- [ ]       3.1.3 Variables
+- [x]       3.1.1 Transitions
+- [x]       3.1.2 Methods
+- [x]       3.1.3 Variables
 - [ ]       3.1.4 Variables Across Modules
-- [ ]       3.1.5 Variable Types
-- [ ]       3.1.6 Variable Operators
-- [ ]       3.1.7 Variables as Arguments
+- [x]       3.1.5 Variable Types
+- [x]       3.1.6 Variable Operators
+- [x]       3.1.7 Variables as Arguments
 - [ ]     3.2 Conditionals
 - [ ]       3.2.1 And / Or
 - [ ]       3.2.2 Value Checks
