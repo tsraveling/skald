@@ -111,12 +111,12 @@ struct checkable_atom
           checkable_less, checkable_equal, checkable_not_equal,
           checkable_truthy, checkable_not_truthy, checkable_subclause> {};
 struct checkable_and_list
-    : list<checkable_atom,
-           seq<plus<blank>, keyword<'a', 'n', 'd'>, plus<blank>>> {};
+    : list_must<checkable_atom,
+                seq<plus<blank>, keyword<'a', 'n', 'd'>, plus<blank>>> {};
 struct checkable_or_list
-    : list<checkable_atom, seq<plus<blank>, keyword<'o', 'r'>, plus<blank>>> {};
-struct checkable_clause
-    : sor<checkable_and_list, checkable_or_list, checkable_atom> {};
+    : seq<checkable_atom, plus<seq<plus<blank>, keyword<'o', 'r'>, plus<blank>,
+                                   checkable_atom>>> {};
+struct checkable_clause : sor<checkable_or_list, checkable_and_list> {};
 struct checkable_subclause : paren<seq<ws, checkable_clause, ws>> {};
 
 /// PUTTING IT TOGETHER ///
