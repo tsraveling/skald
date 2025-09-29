@@ -141,6 +141,24 @@ template <> struct action<checkable_atom> {
     dbg_out(">>> checkable_atom: " << input.string());
   }
 };
+template <> struct action<checkable_subclause> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_subclause: " << input.string());
+  }
+};
+template <> struct action<checkable_and_list> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_and_list: " << input.string());
+  }
+};
+template <> struct action<checkable_or_list> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> checkable_or_list: " << input.string());
+  }
+};
 template <> struct action<conditional> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
