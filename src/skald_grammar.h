@@ -86,9 +86,6 @@ struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
 // SECTION: CONDITIONALS
 
 /// CHECKABLE SYNTAX ///
-// struct checkable_left_factor : rvalue {};
-// struct checkable_right_factor : rvalue {};
-// struct checkable_truthy : checkable_left_factor {};
 struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
 struct checkable_2f_operator
     : sor<operator_equals, operator_not_equals, operator_more_equal,
