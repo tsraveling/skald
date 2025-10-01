@@ -73,6 +73,7 @@ struct arg_list : list<argument, arg_separator> {};
 // These are used for inline computation
 struct operator_plus_equals : string<'+', '='> {};
 struct operator_minus_equals : string<'-', '='> {};
+struct operator_not_equals : string<'!', '='> {};
 struct operator_equals : one<'='> {};
 struct operator_equals_switch : string<'=', '!'> {};
 struct operator_more : one<'>'> {};
@@ -85,38 +86,28 @@ struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
 // SECTION: CONDITIONALS
 
 /// CHECKABLE SYNTAX ///
-struct checkable_left_factor : rvalue {};
-struct checkable_right_factor : rvalue {};
-struct checkable_truthy : checkable_left_factor {};
-struct checkable_not_truthy : seq<one<'!'>, checkable_left_factor> {};
-struct checkable_equal
-    : seq<checkable_left_factor, ws, one<'='>, ws, checkable_right_factor> {};
-struct checkable_not_equal : seq<checkable_left_factor, ws, string<'!', '='>,
-                                 ws, checkable_right_factor> {};
-struct checkable_more : seq<checkable_left_factor, ws, operator_more, ws,
-                            checkable_right_factor> {};
-struct checkable_less : seq<checkable_left_factor, ws, operator_less, ws,
-                            checkable_right_factor> {};
-struct checkable_more_equal
-    : seq<checkable_left_factor, ws, operator_more_equal, ws,
-          checkable_right_factor> {};
-struct checkable_less_equal
-    : seq<checkable_left_factor, ws, operator_less_equal, ws,
-          checkable_right_factor> {};
+// struct checkable_left_factor : rvalue {};
+// struct checkable_right_factor : rvalue {};
+// struct checkable_truthy : checkable_left_factor {};
+struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
+struct checkable_2f_operator
+    : sor<operator_equals, operator_not_equals, operator_more_equal,
+          operator_less_equal, operator_more, operator_less> {};
+struct checkable_right_tail : seq<ws, checkable_2f_operator, ws, rvalue> {};
+struct checkable_base
+    : sor<checkable_not_truthy, seq<rvalue, opt<checkable_right_tail>>> {};
 
 /// SPECIFIC CONSTRUCTIONS ///
 struct checkable_subclause;
-struct checkable_atom
-    : sor<checkable_more_equal, checkable_less_equal, checkable_more,
-          checkable_less, checkable_equal, checkable_not_equal,
-          checkable_truthy, checkable_not_truthy, checkable_subclause> {};
-struct checkable_and_list
-    : list_must<checkable_atom,
-                seq<plus<blank>, keyword<'a', 'n', 'd'>, plus<blank>>> {};
-struct checkable_or_list
-    : seq<checkable_atom, plus<seq<plus<blank>, keyword<'o', 'r'>, plus<blank>,
-                                   checkable_atom>>> {};
-struct checkable_clause : sor<checkable_or_list, checkable_and_list> {};
+struct checkable_atom : sor<checkable_base, checkable_subclause> {};
+
+struct checkable_and_tail : plus<seq<plus<blank>, keyword<'a', 'n', 'd'>,
+                                     plus<blank>, checkable_atom>> {};
+struct checkable_or_tail
+    : plus<seq<plus<blank>, keyword<'o', 'r'>, plus<blank>, checkable_atom>> {};
+
+struct checkable_clause
+    : seq<checkable_atom, opt<sor<checkable_or_tail, checkable_and_tail>>> {};
 struct checkable_subclause : paren<seq<ws, checkable_clause, ws>> {};
 
 /// PUTTING IT TOGETHER ///

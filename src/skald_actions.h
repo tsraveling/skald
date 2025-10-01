@@ -115,24 +115,10 @@ template <> struct action<text_content> {
 
 // SECTION: CONDITIONALS
 
-template <> struct action<checkable_left_factor> {
+template <> struct action<checkable_base> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_left_factor: " << input.string());
-  }
-};
-template <> struct action<checkable_right_factor> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_right_factor: " << input.string());
-  }
-};
-template <> struct action<checkable_truthy> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_truthy: " << input.string());
-    state.checkable_queue.push_back(ConditionalAtom{
-        state.rval_buffer, ConditionalAtom::Comparison::TRUTHY, {}});
+    dbg_out(">>> base: " << input.string());
   }
 };
 template <> struct action<checkable_atom> {
@@ -147,13 +133,13 @@ template <> struct action<checkable_subclause> {
     dbg_out(">>> checkable_subclause: " << input.string());
   }
 };
-template <> struct action<checkable_and_list> {
+template <> struct action<checkable_and_tail> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> checkable_and_list: " << input.string());
   }
 };
-template <> struct action<checkable_or_list> {
+template <> struct action<checkable_or_tail> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> checkable_or_list: " << input.string());
