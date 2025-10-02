@@ -45,8 +45,16 @@ struct ParseState {
   }
 
   /** Buffer for nesting conditionals */
+  ConditionalAtom::Comparison current_comparison =
+      ConditionalAtom::Comparison::TRUTHY;
   std::vector<ConditionalItem> checkable_queue;
   std::optional<Conditional> conditional_buffer;
+
+  void add_conditional_atom(const ConditionalAtom &atom) {
+    dbg_out("-++ Adding a conditional atom to checkable_queue: "
+            << atom.dbg_desc());
+    checkable_queue.push_back(atom);
+  }
 
   /** Argument stack for method calls etc */
   std::vector<RValue> argument_queue;

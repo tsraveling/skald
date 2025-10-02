@@ -9,7 +9,7 @@ Second beat
 Third {-- with inline comment} test
 
 -- (? check_val) This one is conditional with a truthy value!
-(? check_val and (more_check > 10 or less_check <= 9)) This one is a combo clause
+(? check_val and !falsy_check and (more_check > 10 or less_check <= 9)) This one is a combo clause
 -- (? !check_val) This one shows up if check val is not true
 -- (? val_a and val_b and val_c and val_d) This one checks a long and clause.
 

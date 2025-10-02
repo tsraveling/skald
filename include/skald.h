@@ -43,6 +43,21 @@ struct ConditionalAtom {
     MORE_EQUAL,
     LESS_EQUAL
   };
+  static Comparison comparison_for_operator(const std::string op) {
+    if (op == "=")
+      return Comparison::EQUALS;
+    if (op == "!=")
+      return Comparison::NOT_EQUALS;
+    if (op == ">")
+      return Comparison::MORE;
+    if (op == "<")
+      return Comparison::LESS;
+    if (op == ">=")
+      return Comparison::MORE_EQUAL;
+    if (op == "<=")
+      return Comparison::LESS_EQUAL;
+    return TRUTHY;
+  }
   RValue a;
   Comparison comparison;
   std::optional<RValue> b;
@@ -72,6 +87,11 @@ struct Conditional;
 using ConditionalItem =
     std::variant<ConditionalAtom, std::shared_ptr<Conditional>>;
 
+// Forward-declared:
+/** Returns the debug text describing a ConditionalItem, which can be an atom or
+ * a clause. */
+std::string dbg_desc_conditional_item(const ConditionalItem &item);
+
 struct Conditional {
   enum Type { AND, OR };
   Type type = Type::AND;
@@ -83,23 +103,26 @@ struct Conditional {
     for (auto item : items) {
       if (i > 0)
         ret += type == Type::AND ? " AND " : " OR ";
-      std::string desc = std::visit(
-          [](const auto &value) -> std::string {
-            using T = std::decay_t<decltype(value)>;
-            if constexpr (std::is_same_v<T, ConditionalAtom>) {
-              return value.dbg_desc();
-            } else if constexpr (std::is_same_v<T,
-                                                std::shared_ptr<Conditional>>) {
-              return value->dbg_desc();
-            }
-          },
-          item);
+      std::string desc = dbg_desc_conditional_item(item);
       i++;
     }
     ret += "]";
     return ret;
   }
 };
+
+inline std::string dbg_desc_conditional_item(const ConditionalItem &item) {
+  return std::visit(
+      [](const auto &value) -> std::string {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, ConditionalAtom>) {
+          return value.dbg_desc();
+        } else if constexpr (std::is_same_v<T, std::shared_ptr<Conditional>>) {
+          return value->dbg_desc();
+        }
+      },
+      item);
+}
 
 struct Mutation {
   enum Type { EQUATE, SWITCH, ADD, SUBTRACT };

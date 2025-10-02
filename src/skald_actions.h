@@ -116,10 +116,45 @@ template <> struct action<text_content> {
 
 // SECTION: CONDITIONALS
 
+// This will grab and store the operation type
+template <> struct action<checkable_2f_operator> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out("<.> stored comparitor for " << input.string());
+    state.current_comparison =
+        ConditionalAtom::comparison_for_operator(input.string());
+  }
+};
+template <> struct action<checkable_right_tail> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out("<X> checkable_right_tail: " << input.string());
+  }
+};
+template <> struct action<checkable_not_truthy> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out("<.> checkable_not_truthy: " << input.string());
+    state.current_comparison = ConditionalAtom::Comparison::NOT_TRUTHY;
+  }
+};
 template <> struct action<checkable_base> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> base: " << input.string());
+    RValue left;
+    std::optional<RValue> right = {};
+    if (state.current_comparison == ConditionalAtom::Comparison::TRUTHY ||
+        state.current_comparison == ConditionalAtom::Comparison::NOT_TRUTHY) {
+      // These comparitor types only have the one rval
+      left = state.rval_buffer_pop();
+    } else {
+      // Grab the rvals in order, first right (most recent) then left
+      right = state.rval_buffer_pop();
+      left = state.rval_buffer_pop();
+    }
+    state.add_conditional_atom(
+        ConditionalAtom{left, state.current_comparison, right});
   }
 };
 template <> struct action<checkable_atom> {
