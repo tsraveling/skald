@@ -1,5 +1,10 @@
 # Skald TODO
 
+- [ ] Return to rvalue pop queue
+- [ ] 
+
+# Docs
+
 ## 3.2 Conditionals
 
 **Conditionals** can determine if a choice will appear, if a beat will be included, or if a logic beat (XX) will be executed.

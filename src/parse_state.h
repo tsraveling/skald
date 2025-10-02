@@ -34,7 +34,15 @@ struct ParseState {
   bool bool_buffer;
 
   /** Buffers the last-held rvalue */
-  RValue rval_buffer;
+  std::vector<RValue> rval_buffer;
+
+  /** Returns the last buffered RValue, and pop it out of the buffer */
+  RValue rval_buffer_pop() {
+    dbg_out(">>> rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+    auto back = rval_buffer.back();
+    rval_buffer.pop_back();
+    return back;
+  }
 
   /** Buffer for nesting conditionals */
   std::vector<ConditionalItem> checkable_queue;

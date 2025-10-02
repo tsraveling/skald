@@ -53,43 +53,44 @@ template <> struct action<string_content> {
 template <> struct action<val_bool> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.rval_buffer = state.bool_buffer;
-    dbg_out("<<< val_bool: " << state.bool_buffer);
+    state.rval_buffer.push_back(state.bool_buffer);
+    dbg_out("<<< rval_buffer -> push_back: val_bool: " << state.bool_buffer);
   }
 };
 template <> struct action<val_int> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.rval_buffer = std::stoi(input.string());
-    dbg_out("<<< val_int: " << input.string());
+    state.rval_buffer.push_back(std::stoi(input.string()));
+    dbg_out("<<< rval_buffer -> push_back: val_int: " << input.string());
   }
 };
 template <> struct action<val_float> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.rval_buffer = std::stof(input.string());
-    dbg_out("<<< val_float: " << input.string());
+    state.rval_buffer.push_back(std::stof(input.string()));
+    dbg_out("<<< rval_buffer -> push_back: val_float: " << input.string());
   }
 };
 template <> struct action<val_string> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.rval_buffer = state.string_buffer;
-    dbg_out("<<< val_string: " << state.string_buffer);
+    state.rval_buffer.push_back(state.string_buffer);
+    dbg_out(
+        "<<< rval_buffer -> push_back: val_string: " << state.string_buffer);
   }
 };
 template <> struct action<r_variable> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.rval_buffer = Variable{input.string()};
-    dbg_out("<<< r_variable: " << input.string());
+    state.rval_buffer.push_back(Variable{input.string()});
+    dbg_out("<<< rval_buffer -> push_back: r_variable: " << input.string());
   }
 };
 
 template <> struct action<argument> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.argument_queue.push_back(state.rval_buffer);
+    state.argument_queue.push_back(state.rval_buffer_pop());
     dbg_out("<<< argument (adding to queue): " << input.string());
   }
 };
@@ -186,7 +187,7 @@ template <> struct action<op_mutate_subtract> {
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_subtract: " << input.string());
     state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::SUBTRACT, state.rval_buffer});
+        Mutation{state.pop_id(), Mutation::SUBTRACT, state.rval_buffer_pop()});
   }
 };
 template <> struct action<op_mutate_add> {
@@ -194,7 +195,7 @@ template <> struct action<op_mutate_add> {
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_add: " << input.string());
     state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::ADD, state.rval_buffer});
+        Mutation{state.pop_id(), Mutation::ADD, state.rval_buffer_pop()});
   }
 };
 template <> struct action<op_mutate_equate> {
@@ -202,7 +203,7 @@ template <> struct action<op_mutate_equate> {
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_equate: " << input.string());
     state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::EQUATE, state.rval_buffer});
+        Mutation{state.pop_id(), Mutation::EQUATE, state.rval_buffer_pop()});
   }
 };
 template <> struct action<op_mutate_switch> {
