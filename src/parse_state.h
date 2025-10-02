@@ -47,14 +47,27 @@ struct ParseState {
   /** Buffer for nesting conditionals */
   ConditionalAtom::Comparison current_comparison =
       ConditionalAtom::Comparison::TRUTHY;
-  std::vector<ConditionalItem> checkable_queue;
-  std::optional<Conditional> conditional_buffer;
 
+  /** The stack of conditional items we will use to assemble clauses and whole
+   * conditionals */
+  std::vector<ConditionalItem> checkable_queue;
+
+  /** Adds an atom (concrete base checker) to the checkable queue */
   void add_conditional_atom(const ConditionalAtom &atom) {
     dbg_out("-++ Adding a conditional atom to checkable_queue: "
             << atom.dbg_desc());
     checkable_queue.push_back(atom);
   }
+
+  /** True if the current checkable list is OR (vs AND by default) */
+  bool is_current_list_or = false;
+
+  /** Length of current checkable list we are working on */
+  int checkable_list_length = 1;
+
+  /** The current conditional ??? */
+  // FIXME: Delete this entity?
+  std::optional<Conditional> conditional_buffer;
 
   /** Argument stack for method calls etc */
   std::vector<RValue> argument_queue;

@@ -125,12 +125,14 @@ template <> struct action<checkable_2f_operator> {
         ConditionalAtom::comparison_for_operator(input.string());
   }
 };
+// FIXME: Delete this struct
 template <> struct action<checkable_right_tail> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out("<X> checkable_right_tail: " << input.string());
   }
 };
+// This specifically checks the non-truthy case
 template <> struct action<checkable_not_truthy> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
@@ -138,6 +140,7 @@ template <> struct action<checkable_not_truthy> {
     state.current_comparison = ConditionalAtom::Comparison::NOT_TRUTHY;
   }
 };
+// This assembles the base checkables (aka direct checks, not subclauses)
 template <> struct action<checkable_base> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
@@ -155,6 +158,7 @@ template <> struct action<checkable_base> {
     }
     state.add_conditional_atom(
         ConditionalAtom{left, state.current_comparison, right});
+    state.current_comparison = ConditionalAtom::TRUTHY;
   }
 };
 template <> struct action<checkable_atom> {
@@ -169,16 +173,29 @@ template <> struct action<checkable_subclause> {
     dbg_out(">>> checkable_subclause: " << input.string());
   }
 };
+template <> struct action<checkable_and> {
+  static void apply0(ParseState &state) {
+    dbg_out(">>> + and");
+    state.checkable_list_length++;
+  }
+};
+template <> struct action<checkable_or> {
+  static void apply0(ParseState &state) {
+    dbg_out(">>> + or");
+    state.checkable_list_length++;
+  }
+};
+// FIXME: Delete these structs
 template <> struct action<checkable_and_tail> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_and_list: " << input.string());
+    dbg_out("<X> checkable_and_list: " << input.string());
   }
 };
 template <> struct action<checkable_or_tail> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_or_list: " << input.string());
+    dbg_out("<X> checkable_or_list: " << input.string());
   }
 };
 template <> struct action<conditional> {
