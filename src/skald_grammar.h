@@ -95,17 +95,22 @@ struct checkable_base
     : sor<checkable_not_truthy, seq<rvalue, opt<checkable_right_tail>>> {};
 
 /// SPECIFIC CONSTRUCTIONS ///
+struct subclause_opener : one<'('> {};
+struct subclause_closer : one<')'> {};
 struct checkable_subclause;
 struct checkable_atom : sor<checkable_base, checkable_subclause> {};
 
-struct checkable_and_tail : plus<seq<plus<blank>, keyword<'a', 'n', 'd'>,
-                                     plus<blank>, checkable_atom>> {};
+struct checkable_and : keyword<'a', 'n', 'd'> {};
+struct checkable_and_tail
+    : plus<seq<plus<blank>, checkable_and, plus<blank>, checkable_atom>> {};
+struct checkable_or : keyword<'o', 'r'> {};
 struct checkable_or_tail
-    : plus<seq<plus<blank>, keyword<'o', 'r'>, plus<blank>, checkable_atom>> {};
+    : plus<seq<plus<blank>, checkable_or, plus<blank>, checkable_atom>> {};
 
 struct checkable_clause
     : seq<checkable_atom, opt<sor<checkable_or_tail, checkable_and_tail>>> {};
-struct checkable_subclause : paren<seq<ws, checkable_clause, ws>> {};
+struct checkable_subclause
+    : seq<subclause_opener, ws, checkable_clause, ws, subclause_closer> {};
 
 /// PUTTING IT TOGETHER ///
 struct conditional : paren<seq<one<'?'>, ws, checkable_clause, ws>> {};

@@ -65,9 +65,8 @@ struct ParseState {
   /** Length of current checkable list we are working on */
   int checkable_list_length = 1;
 
-  /** The current conditional ??? */
-  // FIXME: Delete this entity?
-  std::optional<Conditional> conditional_buffer;
+  /** The conditional stack. `.back()` is always the one that's open. */
+  std::vector<Conditional> conditional_stack;
 
   /** Argument stack for method calls etc */
   std::vector<RValue> argument_queue;
