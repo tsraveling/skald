@@ -161,6 +161,12 @@ template <> struct action<checkable_base> {
     state.current_comparison = ConditionalAtom::TRUTHY;
   }
 };
+template <> struct action<subclause_opener> {
+  static void apply0(ParseState &state) { dbg_out(">>> checkable_opener"); }
+};
+template <> struct action<subclause_closer> {
+  static void apply0(ParseState &state) { dbg_out(">>> checkable_closer"); }
+};
 template <> struct action<checkable_atom> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
@@ -173,16 +179,18 @@ template <> struct action<checkable_subclause> {
     dbg_out(">>> checkable_subclause: " << input.string());
   }
 };
+
+// FIXME: Delete these
 template <> struct action<checkable_and> {
   static void apply0(ParseState &state) {
     dbg_out(">>> + and");
-    state.checkable_list_length++;
+    // state.checkable_list_length++;
   }
 };
 template <> struct action<checkable_or> {
   static void apply0(ParseState &state) {
     dbg_out(">>> + or");
-    state.checkable_list_length++;
+    // state.checkable_list_length++;
   }
 };
 // FIXME: Delete these structs

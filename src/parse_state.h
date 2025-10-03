@@ -48,25 +48,33 @@ struct ParseState {
   ConditionalAtom::Comparison current_comparison =
       ConditionalAtom::Comparison::TRUTHY;
 
-  /** The stack of conditional items we will use to assemble clauses and whole
-   * conditionals */
-  std::vector<ConditionalItem> checkable_queue;
+  // FIXME: Delete all these if we can
+
+  // /** The stack of conditional items we will use to assemble clauses and
+  // whole
+  //  * conditionals */
+  // std::vector<ConditionalItem> checkable_queue;
+
+  // /** True if the current checkable list is OR (vs AND by default) */
+  // bool is_current_list_or = false;
+
+  // /** Length of current checkable list we are working on */
+  // int checkable_list_length = 1;
+
+  /** The conditional stack. `.back()` is always the one that's open. */
+  std::vector<Conditional> conditional_stack;
 
   /** Adds an atom (concrete base checker) to the checkable queue */
   void add_conditional_atom(const ConditionalAtom &atom) {
     dbg_out("-++ Adding a conditional atom to checkable_queue: "
             << atom.dbg_desc());
-    checkable_queue.push_back(atom);
+    if (conditional_stack.size() < 1) {
+      Log::err("Tried to add a conditional atom, but no conditional was open!");
+      return;
+    }
+    auto &current = conditional_stack.back();
+    current.items.push_back(atom);
   }
-
-  /** True if the current checkable list is OR (vs AND by default) */
-  bool is_current_list_or = false;
-
-  /** Length of current checkable list we are working on */
-  int checkable_list_length = 1;
-
-  /** The conditional stack. `.back()` is always the one that's open. */
-  std::vector<Conditional> conditional_stack;
 
   /** Argument stack for method calls etc */
   std::vector<RValue> argument_queue;

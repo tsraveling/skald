@@ -113,7 +113,10 @@ struct checkable_subclause
     : seq<subclause_opener, ws, checkable_clause, ws, subclause_closer> {};
 
 /// PUTTING IT TOGETHER ///
-struct conditional : paren<seq<one<'?'>, ws, checkable_clause, ws>> {};
+struct conditional_opener : seq<one<'('>, ws, one<'?'>> {};
+struct conditional_closer : seq<one<')'>> {};
+struct conditional
+    : seq<conditional_opener, ws, checkable_clause, ws, conditional_closer> {};
 
 // SECTION: OPERATIONS
 
