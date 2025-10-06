@@ -106,14 +106,6 @@ template <> struct action<inline_text_segment> {
   }
 };
 
-template <> struct action<text_content> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> text_content");
-    // state.add_beat();
-  }
-};
-
 // SECTION: CONDITIONALS
 
 // This will grab and store the operation type
@@ -125,13 +117,7 @@ template <> struct action<checkable_2f_operator> {
         ConditionalAtom::comparison_for_operator(input.string());
   }
 };
-// FIXME: Delete this struct
-template <> struct action<checkable_right_tail> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out("<X> checkable_right_tail: " << input.string());
-  }
-};
+
 // This specifically checks the non-truthy case
 template <> struct action<checkable_not_truthy> {
   template <typename ActionInput>
@@ -189,33 +175,6 @@ template <> struct action<conditional_closer> {
   static void apply0(ParseState &state) {
     dbg_out(">>> cond_close");
     state.conditional_step_out();
-  }
-};
-template <> struct action<checkable_atom> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_atom: " << input.string());
-    // FINDME
-  }
-};
-template <> struct action<checkable_subclause> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> checkable_subclause: " << input.string());
-  }
-};
-
-// FIXME: prob delete this
-template <> struct action<conditional> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> conditional: " << input.string());
-    // STUB: Pop here?
-    if (state.conditional_buffer) {
-      dbg_out("%%% COMPUTED COND: " << state.conditional_buffer->dbg_desc());
-    } else {
-      dbg_out("XXX COMPUTED COND WITH EMPTY BUFFER!");
-    }
   }
 };
 
@@ -298,14 +257,6 @@ template <> struct action<inline_choice_move> {
     auto text = input.string();
     state.operation_queue.push_back(Move{state.pop_id()});
     dbg_out(">>> inline_choice_move: " << text);
-  }
-};
-
-// FIXME: Delete this later
-template <> struct action<choice_line> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> choice_line: " << input.string());
   }
 };
 

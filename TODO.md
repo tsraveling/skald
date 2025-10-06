@@ -1,10 +1,10 @@
 # Skald TODO
 
 - [x] Return to rvalue pop queue
-- [ ] Action the opener to add a new conditional the stack
-- [ ] Action the closer to turn the top of the stack into an atom for the next one up
-- [ ] Add conditional base atoms directly to the current conditional .back()
-- [ ] Check operators to set the list type of the current conditional .back()
+- [x] Action the opener to add a new conditional the stack
+- [x] Action the closer to turn the top of the stack into an atom for the next one up
+- [x] Add conditional base atoms directly to the current conditional .back()
+- [x] Check operators to set the list type of the current conditional .back()
 
 # Docs
 
