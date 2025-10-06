@@ -86,6 +86,8 @@ struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
 // SECTION: CONDITIONALS
 
 /// CHECKABLE SYNTAX ///
+struct checkable_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
+struct checkable_not_method : seq<one<'!'>, checkable_method> {};
 struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
 struct checkable_2f_operator
     : sor<operator_equals, operator_not_equals, operator_more_equal,
@@ -98,6 +100,7 @@ struct checkable_base
 struct subclause_opener : one<'('> {};
 struct subclause_closer : one<')'> {};
 struct checkable_subclause;
+// STUB: Add in checkable methods here
 struct checkable_atom : sor<checkable_base, checkable_subclause> {};
 
 struct checkable_and : keyword<'a', 'n', 'd'> {};
