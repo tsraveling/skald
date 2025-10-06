@@ -171,6 +171,7 @@ struct ParseState {
     Log::verbose(" - Adding beat.");
 
     Beat beat;
+    beat.condition = conditional_buffer_pop();
     beat.content.parts = std::move(text_content_queue);
     beat.operations = std::move(operation_queue);
     beat.attribution = current_tag;
@@ -186,6 +187,7 @@ struct ParseState {
     Choice choice;
     choice.content.parts = std::move(text_content_queue);
     choice.operations = std::move(operation_queue);
+    choice.condition = conditional_buffer_pop();
     current_block->choices.push_back(choice);
   }
 };
