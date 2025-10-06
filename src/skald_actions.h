@@ -161,16 +161,41 @@ template <> struct action<checkable_base> {
     state.current_comparison = ConditionalAtom::TRUTHY;
   }
 };
+template <> struct action<checkable_or_tail> {
+  static void apply0(ParseState &state) {
+    dbg_out("||| checkable_or_tail: SET TO OR");
+    state.conditional_stack.back().type = Conditional::OR;
+  }
+};
 template <> struct action<subclause_opener> {
-  static void apply0(ParseState &state) { dbg_out(">>> checkable_opener"); }
+  static void apply0(ParseState &state) {
+    dbg_out(">>> checkable_opener");
+    state.conditional_step_in();
+  }
 };
 template <> struct action<subclause_closer> {
-  static void apply0(ParseState &state) { dbg_out(">>> checkable_closer"); }
+  static void apply0(ParseState &state) {
+    dbg_out(">>> checkable_closer");
+    state.conditional_step_out();
+  }
+};
+template <> struct action<conditional_opener> {
+  static void apply0(ParseState &state) {
+    dbg_out(">>> cond_open");
+    state.conditional_step_in();
+  }
+};
+template <> struct action<conditional_closer> {
+  static void apply0(ParseState &state) {
+    dbg_out(">>> cond_close");
+    state.conditional_step_out();
+  }
 };
 template <> struct action<checkable_atom> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> checkable_atom: " << input.string());
+    // FINDME
   }
 };
 template <> struct action<checkable_subclause> {
@@ -180,36 +205,17 @@ template <> struct action<checkable_subclause> {
   }
 };
 
-// FIXME: Delete these
-template <> struct action<checkable_and> {
-  static void apply0(ParseState &state) {
-    dbg_out(">>> + and");
-    // state.checkable_list_length++;
-  }
-};
-template <> struct action<checkable_or> {
-  static void apply0(ParseState &state) {
-    dbg_out(">>> + or");
-    // state.checkable_list_length++;
-  }
-};
-// FIXME: Delete these structs
-template <> struct action<checkable_and_tail> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out("<X> checkable_and_list: " << input.string());
-  }
-};
-template <> struct action<checkable_or_tail> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out("<X> checkable_or_list: " << input.string());
-  }
-};
+// FIXME: prob delete this
 template <> struct action<conditional> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> conditional: " << input.string());
+    // STUB: Pop here?
+    if (state.conditional_buffer) {
+      dbg_out("%%% COMPUTED COND: " << state.conditional_buffer->dbg_desc());
+    } else {
+      dbg_out("XXX COMPUTED COND WITH EMPTY BUFFER!");
+    }
   }
 };
 

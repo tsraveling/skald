@@ -63,6 +63,33 @@ struct ParseState {
 
   /** The conditional stack. `.back()` is always the one that's open. */
   std::vector<Conditional> conditional_stack;
+  std::optional<Conditional> conditional_buffer;
+
+  void conditional_step_in() { conditional_stack.push_back(Conditional{}); }
+
+  void conditional_step_out() {
+    if (conditional_stack.size() > 1) {
+      // If this isn't the first item, close it into a conditional item and add
+      // it to the next list up
+      auto last =
+          std::make_shared<Conditional>(std::move(conditional_stack.back()));
+      conditional_stack.pop_back();
+      conditional_stack.back().items.push_back(last);
+    } else if (conditional_stack.size() > 0) {
+      // If it's the only item, move it into the conditional buffer
+      conditional_buffer = std::move(
+          conditional_stack.back()); // Moves the struct's moveable members
+      conditional_stack.pop_back();
+    } else {
+      Log::err("Tried to step out of a conditional but the stack is empty!");
+    }
+  }
+
+  /** Will return the conditional held in the buffer if there is one, and clear
+   * it out */
+  auto conditional_buffer_pop() {
+    return std::exchange(conditional_buffer, std::nullopt);
+  }
 
   /** Adds an atom (concrete base checker) to the checkable queue */
   void add_conditional_atom(const ConditionalAtom &atom) {

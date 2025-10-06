@@ -103,7 +103,7 @@ struct Conditional {
     for (auto item : items) {
       if (i > 0)
         ret += type == Type::AND ? " AND " : " OR ";
-      std::string desc = dbg_desc_conditional_item(item);
+      ret += dbg_desc_conditional_item(item);
       i++;
     }
     ret += "]";
