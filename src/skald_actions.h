@@ -108,20 +108,19 @@ template <> struct action<inline_text_segment> {
 
 // SECTION: CONDITIONALS
 //
+template <> struct action<checkable_method_negation> {
+  static void apply0(ParseState &state) {
+    // state.operation_queue.push_back
+    //     MethodCall{state.pop_id(), std::move(state.argument_queue)});
+    dbg_out(">>> checkable_method_negation. ");
+  }
+};
 template <> struct action<checkable_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     // state.operation_queue.push_back(
     //     MethodCall{state.pop_id(), std::move(state.argument_queue)});
     dbg_out(">>> checkable_method: " << input.string());
-  }
-};
-template <> struct action<checkable_not_method> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    // state.operation_queue.push_back(
-    //     MethodCall{state.pop_id(), std::move(state.argument_queue)});
-    dbg_out(">>> checkable_not_method: " << input.string());
   }
 };
 

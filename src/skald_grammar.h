@@ -64,6 +64,7 @@ struct text_content : plus<text_content_part> {};
 struct variable_name : identifier {};
 
 /** A variable name used as an rvalue */
+// STUB: Actually, put r_method here!
 struct r_variable : variable_name {};
 struct rvalue : sor<val_bool, val_string, val_float, val_int, r_variable> {};
 struct arg_separator : seq<ws, one<','>, ws> {};
@@ -86,8 +87,10 @@ struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
 // SECTION: CONDITIONALS
 
 /// CHECKABLE SYNTAX ///
-struct checkable_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
-struct checkable_not_method : seq<one<'!'>, checkable_method> {};
+
+struct checkable_method_negation : one<'!'> {};
+struct checkable_method : seq<one<':'>, opt<checkable_method_negation>,
+                              identifier, paren<opt<arg_list>>> {};
 struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
 struct checkable_2f_operator
     : sor<operator_equals, operator_not_equals, operator_more_equal,
@@ -100,8 +103,8 @@ struct checkable_base
 struct subclause_opener : one<'('> {};
 struct subclause_closer : one<')'> {};
 struct checkable_subclause;
-// STUB: Add in checkable methods here
-struct checkable_atom : sor<checkable_base, checkable_subclause> {};
+struct checkable_atom
+    : sor<checkable_base, checkable_method, checkable_subclause> {};
 
 struct checkable_and : keyword<'a', 'n', 'd'> {};
 struct checkable_and_tail
