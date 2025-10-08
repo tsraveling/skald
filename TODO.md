@@ -112,3 +112,7 @@ You can also pass arguments to conditional methods:
 # Future Features
 
 - [ ] Define an interface of methods we can use up front
+
+# Edge Cases
+
+- [ ] Methods as arguments of other methods
