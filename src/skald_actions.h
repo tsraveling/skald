@@ -86,6 +86,16 @@ template <> struct action<r_variable> {
     dbg_out("<<< rval_buffer -> push_back: r_variable: " << input.string());
   }
 };
+template <> struct action<r_method> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto method_call = std::make_shared<MethodCall>(MethodCall{
+        .method = state.pop_id(), .args = std::move(state.argument_queue)});
+    state.rval_buffer.push_back(method_call);
+    dbg_out(
+        "<<< rval_buffer -> push_back: r_method: " << method_call->dbg_desc());
+  }
+};
 
 template <> struct action<argument> {
   template <typename ActionInput>
@@ -107,22 +117,6 @@ template <> struct action<inline_text_segment> {
 };
 
 // SECTION: CONDITIONALS
-//
-template <> struct action<checkable_method_negation> {
-  static void apply0(ParseState &state) {
-    // state.operation_queue.push_back
-    //     MethodCall{state.pop_id(), std::move(state.argument_queue)});
-    dbg_out(">>> checkable_method_negation. ");
-  }
-};
-template <> struct action<checkable_method> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    // state.operation_queue.push_back(
-    //     MethodCall{state.pop_id(), std::move(state.argument_queue)});
-    dbg_out(">>> checkable_method: " << input.string());
-  }
-};
 
 // This will grab and store the operation type
 template <> struct action<checkable_2f_operator> {

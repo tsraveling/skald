@@ -13,8 +13,18 @@ struct Variable {
   std::string name;
 };
 
-using RValue = std::variant<std::string, bool, int, float, Variable>;
+// Forward declarations
+struct MethodCall;
+using RValue = std::variant<std::string, bool, int, float, Variable,
+                            std::shared_ptr<MethodCall>>;
 
+struct MethodCall {
+  std::string method;
+  std::vector<RValue> args;
+  std::string dbg_desc() const; // Declare only for circular dep reasons
+};
+
+// rval_to_string must be declared before MethodCall::dbg_desc uses it
 inline std::string rval_to_string(const RValue &val) {
   return std::visit(
       [](const auto &value) -> std::string {
@@ -25,11 +35,22 @@ inline std::string rval_to_string(const RValue &val) {
           return value ? "true" : "false";
         } else if constexpr (std::is_arithmetic_v<T>) {
           return std::to_string(value);
-        } else {
+        } else if constexpr (std::is_same_v<T, Variable>) {
           return value.name;
+        } else if constexpr (std::is_same_v<T, std::shared_ptr<MethodCall>>) {
+          return value->dbg_desc();
         }
       },
       val);
+}
+
+// Now define MethodCall::dbg_desc after rval_to_string is available
+inline std::string MethodCall::dbg_desc() const {
+  std::string ret = "CALL " + method + ": ";
+  for (const auto &arg : args) {
+    ret += rval_to_string(arg) + " ";
+  }
+  return ret;
 }
 
 struct ConditionalAtom {
@@ -154,19 +175,6 @@ struct Mutation {
 
 struct Move {
   std::string target_tag;
-};
-
-struct MethodCall {
-  std::string method;
-  std::vector<RValue> args;
-
-  std::string dbg_desc() const {
-    std::string ret = "CALL " + method + ": ";
-    for (const auto &arg : args) {
-      ret += rval_to_string(arg) + " ";
-    }
-    return ret;
-  }
 };
 
 using Operation = std::variant<Move, MethodCall, Mutation>;
