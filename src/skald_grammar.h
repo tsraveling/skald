@@ -110,8 +110,10 @@ struct conditional
 // SECTION: INJECTABLES
 
 struct injectable_rvalue : rvalue {};
-struct injectable : sor<injectable_rvalue> {};
-struct text_injection : seq<one<'{'>, injectable, one<'}'>> {};
+struct ternary_tail : seq<ws, one<'?'>, ws, rvalue, ws, one<':'>, ws, rvalue> {
+};
+struct injectable : seq<injectable_rvalue, opt<ternary_tail>> {};
+struct text_injection : seq<one<'{'>, ws, injectable, ws, one<'}'>> {};
 
 // SECTION: TEXT
 

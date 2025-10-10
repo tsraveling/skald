@@ -179,12 +179,29 @@ struct Move {
 
 using Operation = std::variant<Move, MethodCall, Mutation>;
 
+using TernaryOption = std::tuple<RValue, RValue>;
+
+struct TernarySwitch {
+  RValue check;
+  std::vector<TernaryOption> options;
+};
+
+struct TernaryInsertion {
+  RValue check;
+  RValue true_response;
+  RValue false_response;
+  std::string dbg_desc() {
+    return rval_to_string(check) + " ? " + rval_to_string(true_response) +
+           " : " + rval_to_string(false_response);
+  }
+};
+
 struct TextInsertion {
   RValue rvalue;
   std::string dbg_desc() { return rval_to_string(rvalue); }
 };
 
-using TextPart = std::variant<std::string, TextInsertion>;
+using TextPart = std::variant<std::string, TextInsertion, TernaryInsertion>;
 
 struct TextContent {
   std::vector<TextPart> parts;
@@ -193,6 +210,9 @@ struct TextContent {
     for (auto &part : parts) {
       if (std::holds_alternative<std::string>(part)) {
         ret += std::get<std::string>(part);
+      } else if (std::holds_alternative<TernaryInsertion>(part)) {
+        auto ins = std::get<TernaryInsertion>(part);
+        ret += "{" + ins.dbg_desc() + "}";
       } else {
         auto ins = std::get<TextInsertion>(part);
         ret += "{" + ins.dbg_desc() + "}";
