@@ -107,6 +107,14 @@ template <> struct action<argument> {
 
 // SECTION: TEXT
 
+template <> struct action<injectable_rvalue> {
+  static void apply0(ParseState &state) {
+    dbg_out(">-+ injectable_rvalue: ");
+    state.text_content_queue.push_back(
+        TextInsertion{.rvalue = state.rval_buffer_pop()});
+  }
+};
+
 template <> struct action<inline_text_segment> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

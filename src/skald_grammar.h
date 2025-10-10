@@ -44,21 +44,6 @@ struct signed_int : seq<sign_indicator, plus<digit>> {};
 struct val_int : signed_int {};
 struct val_float : signed_float {};
 
-// SECTION: TEXT
-
-/** Matches {-- some comment} */
-struct inline_comment : seq<string<'{', '-', '-'>, until<string<'}'>>> {};
-
-/** Matches anything up to { or EOL */
-struct inline_text_segment
-    : plus<seq<not_at<string<'{'>>, not_at<eol>, not_at<move_marker>, any>> {};
-
-/** Any valid part of a text sequence */
-struct text_content_part : sor<inline_comment, inline_text_segment> {};
-
-/** A piece of text conent (an array of parts) */
-struct text_content : plus<text_content_part> {};
-
 // SECTION: LOGIC FUNDAMENTALS
 
 struct variable_name : identifier {};
@@ -121,6 +106,28 @@ struct conditional_opener : seq<one<'('>, ws, one<'?'>> {};
 struct conditional_closer : seq<one<')'>> {};
 struct conditional
     : seq<conditional_opener, ws, checkable_clause, ws, conditional_closer> {};
+
+// SECTION: INJECTABLES
+
+struct injectable_rvalue : rvalue {};
+struct injectable : sor<injectable_rvalue> {};
+struct text_injection : seq<one<'{'>, injectable, one<'}'>> {};
+
+// SECTION: TEXT
+
+/** Matches {-- some comment} */
+struct inline_comment : seq<string<'{', '-', '-'>, until<string<'}'>>> {};
+
+/** Matches anything up to { or EOL */
+struct inline_text_segment
+    : plus<seq<not_at<string<'{'>>, not_at<eol>, not_at<move_marker>, any>> {};
+
+/** Any valid part of a text sequence */
+struct text_content_part
+    : sor<inline_comment, text_injection, inline_text_segment> {};
+
+/** A piece of text conent (an array of parts) */
+struct text_content : plus<text_content_part> {};
 
 // SECTION: OPERATIONS
 

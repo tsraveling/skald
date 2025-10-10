@@ -203,6 +203,13 @@ If you immediately follow a conditional logic block with `* (else)`, that will d
   -> road_more_traveled
 ```
 
+This works for regular beats as well:
+
+```
+(? did_win) And they lived happily every after!
+(else) They unfortunately did not live happily ever after.
+```
+
 This can be useful for places where the narrative branches due to choices made previous to the current block.
 
 ### 2.4.3 Inline Logic Beats

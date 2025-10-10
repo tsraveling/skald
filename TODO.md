@@ -1,92 +1,76 @@
 # Skald TODO
 
-- [x] Return to rvalue pop queue
-- [x] Action the opener to add a new conditional the stack
-- [x] Action the closer to turn the top of the stack into an atom for the next one up
-- [x] Add conditional base atoms directly to the current conditional .back()
-- [x] Check operators to set the list type of the current conditional .back()
+## 2.3 Insertions
 
-# Docs
+### 2.3.1 Direct Insertion
 
-## 3.2 Conditionals
-
-**Conditionals** can determine if a choice will appear, if a beat will be included, or if a logic beat (XX) will be executed.
+You can insert the value of a variable into any text (choice or beat) using **curly braces**, like this:
 
 ```
-(? bool_var) This beat will only appear (and attached operations will only be run) if bool_var is true.
-
-* (? bool_var)
-  :call_method() -- Operations on this logic beat will only occur if
-                 -- bool_var is true.
-
-> (? bool_var) This choice will only be enabled if bool_var is true.
+This is some beat text! Our variable "player_name" is currently set to {player_name}.
 ```
 
-### 3.2.1 And / Or
+### 2.3.2 Boolean Ternaries
 
-Multiple conditions can be used with the `and` and `or` keywords:
-
-```
-(? bool_var and other_bool) This beat will only occur if both values are true
-
-(? bool_var or other_bool) This beat will occur if either value is true
-```
-
-You can also nest parentheses:
+You can do a **boolean ternary insertion** like this:
 
 ```
-(? bool_var and (a_bool or b_bool)) This text will occur if bool var is true, and either a_bool or b_bool is true.
+Right now it is {is_day ? "light" : "dark"}
 ```
 
-### 3.2.2 Value Checks
-
-You can check **equality** on any variable:
+The left-hand side of the ternary is just a basic conditional (3.2), and can use `and` / `or`, parentheses, and so on. The right hand side can either be a string, or a variable that resolves to a string, like this:
 
 ```
-(? bool_var = true or str_var = "Test" or num_var = 3) This beat will show up if any of these variables match the given variable.
+The value of either a variable or a method is {some_condition ? a_variable : "some text"}
 ```
 
-Likewise, you can check **not equals**:
+### 2.3.3 Switch Ternaries
+
+You can also do a **switch ternary** using an integer variable like this:
 
 ```
-(? bool_var != true or str_var != "Test" or num_var != 3) This beat will show up if any of these variables *don't* match the given variable.
+My pet is a {pet_type ? 1:dog 2:cat 3:donkey}.
 ```
 
-Bools can be **false-checked** or **true-checked** directly:
+### 2.3.4 Chance Ternaries
+
+You can use a **chance ternary** to inject an option at random:
 
 ```
-(? !bool_var) This beat will show up if bool_var is false.
-(? bool_var) This beat will show up if bool_var is true.
+I prefer {% ? "dark" : "light"} roast coffee.
 ```
 
-You can compare integers using **more and less than operators**:
+You can also make a **chance switch ternary**:
 
 ```
-(? num_var > 10) More than ten
-(? num_var >= 10) More than or equal to ten
-(? num_var < 10) Less than ten
-(? num_var <= 10) Less than or equal to ten
+Her pet is a {% ? :"dog" :"cat" :"donkey"} -- these choices are evenly weighted
 ```
 
-### 3.2.3 Methods as Conditions
-
-Any method can be used as a **boolean check**. If the method does not return a response, that will be treated as a **false** value.
+You can weight options like this:
 
 ```
-(? :check_method()) -- This will fire if check_method() returns true via the API.
+Her pet is a {% ? :"dog" 3:"cat" 5:"donkey"} -- This pet has a 5/9 chance of being a donkey
 ```
 
-Likewise the false boolean check syntax applies to methods:
+Finally, you can mark some options as conditional with paren syntax:
 
 ```
-(? !:check_method()) -- This will fire if check_method() returns false via the API.
+Her pet is a {% ? :"dog" :"cat" 3(?is_pirate): "parrot"}.
 ```
 
-You can also pass arguments to conditional methods:
+In this example, if `is_pirate` is not set, it's a coin-flip between dog and cat. If she is a pirate, however, the pet has a 3/5 chance of being a parrot.
+
+
+## 2.4 Logic Beats
+
+Sometimes in a narrative flow, you may want to perform logic that is not directly attached to a text beat. To do that, you can use a **logic beat:**
 
 ```
-(? :check_method(some_variable)) -- This will pass `some_variable` to `check_method`, where it can be used in determining the calculation
+*                 -- this is a logic beat
+  :call_method
+  ~ some_var = 3
 ```
+
 
 # PEGTL Notes
 

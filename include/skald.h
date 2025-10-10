@@ -180,7 +180,8 @@ struct Move {
 using Operation = std::variant<Move, MethodCall, Mutation>;
 
 struct TextInsertion {
-  std::string variable_name;
+  RValue rvalue;
+  std::string dbg_desc() { return rval_to_string(rvalue); }
 };
 
 using TextPart = std::variant<std::string, TextInsertion>;
@@ -194,7 +195,7 @@ struct TextContent {
         ret += std::get<std::string>(part);
       } else {
         auto ins = std::get<TextInsertion>(part);
-        ret += "{" + ins.variable_name + "}";
+        ret += "{" + ins.dbg_desc() + "}";
       }
     }
     return ret;
