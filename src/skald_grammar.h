@@ -112,6 +112,7 @@ struct conditional
 struct injectable_rvalue : rvalue {};
 struct ternary_tail : seq<ws, one<'?'>, ws, rvalue, ws, one<':'>, ws, rvalue> {
 };
+// struct switch_option :
 // struct ternary_switch_tail:
 struct injectable : seq<injectable_rvalue, opt<ternary_tail>> {};
 struct text_injection : seq<one<'{'>, ws, injectable, ws, one<'}'>> {};

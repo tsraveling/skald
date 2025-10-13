@@ -111,7 +111,7 @@ template <> struct action<injectable_rvalue> {
   static void apply0(ParseState &state) {
     dbg_out(">-+ injectable_rvalue: ");
     state.text_content_queue.push_back(
-        TextInsertion{.rvalue = state.rval_buffer_pop()});
+        SimpleInsertion{.rvalue = state.rval_buffer_pop()});
   }
 };
 
