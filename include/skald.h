@@ -181,27 +181,46 @@ using Operation = std::variant<Move, MethodCall, Mutation>;
 
 using TernaryOption = std::tuple<RValue, RValue>;
 
-struct TernarySwitch {
-  RValue check;
-  std::vector<TernaryOption> options;
-};
-
 struct TernaryInsertion {
   RValue check;
-  RValue true_response;
-  RValue false_response;
+  std::vector<TernaryOption> options;
   std::string dbg_desc() {
-    return rval_to_string(check) + " ? " + rval_to_string(true_response) +
-           " : " + rval_to_string(false_response);
+    std::string ret = "{> " + rval_to_string(check) + "? ";
+    for (auto &opt : options) {
+      ret += rval_to_string(std::get<0>(opt)) + ":" +
+             rval_to_string(std::get<1>(opt));
+    }
+    ret += "}";
+    return ret;
   }
 };
 
-struct TextInsertion {
+struct ChanceOption {
+  int weight;
+  RValue value;
+  std::string dbg_desc() {
+    return std::to_string(weight) + ":" + rval_to_string(value);
+  }
+};
+
+struct ChanceInsertion {
+  std::vector<ChanceOption> options;
+  std::string dbg_desc() {
+    std::string ret = "{> DICE ? ";
+    for (auto &opt : options) {
+      ret += opt.dbg_desc();
+    }
+    ret += "}";
+    return ret;
+  }
+};
+
+struct SimpleInsertion {
   RValue rvalue;
   std::string dbg_desc() { return rval_to_string(rvalue); }
 };
 
-using TextPart = std::variant<std::string, TextInsertion, TernaryInsertion>;
+using TextPart = std::variant<std::string, SimpleInsertion, TernaryInsertion>;
 
 struct TextContent {
   std::vector<TextPart> parts;
@@ -214,7 +233,7 @@ struct TextContent {
         auto ins = std::get<TernaryInsertion>(part);
         ret += "{" + ins.dbg_desc() + "}";
       } else {
-        auto ins = std::get<TextInsertion>(part);
+        auto ins = std::get<SimpleInsertion>(part);
         ret += "{" + ins.dbg_desc() + "}";
       }
     }
