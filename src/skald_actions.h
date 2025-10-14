@@ -115,6 +115,14 @@ template <> struct action<injectable_rvalue> {
   }
 };
 
+template <> struct action<injectable> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out(">>> injectable: " << text);
+  }
+};
+
 template <> struct action<inline_text_segment> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

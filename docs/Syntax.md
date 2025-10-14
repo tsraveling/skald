@@ -176,29 +176,6 @@ Her pet is a {% ? ["dog", (?is_cat_person):"cat", 3(?is_pirate): "parrot"]}.
 
 In this example, if `is_pirate` is not set but `is_cat_person` is, it's a coin-flip between dog and cat. If she is a pirate, however, the pet has a 3/5 chance of being a parrot. If neither flag is set, it will always be "dog".
 
-### 2.3.5 Textual Insertions
-
-If you are inserting sections of just text, you can use `|` (bar) syntax:
-
-```
-{some_flag ? You can add a bunch of text here | and this is if some_flag is false}
-```
-
-And with switches:
-
-```
-{some_val ? [1: here is some text | 2: and some text here | 3: and so on]}
-```
-
-And with chance switches:
-
-```
-{% ? [take the road more traveled | take the road less traveled]}
-```
-
-Note that with the normal syntax you must use either a string, number, variable, or method value, and with the bar syntax, you can only use text -- in other words you can't use text for one option and (for instance) a method for another.
-
-
 ## 2.4 Logic Beats
 
 Sometimes in a narrative flow, you may want to perform logic that is not directly attached to a text beat. To do that, you can use a **logic beat:**

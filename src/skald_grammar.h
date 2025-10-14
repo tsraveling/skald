@@ -112,9 +112,15 @@ struct conditional
 struct injectable_rvalue : rvalue {};
 struct ternary_tail : seq<ws, one<'?'>, ws, rvalue, ws, one<':'>, ws, rvalue> {
 };
-// struct switch_option :
-// struct ternary_switch_tail:
-struct injectable : seq<injectable_rvalue, opt<ternary_tail>> {};
+struct switch_default : one<'_'> {};
+struct switch_option
+    : seq<sor<switch_default, rvalue>, ws, one<':'>, ws, rvalue> {};
+// STUB: NEXT: This switch tail isn't working (regular ternary is)
+struct switch_tail
+    : seq<ws, one<'?'>, ws, one<'['>, ws, list<switch_option, one<','>, space>,
+          ws, must<one<']'>>> {};
+struct injectable
+    : seq<injectable_rvalue, opt<sor<ternary_tail, switch_tail>>, ws> {};
 struct text_injection : seq<one<'{'>, ws, injectable, ws, one<'}'>> {};
 
 // SECTION: TEXT
