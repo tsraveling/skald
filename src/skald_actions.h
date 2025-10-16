@@ -4,7 +4,9 @@
 #include "parse_state.h"
 #include "skald.h"
 #include "skald_grammar.h"
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace Skald {
 
@@ -110,8 +112,38 @@ template <> struct action<argument> {
 template <> struct action<injectable_rvalue> {
   static void apply0(ParseState &state) {
     dbg_out(">-+ injectable_rvalue: ");
+
+    state.injectable_buffer = state.rval_buffer_pop();
+  }
+};
+
+template <> struct action<switch_option> {
+  static void apply0(ParseState &state) {
+    auto val = state.rval_buffer_pop();
+    auto check = state.rval_buffer_pop();
+    state.ternary_option_queue.push_back(TernaryOption{check, val});
+    dbg_out(">>> switch_option committed.");
+  }
+};
+
+template <> struct action<switch_tail> {
+  static void apply0(ParseState &state) {
     state.text_content_queue.push_back(
-        SimpleInsertion{.rvalue = state.rval_buffer_pop()});
+        TernaryInsertion{.check = state.injectable_buffer_pop(),
+                         .options = std::move(state.ternary_option_queue)});
+    dbg_out(">>> switch_tail committed.");
+  }
+};
+
+template <> struct action<ternary_tail> {
+  static void apply0(ParseState &state) {
+    auto false_val = state.rval_buffer_pop();
+    auto true_val = state.rval_buffer_pop();
+    state.text_content_queue.push_back(
+        TernaryInsertion{.check = state.injectable_buffer_pop(),
+                         .options = {TernaryOption{true, true_val},
+                                     TernaryOption{false, false_val}}});
+    dbg_out(">>> ternary_tail committed.");
   }
 };
 
@@ -120,6 +152,12 @@ template <> struct action<injectable> {
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
     dbg_out(">>> injectable: " << text);
+    // This will only be filled if it wasn't a switch or ternary
+    if (state.injectable_buffer) {
+      dbg_out(("  --> saving as simple insertion!"));
+      state.text_content_queue.push_back(
+          SimpleInsertion{.rvalue = state.injectable_buffer_pop()});
+    }
   }
 };
 

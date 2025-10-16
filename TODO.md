@@ -1,5 +1,7 @@
 # Skald TODO
 
+- std::exchange(conditional_buffer, std::nullopt)
+
 ## 2.3 Insertions
 
 ### 2.3.1 Direct Insertion

@@ -116,9 +116,9 @@ struct switch_default : one<'_'> {};
 struct switch_option
     : seq<sor<switch_default, rvalue>, ws, one<':'>, ws, rvalue> {};
 // STUB: NEXT: This switch tail isn't working (regular ternary is)
-struct switch_tail
-    : seq<ws, one<'?'>, ws, one<'['>, ws, list<switch_option, one<','>, space>,
-          ws, must<one<']'>>> {};
+struct switch_tail : seq<ws, one<'?'>, ws, one<'['>, ws,
+                         list<switch_option, seq<ws, one<','>, ws>, space>, ws,
+                         must<one<']'>>> {};
 struct injectable
     : seq<injectable_rvalue, opt<sor<ternary_tail, switch_tail>>, ws> {};
 struct text_injection : seq<one<'{'>, ws, injectable, ws, one<'}'>> {};

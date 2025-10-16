@@ -129,6 +129,19 @@ struct ParseState {
     return r;
   }
 
+  /** This will hold the initial rval in an injectable so it can be used in
+   * whatever format the injectable ends up being. */
+  std::optional<RValue> injectable_buffer;
+
+  /** Pops the injectable buffer and returns the RValue to use */
+  auto injectable_buffer_pop() {
+    return *std::exchange(injectable_buffer, std::nullopt);
+  }
+
+  /** This holds ternary options until the ternary tail is complete, at which
+   * point these get committed to a given Insertion. */
+  std::vector<TernaryOption> ternary_option_queue;
+
   /** Will either append to the last string if also a simple string, or add it
    * to the stack if not. */
   void add_text_string(std::string str) {

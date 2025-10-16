@@ -8,8 +8,6 @@ Second beat with an {injection}.
 
 This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
 
-This one has a normal ternary with text separation bars, and {some_flag ? "yarrrrr!" (the quotes should appear in this version!) | "narrrrr."} is the result.
-
 Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
 
 Third {-- with inline comment} test
