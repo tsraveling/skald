@@ -569,6 +569,7 @@ You can also send an **argument** to the conclusion, as with methods:
 ### 4.1.4 Narrative Completion
 
 Every module must either transition to another module, or exit. 
+
 ## 4.2 File Structure
 
 The **Skald root** will be determined by the code invoking the Skald API. You can use **folders** within this, like this:
@@ -629,7 +630,7 @@ You can also overwrite local module variables using testbeds. This is useful to 
 Finally, you can define any block as an entrypoint for testing. So if you wanted to jump into a dungeon crawl as a wizard, right after the player enters the throne room, you might invoke the command line tool like this:
 
 ```
-> skalder DungeonCrawl.ska testbed=WizardMode start=throne-room
+> skalder DungeonCrawl.ska testbed=WizardMode start=throne_room
 ```
 
 You can also start over from any block, using any testbed, directly from the Skalder interface.
