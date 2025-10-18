@@ -1,16 +1,9 @@
 # Skald TODO
 
-- [ ] 2.3.4 Chance Ternaries
-    - [ ] Chance Switch Ternaries
-    - [ ] Weights
-    - [ ] Conditional options
 - [ ] 2.4 Logic Beats
     - [ ] One-liners
     - [ ] Conditional logic beats
     - [ ] Else logic beats
-- [ ] 2.5 Chance blocks
-    - [ ] Weighting
-    - [ ] With logic beats
 - [ ] 3.1.3 Variables
     - [ ] Declarations
     - [ ] Variable carry-throughs
@@ -24,6 +17,18 @@
 - [ ] 5.2 Testbeds
     - [ ] Initial defaults
     - [ ] Including for carry-throughs
+
+**Hold for later consideration**
+
+We should hold off on these because it seems like their primary use will be PCG stuff, and it is decently likely there will be a better way to do that. If that decision is finalized we will need to update the syntax docs accordingly.
+
+- [ ] 2.3.4 Chance Ternaries
+    - [ ] Chance Switch Ternaries
+    - [ ] Weights
+    - [ ] Conditional options
+- [ ] 2.5 Chance blocks
+    - [ ] Weighting
+    - [ ] With logic beats
     
 **Then begin planning next steps:**
 
