@@ -169,6 +169,9 @@ struct beat_line
     : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>, opt<conditional>, ws,
           opt<beat_attribution>, text_content, eol> {};
 
+/** A text beat, optionally followed by some operations. */
+struct beat_clause : seq<beat_line, star<op_line>> {};
+
 // SECTION: CHOICES
 
 struct inline_choice_move : op_move {};
@@ -190,7 +193,7 @@ struct ignored : sor<line_comment, blank_line> {};
 struct block_tag_name : identifier {};
 struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
 struct block
-    : seq<block_tag_line, star<sor<ignored, beat_line, choice_block>>> {};
+    : seq<block_tag_line, star<sor<ignored, beat_clause, choice_block>>> {};
 
 // SECTION: FULL GRAMMAR
 

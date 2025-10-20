@@ -1,5 +1,6 @@
 # Skald TODO
 
+- [ ] Operations on normal beats
 - [ ] 2.4 Logic Beats
     - [ ] One-liners
     - [ ] Conditional logic beats

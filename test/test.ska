@@ -10,6 +10,18 @@ This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the 
 
 Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
 
+This is a normal text block with some ops on it
+  -> some_transition
+  ~ some_var = another_var
+
+-- This is a logic beat
+*
+  -> to_park
+  ~ subtract -= 5
+
+-- This is a one-liner:
+* :someMethod(a, b)
+
 Third {-- with inline comment} test
 
 -- (? :method_check() and !:arg_check(a, b, c)) This one is conditional with a truthy value!
