@@ -161,6 +161,8 @@ struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 
 // SECTION: BEATS
 
+// struct logic_beat_clause : seq<ws, one<'*'>, ws
+
 /** The `some_tag: ...` part of a beat */
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
 
