@@ -342,6 +342,20 @@ template <> struct action<choice_block> {
 
 // SECTION: BEATS
 
+template <> struct action<logic_beat_single> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> logic_beat_single: " << input.string());
+  }
+};
+
+template <> struct action<logic_beat_clause> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> logic_beat_clause:\n" << input.string());
+  }
+};
+
 template <> struct action<beat_attribution> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

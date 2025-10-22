@@ -6,13 +6,13 @@ First beat
 
 Second beat with an {injection}.
 
-This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
+-- This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
 
-Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
+-- Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
 
-This is a normal text block with some ops on it
-  -> some_transition
-  ~ some_var = another_var
+-- This is a normal text block with some ops on it
+--  -> some_transition
+--  ~ some_var = another_var
 
 -- This is a logic beat
 *

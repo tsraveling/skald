@@ -161,7 +161,14 @@ struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 
 // SECTION: BEATS
 
-// struct logic_beat_clause : seq<ws, one<'*'>, ws
+struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
+struct logic_beat_conditional : sor<conditional, logic_beat_else> {};
+struct logic_beat_clause
+    : seq<ws, one<'*'>, ws, opt<logic_beat_conditional>, ws,
+          opt<end_line_comment>, ws, eol, star<op_line>> {};
+struct logic_beat_single
+    : seq<ws, one<'*'>, ws, opt<logic_beat_conditional>, ws, operation, ws,
+          opt<end_line_comment>, ws, eol> {};
 
 /** The `some_tag: ...` part of a beat */
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
@@ -194,8 +201,9 @@ struct ignored : sor<line_comment, blank_line> {};
 
 struct block_tag_name : identifier {};
 struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
-struct block
-    : seq<block_tag_line, star<sor<ignored, beat_clause, choice_block>>> {};
+struct block : seq<block_tag_line,
+                   star<sor<ignored, logic_beat_single, logic_beat_clause,
+                            beat_clause, choice_block>>> {};
 
 // SECTION: FULL GRAMMAR
 
