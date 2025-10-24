@@ -13,26 +13,6 @@ namespace pegtl = tao::pegtl;
 
 namespace Skald {
 
-/* DEBUG OUTPUT STUFF TO DELETE LATER */
-
-struct OpDebugProcessor {
-  void operator()(const Move &move) {
-    dbg_out("        * MOVE TO: " << move.target_tag);
-  }
-  void operator()(const MethodCall &method_call) {
-    dbg_out("        * CALL: " << method_call.dbg_desc());
-  }
-  void operator()(const Mutation &mutation) {
-    dbg_out("        * MUTATE: " << mutation.dbg_desc());
-  }
-};
-
-void dbg_desc_ops(const std::vector<Operation> &ops) {
-  for (auto &op : ops) {
-    std::visit(OpDebugProcessor{}, op);
-  }
-}
-
 /* EXTERNAL API */
 
 void Skald::load(std::string path) {

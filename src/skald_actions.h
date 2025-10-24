@@ -346,6 +346,13 @@ template <> struct action<logic_beat_single> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> logic_beat_single: " << input.string());
+    state.add_logic_beat();
+  }
+};
+
+template <> struct action<logic_beat_conditional> {
+  static void apply0(ParseState &state) {
+    dbg_out(">>> logic_beat_conditional");
   }
 };
 
@@ -353,6 +360,7 @@ template <> struct action<logic_beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> logic_beat_clause:\n" << input.string());
+    state.add_logic_beat();
   }
 };
 

@@ -22,10 +22,16 @@ Second beat with an {injection}.
 -- This is a one-liner:
 * :someMethod(a, b)
 
+-- This one is conditional
+* (? some_condition and :some_cond_method())
+  -> to_cond
+  ~ cond_sub -= 5
+  :call_meth()
+
 Third {-- with inline comment} test
 
 -- (? :method_check() and !:arg_check(a, b, c)) This one is conditional with a truthy value!
--- (? check_val and !falsy_check and (more_check > 10 or less_check <= 9)) This one is a combo clause
+-- (? check_val and !falsy_check and (more_check > 10 or less_check<= 9)) This one is a combo clause
 -- (? !check_val) This one shows up if check val is not true
 -- (? val_a and val_b and val_c and val_d) This one checks a long and clause.
 

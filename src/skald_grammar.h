@@ -165,7 +165,7 @@ struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
 struct logic_beat_conditional : sor<conditional, logic_beat_else> {};
 struct logic_beat_clause
     : seq<ws, one<'*'>, ws, opt<logic_beat_conditional>, ws,
-          opt<end_line_comment>, ws, eol, star<op_line>> {};
+          opt<end_line_comment>, ws, eol, plus<op_line>> {};
 struct logic_beat_single
     : seq<ws, one<'*'>, ws, opt<logic_beat_conditional>, ws, operation, ws,
           opt<end_line_comment>, ws, eol> {};

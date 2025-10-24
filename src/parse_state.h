@@ -191,6 +191,21 @@ struct ParseState {
     current_block->beats.push_back(beat);
   }
 
+  /** Creates a beat and adds it to the current block */
+  void add_logic_beat() {
+    dbg_out(">>> add_logic_beat()");
+    if (!current_block) {
+      Log::err("Found a logic beat but there is no current block!");
+    }
+    Log::verbose(" - Adding a logic beat.");
+
+    Beat beat;
+    beat.condition = conditional_buffer_pop();
+    beat.is_logic_block = true;
+    beat.operations = std::move(operation_queue);
+    current_block->beats.push_back(beat);
+  }
+
   void add_choice() {
     if (!current_block) {
       Log::err("Found choice but there is no current block!");

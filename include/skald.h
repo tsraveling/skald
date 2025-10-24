@@ -179,6 +179,28 @@ struct Move {
 
 using Operation = std::variant<Move, MethodCall, Mutation>;
 
+/* DEBUG OUTPUT STUFF TO DELETE LATER */
+
+struct OpDebugProcessor {
+  std::string operator()(const Move &move) {
+    return "\n        * MOVE TO: " + move.target_tag;
+  }
+  std::string operator()(const MethodCall &method_call) {
+    return "\n        * CALL: " + method_call.dbg_desc();
+  }
+  std::string operator()(const Mutation &mutation) {
+    return "\n        * MUTATE: " + mutation.dbg_desc();
+  }
+};
+
+inline std::string dbg_desc_ops(const std::vector<Operation> &ops) {
+  std::string ret = "";
+  for (auto &op : ops) {
+    ret += std::visit(OpDebugProcessor{}, op);
+  }
+  return ret;
+}
+
 using TernaryOption = std::tuple<RValue, RValue>;
 
 struct TernaryInsertion {
@@ -256,11 +278,13 @@ struct Beat {
   std::string attribution;
   std::vector<Operation> operations;
   TextContent content;
+  bool is_logic_block = false;
 
   std::string dbg_desc() const {
     return (condition ? condition->dbg_desc() + " " : "") +
            (attribution.length() > 0 ? attribution + ": " : "") +
-           content.dbg_desc();
+           (is_logic_block ? "<LOGIC>" : content.dbg_desc()) +
+           (operations.size() > 0 ? dbg_desc_ops(operations) : "");
   }
 };
 
