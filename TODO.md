@@ -5,12 +5,12 @@
     - [x] One-liners
     - [x] Conditional logic beats
     - [x] Else logic beats
-- [ ] 3.1.3 Variables
-    - [ ] Declarations
-    - [ ] Variable carry-throughs
-    - [ ] Operator rvalue methods
-    - [ ] Operator rvalue variables
-- [ ] 4.1.1 Module Transitinos
+- [x] 3.1.3 Variables
+    - [x] Declarations
+    - [x] Variable carry-throughs
+    - [x] Operator rvalue methods
+    - [x] Operator rvalue variables
+- [ ] 4.1.1 Module Transitions
     - [ ] 4.1.2 Module Entry Points
     - [ ] 4.2 Subfolder parsing
 - [ ] 4.1.3 Conclusions

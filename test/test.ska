@@ -68,8 +68,9 @@ some_tag: This one is attributed!
   :methodWithArg(5)
   :methodWithAllAgs(5, true, 2.3, false, "some string content!", a_variable)
 > This one mutates
-  ~ equate = 3
-  ~ add += 4
+  ~ equate = :some_method(with_arg)
+  ~ add += 3
+  ~ add += :method_output("cat")
   ~ subtract -= 5
   ~ flip =!
   ~ equate_var = some_other_var

@@ -275,7 +275,8 @@ struct Choice {
   std::vector<Operation> operations;
 
   std::string dbg_desc() const {
-    return (condition ? condition->dbg_desc() + " " : "") + content.dbg_desc();
+    return (condition ? condition->dbg_desc() + " " : "") + content.dbg_desc() +
+           " (" + std::to_string(operations.size()) + " ops)";
   }
 };
 

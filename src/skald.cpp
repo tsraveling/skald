@@ -47,7 +47,7 @@ void Skald::load(std::string path) {
       }
       for (const auto &choice : block.choices) {
         std::cout << "    - Choice: " << choice.dbg_desc() << "\n";
-        dbg_desc_ops(choice.operations);
+        std::cout << dbg_desc_ops(choice.operations);
       }
     }
 
