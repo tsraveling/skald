@@ -279,11 +279,13 @@ struct Beat {
   std::vector<Operation> operations;
   TextContent content;
   bool is_logic_block = false;
+  bool is_else = false;
 
   std::string dbg_desc() const {
     return (condition ? condition->dbg_desc() + " " : "") +
            (attribution.length() > 0 ? attribution + ": " : "") +
-           (is_logic_block ? "<LOGIC>" : content.dbg_desc()) +
+           (is_logic_block ? (is_else ? "<ELSE>" : "<LOGIC>")
+                           : content.dbg_desc()) +
            (operations.size() > 0 ? dbg_desc_ops(operations) : "");
   }
 };

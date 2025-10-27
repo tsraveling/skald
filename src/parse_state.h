@@ -191,6 +191,9 @@ struct ParseState {
     current_block->beats.push_back(beat);
   }
 
+  /** Stores an `(else)` flag for a logic block */
+  bool store_is_else = false;
+
   /** Creates a beat and adds it to the current block */
   void add_logic_beat() {
     dbg_out(">>> add_logic_beat()");
@@ -203,7 +206,9 @@ struct ParseState {
     beat.condition = conditional_buffer_pop();
     beat.is_logic_block = true;
     beat.operations = std::move(operation_queue);
+    beat.is_else = store_is_else;
     current_block->beats.push_back(beat);
+    store_is_else = false;
   }
 
   void add_choice() {

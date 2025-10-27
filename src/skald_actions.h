@@ -356,6 +356,13 @@ template <> struct action<logic_beat_conditional> {
   }
 };
 
+template <> struct action<logic_beat_else> {
+  static void apply0(ParseState &state) {
+    dbg_out(">>> logic_beat_else");
+    state.store_is_else = true;
+  }
+};
+
 template <> struct action<logic_beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

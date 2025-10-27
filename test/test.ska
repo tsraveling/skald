@@ -28,6 +28,14 @@ Second beat with an {injection}.
   ~ cond_sub -= 5
   :call_meth()
 
+-- This one is an else
+* (else)
+  -> go_elsewhere
+
+-- Test inlines
+* (? is_true) -> one_way
+* (else) ~ got_lost = true
+
 Third {-- with inline comment} test
 
 -- (? :method_check() and !:arg_check(a, b, c)) This one is conditional with a truthy value!

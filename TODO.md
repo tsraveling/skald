@@ -1,10 +1,10 @@
 # Skald TODO
 
 - [ ] Operations on normal beats
-- [ ] 2.4 Logic Beats
-    - [ ] One-liners
-    - [ ] Conditional logic beats
-    - [ ] Else logic beats
+- [x] 2.4 Logic Beats
+    - [x] One-liners
+    - [x] Conditional logic beats
+    - [x] Else logic beats
 - [ ] 3.1.3 Variables
     - [ ] Declarations
     - [ ] Variable carry-throughs
