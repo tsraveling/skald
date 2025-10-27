@@ -159,6 +159,14 @@ struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation> {};
 struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 
+// SECTION: VARIABLE DECLARATION
+
+struct declaration_initial : one<'~'> {};
+struct declaration_import : one<'>'> {};
+struct declaration_line
+    : seq<ws, sor<declaration_initial, declaration_import>, ws, identifier, ws,
+          one<'='>, ws, rvalue, ws, opt<end_line_comment>, eol> {};
+
 // SECTION: BEATS
 
 struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
@@ -207,10 +215,13 @@ struct block : seq<block_tag_line,
 
 // SECTION: FULL GRAMMAR
 
-struct grammar : seq<star<ignored>, // Skip initial comments/blanks
-                     plus<block>,   // One or more blocks
-                     star<ignored>, // Skip trailing comments/blanks
-                     opt<eof>       // Optional EOF (more forgiving)
-                     > {};
+struct grammar
+    : seq<star<ignored>,                        // Skip initial comments/blanks
+          star<sor<ignored, declaration_line>>, // Variable declarations
+          star<ignored>,                        // Whitespace etc
+          plus<block>,                          // One or more blocks
+          star<ignored>,                        // Skip trailing comments/blanks
+          opt<eof>                              // Optional EOF (more forgiving)
+          > {};
 
 } // namespace Skald

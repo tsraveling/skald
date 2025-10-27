@@ -269,7 +269,28 @@ template <> struct action<op_method> {
   }
 };
 
-/// MUTATIONS ///
+/// SECTION: DECLARATIONS ///
+
+template <> struct action<declaration_initial> {
+  static void apply0(ParseState &state) {
+    state.last_declaration_was_import = false;
+  }
+};
+template <> struct action<declaration_import> {
+  static void apply0(ParseState &state) {
+    state.last_declaration_was_import = true;
+  }
+};
+template <> struct action<declaration_line> {
+  static void apply0(ParseState &state) {
+    state.module.declarations.push_back(
+        Declaration{.var = {state.pop_id()},
+                    .initial_value = state.rval_buffer_pop(),
+                    .is_imported = state.last_declaration_was_import});
+  }
+};
+
+/// SECTION: MUTATIONS ///
 
 template <> struct action<op_mutate_subtract> {
   template <typename ActionInput>

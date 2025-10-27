@@ -18,6 +18,12 @@ struct MethodCall;
 using RValue = std::variant<std::string, bool, int, float, Variable,
                             std::shared_ptr<MethodCall>>;
 
+struct Declaration {
+  Variable var;
+  RValue initial_value;
+  bool is_imported = false;
+};
+
 struct MethodCall {
   std::string method;
   std::vector<RValue> args;
@@ -183,13 +189,13 @@ using Operation = std::variant<Move, MethodCall, Mutation>;
 
 struct OpDebugProcessor {
   std::string operator()(const Move &move) {
-    return "\n        * MOVE TO: " + move.target_tag;
+    return "\n    * MOVE TO: " + move.target_tag;
   }
   std::string operator()(const MethodCall &method_call) {
-    return "\n        * CALL: " + method_call.dbg_desc();
+    return "\n    * CALL: " + method_call.dbg_desc();
   }
   std::string operator()(const Mutation &mutation) {
-    return "\n        * MUTATE: " + mutation.dbg_desc();
+    return "\n    * MUTATE: " + mutation.dbg_desc();
   }
 };
 
@@ -301,6 +307,7 @@ struct Block {
 class Module {
 public:
   std::string filename;
+  std::vector<Declaration> declarations;
   std::map<std::string, Block> blocks;
 
   Block *get_block(std::string tag) {

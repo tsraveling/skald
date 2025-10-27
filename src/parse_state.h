@@ -11,6 +11,10 @@
 namespace Skald {
 
 struct ParseState {
+
+  /** Stores if a declaration is an import or not */
+  bool last_declaration_was_import = false;
+
   /** The module attached to the parsed file */
   Module module;
 

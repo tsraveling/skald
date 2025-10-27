@@ -1,3 +1,15 @@
+
+-- Initializations
+~ some_var = 3
+~ some_other = :call_method()
+> imported_var = 0
+> player_name = "Billy"
+
+-- This one is commented!
+> foo = false
+~ bar = true -- end of line comment
+
+
 -- Test comment
 
 #test_block

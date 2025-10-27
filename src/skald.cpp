@@ -28,16 +28,25 @@ void Skald::load(std::string path) {
       std::cout << "Parse failed!\n";
     }
 
-    std::cout << ">>> Parse results:";
+    std::cout << ">>> Parse results:\n\n";
+
+    std::cout << "DECLARATIONS:\n";
+    for (const auto &dec : state.module.declarations) {
+      std::cout << " - " << (dec.is_imported ? "<IMPORT>" : "<NEW>") << " "
+                << dec.var.name << " (" << rval_to_string(dec.initial_value)
+                << ")\n";
+    }
+
+    std::cout << "\nSTRUCTURE:\n";
     // Print details about each block
     for (const auto &[tag, block] : state.module.blocks) {
-      std::cout << "   - Block '" << tag << "': " << block.beats.size()
+      std::cout << "\n- Block '" << tag << "': " << block.beats.size()
                 << " beats" << std::endl;
       for (const auto &beat : block.beats) {
-        std::cout << "     - Beat: " << beat.dbg_desc() << "\n";
+        std::cout << "  - Beat: " << beat.dbg_desc() << "\n";
       }
       for (const auto &choice : block.choices) {
-        std::cout << "      - Choice: " << choice.dbg_desc() << "\n";
+        std::cout << "    - Choice: " << choice.dbg_desc() << "\n";
         dbg_desc_ops(choice.operations);
       }
     }
