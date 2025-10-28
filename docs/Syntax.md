@@ -529,7 +529,7 @@ In addition, a module transition can define an entry point like this:
 ```
 > Take the road less traveled
   ~robert_frost=true
-  GO RoadLessTraveled.ska -> still-in-the-woods
+  GO RoadLessTraveled.ska -> still_in_the_woods
 ```
 
 This will drop the player into the `RoadLessTraveled` module, starting at the `#still-in-the-woods` block.

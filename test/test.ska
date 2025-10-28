@@ -59,6 +59,10 @@ some_tag: This one is attributed!
 
 -- (? eq_check = some_other_val) some_tag: this is a conditional attributed beat
 
+> Bye!
+  EXIT 14
+> Next please!
+  GO next chapter.ska
 > This is a choice
 > (? some_condition = "test") This choice is conditional
 > This one goes -> to_school

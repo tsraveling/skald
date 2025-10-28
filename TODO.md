@@ -1,5 +1,11 @@
 # Skald TODO
 
+## Next:
+
+GO and EXIT are handled in grammar and set up in Skald.h. Just add actions for htem and get em added in.
+
+## Roadmap
+
 - [ ] Operations on normal beats
 - [x] 2.4 Logic Beats
     - [x] One-liners

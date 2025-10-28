@@ -145,7 +145,7 @@ struct op_mutate_start : seq<ws, one<'~'>, ws, identifier, ws> {};
 struct op_mutate_equate
     : seq<op_mutate_start, ws, operator_equals, ws, rvalue> {};
 struct op_mutate_switch : seq<op_mutate_start, ws, operator_equals_switch> {};
-struct math_rvalue : sor<r_variable, val_int, val_float> {};
+struct math_rvalue : sor<r_variable, val_int, val_float, r_method> {};
 struct op_mutate_add
     : seq<op_mutate_start, ws, operator_plus_equals, ws, math_rvalue> {};
 struct op_mutate_subtract
@@ -154,9 +154,16 @@ struct op_mutate_subtract
 struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
                          op_mutate_subtract> {};
 
+/** You can use basically any string for your module path; we'll check validity
+ * later in the LSP */
+struct module_path : plus<not_one<'\r', '\n'>> {};
+struct keyword_go : keyword<'G', 'O'> {};
+struct keyword_exit : keyword<'E', 'X', 'I', 'T'> {};
+struct op_go : seq<keyword_go, plus<space>, module_path> {};
+struct op_exit : seq<keyword_exit, plus<space>, opt<rvalue>> {};
 struct op_move : seq<move_marker, ws, identifier, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
-struct operation : sor<op_move, op_method, op_mutation> {};
+struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
 struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 
 // SECTION: VARIABLE DECLARATION

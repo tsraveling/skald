@@ -179,11 +179,27 @@ struct Mutation {
   }
 };
 
+struct GoModule {
+  std::string module_path;
+  std::string dbg_desc() const { return module_path; }
+};
+
+struct Exit {
+  std::optional<RValue> argument;
+  std::string dbg_desc() const {
+    if (argument) {
+      return rval_to_string(*argument);
+    } else {
+      return "<no argument>";
+    }
+  }
+};
+
 struct Move {
   std::string target_tag;
 };
 
-using Operation = std::variant<Move, MethodCall, Mutation>;
+using Operation = std::variant<Move, MethodCall, Mutation, GoModule, Exit>;
 
 /* DEBUG OUTPUT STUFF TO DELETE LATER */
 
@@ -196,6 +212,12 @@ struct OpDebugProcessor {
   }
   std::string operator()(const Mutation &mutation) {
     return "\n    * MUTATE: " + mutation.dbg_desc();
+  }
+  std::string operator()(const GoModule &go) {
+    return "\n    * GO TO: " + go.dbg_desc();
+  }
+  std::string operator()(const Exit &exit) {
+    return "\n    * EXIT: " + exit.dbg_desc();
   }
 };
 

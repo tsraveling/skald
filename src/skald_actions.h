@@ -252,6 +252,27 @@ template <> struct action<operation> {
   }
 };
 
+template <> struct action<module_path> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> module_path: " << input.string());
+  }
+};
+
+template <> struct action<op_go> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> op_go: " << input.string());
+  }
+};
+
+template <> struct action<op_exit> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out(">>> op_exit: " << input.string());
+  }
+};
+
 template <> struct action<op_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
