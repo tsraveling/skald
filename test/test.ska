@@ -22,31 +22,38 @@ Second beat with an {injection}.
 
 -- Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
 
--- This is a normal text block with some ops on it
---  -> some_transition
---  ~ some_var = another_var
+This is a normal text block with some ops on it
+  -> some_transition
+  ~ some_var = another_var
+
+* (? should_transfer)
+  GO subfolder/other module.ska
+
+* (else)
+  EXIT 14
+
 
 -- This is a logic beat
-*
-  -> to_park
-  ~ subtract -= 5
-
--- This is a one-liner:
-* :someMethod(a, b)
-
--- This one is conditional
-* (? some_condition and :some_cond_method())
-  -> to_cond
-  ~ cond_sub -= 5
-  :call_meth()
-
--- This one is an else
-* (else)
-  -> go_elsewhere
-
--- Test inlines
-* (? is_true) -> one_way
-* (else) ~ got_lost = true
+-- *
+--   -> to_park
+--   ~ subtract -= 5
+-- 
+-- -- This is a one-liner:
+-- * :someMethod(a, b)
+-- 
+-- -- This one is conditional
+-- * (? some_condition and :some_cond_method())
+--   -> to_cond
+--   ~ cond_sub -= 5
+--   :call_meth()
+-- 
+-- -- This one is an else
+-- * (else)
+--   -> go_elsewhere
+-- 
+-- -- Test inlines
+-- * (? is_true) -> one_way
+-- * (else) ~ got_lost = true
 
 Third {-- with inline comment} test
 

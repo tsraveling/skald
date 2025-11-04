@@ -606,7 +606,6 @@ You may want to try a few different variations on your start conditions, e.g. on
 A testbed is declared after the initial variable definition, and before the first block, and looks like this:
 
 ```
-
 -- Variables inherited from the CharacterCreation module
 -- Default testing values are for a rogue character
 < class = "Rogue"

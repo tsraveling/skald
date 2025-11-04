@@ -142,6 +142,9 @@ struct ParseState {
     return *std::exchange(injectable_buffer, std::nullopt);
   }
 
+  /** Stores the path for a GO command. Required, so don't need a pop method. */
+  std::string path_buffer;
+
   /** This holds ternary options until the ternary tail is complete, at which
    * point these get committed to a given Insertion. */
   std::vector<TernaryOption> ternary_option_queue;

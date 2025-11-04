@@ -255,21 +255,24 @@ template <> struct action<operation> {
 template <> struct action<module_path> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> module_path: " << input.string());
+    dbg_out(">>> module_path: " << input.string() << " (stored in buffer)");
+    state.path_buffer = input.string();
   }
 };
 
 template <> struct action<op_go> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> op_go: " << input.string());
+    dbg_out(">>> op_go: " << input.string() << " (pushing onto queue)");
+    state.operation_queue.push_back(GoModule{.module_path = state.path_buffer});
   }
 };
 
 template <> struct action<op_exit> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> op_exit: " << input.string());
+    dbg_out(">>> op_exit: " << input.string() << " (pushing onto queue)");
+    state.operation_queue.push_back(Exit{.argument = state.rval_buffer_pop()});
   }
 };
 
@@ -427,7 +430,7 @@ template <> struct action<beat_attribution> {
   }
 };
 
-template <> struct action<beat_line> {
+template <> struct action<beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> beat_line");
