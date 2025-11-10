@@ -260,11 +260,19 @@ template <> struct action<module_path> {
   }
 };
 
+// This checks if the currently processed GO line has a start tag on the end
+template <> struct action<op_go_start_tag> {
+  static void apply0(ParseState &state) { state.does_go_have_start_tag = true; }
+};
+
 template <> struct action<op_go> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_go: " << input.string() << " (pushing onto queue)");
-    state.operation_queue.push_back(GoModule{.module_path = state.path_buffer});
+    std::string start_tag = state.does_go_have_start_tag ? state.pop_id() : "";
+    dbg_out(" - >>> start_tag: " << start_tag);
+    state.operation_queue.push_back(
+        GoModule{.module_path = state.path_buffer, .start_in_tag = start_tag});
   }
 };
 

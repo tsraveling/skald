@@ -133,6 +133,9 @@ struct ParseState {
     return r;
   }
 
+  /** Used to catch optional start tags for GO operations */
+  bool does_go_have_start_tag = false;
+
   /** This will hold the initial rval in an injectable so it can be used in
    * whatever format the injectable ends up being. */
   std::optional<RValue> injectable_buffer;

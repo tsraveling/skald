@@ -29,6 +29,9 @@ This is a normal text block with some ops on it
 * (? should_transfer)
   GO subfolder/other module.ska
 
+* (? should_transfer_directed)
+  GO subfolder/other_module.ska -> some_tag
+
 * (else)
   EXIT 14
 

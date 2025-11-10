@@ -156,11 +156,13 @@ struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
 
 /** You can use basically any string for your module path; we'll check validity
  * later in the LSP */
-struct module_path : plus<not_one<'\r', '\n'>> {};
+struct module_path : plus<seq<not_at<move_marker>, not_one<'\r', '\n'>>> {};
 struct keyword_go : keyword<'G', 'O'> {};
 struct keyword_exit : keyword<'E', 'X', 'I', 'T'> {};
-struct op_go : seq<keyword_go, plus<space>, module_path> {};
 struct op_exit : seq<keyword_exit, plus<space>, opt<rvalue>> {};
+struct op_go_start_tag : seq<plus<blank>, move_marker, ws, identifier, ws> {};
+struct op_go : seq<keyword_go, plus<space>, module_path, opt<op_go_start_tag>> {
+};
 struct op_move : seq<move_marker, ws, identifier, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};

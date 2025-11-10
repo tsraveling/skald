@@ -181,7 +181,11 @@ struct Mutation {
 
 struct GoModule {
   std::string module_path;
-  std::string dbg_desc() const { return module_path; }
+  std::string dbg_desc() const {
+    return module_path +
+           (start_in_tag.length() > 0 ? " > " + start_in_tag : "");
+  }
+  std::string start_in_tag;
 };
 
 struct Exit {
