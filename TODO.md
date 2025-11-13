@@ -16,11 +16,11 @@ GO and EXIT are handled in grammar and set up in Skald.h. Just add actions for h
     - [x] Variable carry-throughs
     - [x] Operator rvalue methods
     - [x] Operator rvalue variables
-- [ ] 4.1.1 Module Transitions
-    - [ ] 4.1.2 Module Entry Points
-    - [ ] 4.2 Subfolder parsing
-- [ ] 4.1.3 Conclusions
-    - [ ] With arguments
+- [x] 4.1.1 Module Transitions
+    - [x] 4.1.2 Module Entry Points
+    - [x] 4.2 Subfolder parsing
+- [x] 4.1.3 Conclusions
+    - [x] With arguments
 - [ ] 5.2 Testbeds
     - [ ] Initial defaults
     - [ ] Including for carry-throughs

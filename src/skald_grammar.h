@@ -11,6 +11,11 @@ struct line_comment : seq<string<'-', '-'>, until<eol>> {};
 struct end_line_comment : seq<string<'-', '-'>, star<not_one<'\r', '\n'>>> {};
 struct ws : star<blank> {};
 struct blank_line : seq<ws, eol> {};
+struct ignored : sor<line_comment, blank_line> {};
+
+/** This can be used to cap any single functional line that allows an end
+ * comment */
+struct functional_eol : seq<ws, opt<end_line_comment>, eol> {};
 
 // SECTION: ABSTRACT STRUCTURE
 
@@ -70,6 +75,18 @@ struct operator_more_equal : string<'>', '='> {};
 struct operator_less_equal : string<'<', '='> {};
 struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
                           operator_equals_switch, operator_equals> {};
+
+// SECTION: TESTBEDS
+
+struct rvalue_testbed : sor<val_bool, val_string, val_float, val_int> {};
+struct testbed_open : seq<keyword<'@', 't', 'e', 's', 't', 'b', 'e', 'd'>,
+                          plus<blank>, identifier, functional_eol> {};
+struct keyword_end : keyword<'@', 'e', 'n', 'd'> {};
+struct testbed_closed : seq<keyword_end, functional_eol> {};
+struct testbed_declaration
+    : seq<ws, identifier, ws, one<'='>, ws, rvalue_testbed, functional_eol> {};
+struct testbed : seq<testbed_open, star<sor<ignored, testbed_declaration>>,
+                     testbed_closed> {};
 
 // SECTION: CONDITIONALS
 
@@ -171,7 +188,7 @@ struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 // SECTION: VARIABLE DECLARATION
 
 struct declaration_initial : one<'~'> {};
-struct declaration_import : one<'>'> {};
+struct declaration_import : one<'<'> {};
 struct declaration_line
     : seq<ws, sor<declaration_initial, declaration_import>, ws, identifier, ws,
           one<'='>, ws, rvalue, ws, opt<end_line_comment>, eol> {};
@@ -210,10 +227,6 @@ struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
 struct choice_clause : seq<choice_line, star<op_line>> {};
 struct choice_block : plus<choice_clause> {};
 
-// SECTION: EXCLUDED
-
-struct ignored : sor<line_comment, blank_line> {};
-
 // SECTION: BLOCKS
 
 struct block_tag_name : identifier {};
@@ -227,6 +240,7 @@ struct block : seq<block_tag_line,
 struct grammar
     : seq<star<ignored>,                        // Skip initial comments/blanks
           star<sor<ignored, declaration_line>>, // Variable declarations
+          star<sor<testbed, ignored>>,          // Testbeds
           star<ignored>,                        // Whitespace etc
           plus<block>,                          // One or more blocks
           star<ignored>,                        // Skip trailing comments/blanks

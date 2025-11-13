@@ -18,6 +18,23 @@ struct MethodCall;
 using RValue = std::variant<std::string, bool, int, float, Variable,
                             std::shared_ptr<MethodCall>>;
 
+using SimpleRValue = std::variant<std::string, bool, int, float>;
+
+/** Attempts to cast an RValue to a SimpleRValue, returnig nullopt if this is
+ * impossible. */
+inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
+  return std::visit(
+      [](const auto &value) -> std::optional<SimpleRValue> {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_constructible_v<SimpleRValue, T>) {
+          return SimpleRValue(value);
+        } else {
+          return std::nullopt;
+        }
+      },
+      rval);
+}
+
 struct Declaration {
   Variable var;
   RValue initial_value;
@@ -31,7 +48,8 @@ struct MethodCall {
 };
 
 // rval_to_string must be declared before MethodCall::dbg_desc uses it
-inline std::string rval_to_string(const RValue &val) {
+template <typename VariantType>
+inline std::string rval_to_string(const VariantType &val) {
   return std::visit(
       [](const auto &value) -> std::string {
         using T = std::decay_t<decltype(value)>;
@@ -150,6 +168,26 @@ inline std::string dbg_desc_conditional_item(const ConditionalItem &item) {
       },
       item);
 }
+
+struct TestbedDeclaration {
+  std::string variable;
+  SimpleRValue test_value;
+  std::string dbg_desc() const {
+    return "  -> " + variable + " = " + rval_to_string(test_value);
+  }
+};
+
+struct Testbed {
+  std::string name;
+  std::vector<TestbedDeclaration> declarations;
+  std::string dbg_desc() const {
+    std::string ret = "@" + name + ":";
+    for (auto &dec : declarations) {
+      ret += "\n" + dec.dbg_desc();
+    }
+    return ret;
+  }
+};
 
 struct Mutation {
   enum Type { EQUATE, SWITCH, ADD, SUBTRACT };
@@ -335,6 +373,7 @@ class Module {
 public:
   std::string filename;
   std::vector<Declaration> declarations;
+  std::vector<Testbed> testbeds;
   std::map<std::string, Block> blocks;
 
   Block *get_block(std::string tag) {

@@ -37,6 +37,11 @@ void Skald::load(std::string path) {
                 << ")\n";
     }
 
+    std::cout << "TESTBEDS:\n";
+    for (const auto &testbed : state.module.testbeds) {
+      std::cout << testbed.dbg_desc() << "\n";
+    }
+
     std::cout << "\nSTRUCTURE:\n";
     // Print details about each block
     for (const auto &[tag, block] : state.module.blocks) {

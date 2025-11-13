@@ -2,12 +2,17 @@
 -- Initializations
 ~ some_var = 3
 ~ some_other = :call_method()
-> imported_var = 0
-> player_name = "Billy"
+< imported_var = 0
+< player_name = "Billy"
 
 -- This one is commented!
-> foo = false
+< foo = false
 ~ bar = true -- end of line comment
+
+@testbed some_testbed
+  some_var = 10
+  some_other = 9
+@end
 
 
 -- Test comment

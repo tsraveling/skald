@@ -50,6 +50,35 @@ template <> struct action<string_content> {
   }
 };
 
+// SECTION: TESTBEDS
+
+template <> struct action<testbed_open> {
+  static void apply0(ParseState &state) {
+    dbg_out("<<< testbed_open");
+    state.module.testbeds.push_back(Testbed{.name = state.pop_id()});
+  }
+};
+template <> struct action<testbed_declaration> {
+  static void apply0(ParseState &state) {
+    dbg_out("<<< testbed_dec");
+    // This code assumes that a testbed has been opened, and that only simple
+    // rvalues will come through; this is grammar-enforced which is fortunate,
+    // because otherwise this would crash quite badly!
+    auto val = *cast_rval_to_simple(state.rval_buffer_pop());
+    state.module.testbeds.back().declarations.push_back(
+        TestbedDeclaration{.variable = state.pop_id(), .test_value = val});
+  }
+};
+template <> struct action<rvalue_testbed> {
+  static void apply0(ParseState &state) { dbg_out("<<< testbed_rval"); }
+};
+template <> struct action<testbed_closed> {
+  static void apply0(ParseState &state) { dbg_out("<<< testbed_closed"); }
+};
+template <> struct action<testbed> {
+  static void apply0(ParseState &state) { dbg_out("<<< testbed"); }
+};
+
 // SECTION: RVALUES AND ARGS
 
 template <> struct action<val_bool> {
