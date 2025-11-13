@@ -14,6 +14,12 @@
   some_other = 9
 @end
 
+@testbed AnotherBed
+  player_name = "Salmon"
+  some_var = 11.2
+  foo = true
+@end
+
 
 -- Test comment
 
