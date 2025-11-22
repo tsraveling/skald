@@ -1,186 +1,96 @@
--- This is a simple little dungeon crawl experience that demonstrates the usage of the Skald
--- narrative scripting system.
+-- This is a comment!
 
--- These variable declarations will be set by default. These can be overwritten or explicitly
--- set by the implementing game, but will be the values used by default when testing.
+-- These are variable initializations
+~ some_var = 3 -- This is a raw value
+~ some_other = :call_method() -- this initialized the variable with a call to an external method
 
-~ health = 10
-~ has_sword = true
-~ has_torch = false -- this is the only variable with any functional use in this example; keep an eye on it.
-~ wealth = 0
+-- These are inherited variables, with local testing values
+< imported_var = 0
+< player_name = "Billy"
 
+-- This is a testbed, for testing a script with alternative configurations
+@testbed some_testbed
+  some_var = 10
+  some_other = 9
+@end
 
--- We might use this testbed to test a character that has progressed a little more than
--- the start case.
-@testbed progressed
-    has_torch = true
-    wealth = 50
+@testbed AnotherBed
+  player_name = "Salmon"
+  some_var = 11.2
+  foo = true
 @end
 
 
--- The first block is where we enter by default.
-
-#meadow_road
-
-You stand on a meadow road. Off to the side stands a low crypt, door ajar. Darkness is beyond.
-
-mystery_voice: Come in, my child.
-
-Nearby stands an abandoned shack. Behind you glow the comforting lights of the village.
-
-You could be enjoying an ale by the fire by nightfall if you start walking now.
-
-But with no risk, comes no glory.
-
-(? has_torch) Besides, you have a torch. What could go wrong?
-(else) You only wish you had something to light your way ...
-
-> Enter the crypt -> crypt
-> Check out the shack -> shack
-> Screw it. Head back to the village. -> village_early
-
--- PREPARE OR BAIL --
-
-#village_early
-
--- Note the ternary in this beat
-Not worth the risk. You return to the village early{has_torch ? ", torch in hand" : ""}.
-
-Sometimes you wonder what you might have found. But for the most part, it's a good life, and over time, the crypt becomes just another memory.
-
-END
-
-#shack
-
-Within the shack, you find a torch!
-  ~ has_torch = true
-
-> Brave the crypt, torch in hand -> crypt
-> Still not worth it -- let's head for the tavern. -> village_early
-
--- MAIN ADVENTURE --
-
-#crypt
-
-* (? has_torch) -> crypt_dark
-* (else) -> crypt_torch
-
-
--- DARK CRYPT BRANCH --
-
-#crypt_dark
-
-It is *extremely* dark in here.
-
-Something rustles, much too close for comfort.
-
-mystery_voice: Exssssseelllent .... a bit clossssser ....
-
-> Screw this. Run for the exit. -> flee_crypt
-> "Who's there?" -> get_eaten
-
-#flee_crypt
-
-You run flat out for the exit.
-
-Something dark and oozing snaps at your heels.
-
-You never look back. You're in the tavern by nightfall, no richer, but with a new story to tell.
-
-And that is good enough.
-
-END
-
-#get_eaten
-
-you: "Who's there?"
-
-A figure of unspeakable horror looms out of the darkness, slivering with putrid fluids and glittering with eldritch teeth.
-
-It smiles you, a sight that would haunt you for the rest of your life ...
-
-grue: Welllllcooooommmmeeeeee ....
-
-... were you to live long enough to experience it.
-
-> Voicelessly scream as it falls upon you
-
-You are eaten by a grue.
-
-END
-
-
--- LIGHT CRYPT BRANCH -- 
-
-#crypt_torch
-
-You descend the mossy steps into the crypt, lighting your torch as you go. The flickering warm light flickers off of ancient walls.
-
-> Look around
-
-The crypt is surprisingly small; yet, you are struck with a feeling that beyond its cracks and crannies lie further darkness ...
-
-mystery_voice: dissssappppointtteeddd ......
-
-... holding dangers unimaginable.
-
-> Raise the torch
-
-A sense of presence falling back, waiting in the shadows.
-
-In an alcove on the wall rests a golden armlet.
-
-> Take it -> take_armlet
-> Leave the dead undisturbed -> leave_bootyless
-
-
-#take_armlet
-
-*
-  ~ wealth += 500000
-
-You reach out and sieze the armlet. It old, older than the town you were born in, and heavy.
-
-The presence in the darkness does not mind this theft; the thing it wants is you.
-
-And yet it is afraid of the light.
-
-> Leave, before the torch gutters -> leave_booty
-
-#leave_bootyless
-
-You leave the grave-goods for the grave, and hastily climb back out into the early evening. You're in the tavern a little after dark.
-
-Just as poor, but feeling more alive than ever.
-
-Not a bad thing to be.
-
-END
-
-
-#leave_booty
-
-You take the armlet and run. You're back in the tavern a little after dark.
-
-The gold weighs heavy in your satchel. You find yourself unable to focus on the ale, or the conversation around you.
-
-You find someone to fence it in the next weeks, for an enormous sum ...
-
-... one that changes your station, your circumstance, the entire course of the river of your life.
-
-> So I'm rich now?
-
-Yes, you are. But haunted. 
-
-Sometimes in the corner of your eyes you see a gray figure, older than the town you grew up in, watching you.
-
-Waiting for you to die, so that it can take back from you what you took from it.
-
-gray_ghost: Soon enough.
-
-Despite your efforts to enjoy your new-found wealth and status, the rest of your life also ends up waiting alongside it.
-
-END
-
-
+-- This is a block. A block starts with a tag:
+#test_block
+
+-- It has "text beats":
+First beat
+
+-- Some of which can inject values:
+Second beat with an {injection}.
+
+-- Including via the use of a ternary:
+This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
+
+-- Or a "switch ternary":
+Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
+
+This is a normal text block with some ops on it
+  -> some_transition -- These intended commands following beats or choices are "operations"
+  ~ some_var = another_var
+
+-- The single asterisk is a "logic beat" with logic but no text
+-- The (? x) syntax is a conditional
+* (? should_transfer)
+  GO subfolder/other module.ska
+
+* (? should_transfer_directed)
+  GO subfolder/other_module.ska -> some_tag
+
+(? show_conditional) A conditional can precede a beat as well.
+
+-- This logic beat has an EXIT command on it, which will exit the script and return the optional argument
+* (else)
+  EXIT 14
+
+
+-- This pair of logic beats has an (else) logic beat on the second; it will fire if the precedind conditional does not.
+* (? is_true) -> one_way
+* (else) ~ got_lost = true
+
+-- This beat has an inline comment on it
+Third {-- with inline comment} test
+
+-- These are various kinds of conditionals
+(? :method_check() and !:arg_check(a, b, c)) This one is conditional with a truthy value!
+(? check_val and !falsy_check and (more_check > 10 or less_check<= 9)) This one is a combo clause
+(? !check_val) This one shows up if check val is not true
+(? val_a and val_b and val_c and val_d) This one checks a long and clause.
+
+-- Some beats are attributed, with an identifier + `:` preceding the beat text
+some_tag: This one is attributed!
+
+-- In a given block, you always have the block tag, followed by some number of beats (above), optionally followed by a set of choices (below). These start with
+-- >, have choice text, and then have operations indented on following lines. The move command (->) may follow on the same line.
+
+> Bye!
+  EXIT 14
+> Next please!
+  GO next chapter.ska -- This GO moves us to a different Skald file.
+> This is a choice
+> (? some_condition = "test") This choice is conditional
+> This one goes -> to_school
+> This one has operations in lines
+  -> to_park
+  :baseMethod() -- this one has a comment on it!
+  :methodWithArg(5)
+  :methodWithAllAgs(5, true, 2.3, false, "some string content!", a_variable)
+> This one mutates
+  ~ equate = :some_method(with_arg)
+  ~ add += 3
+  ~ add += :method_output("cat")
+  ~ subtract -= 5
+  ~ flip =!
+  ~ equate_var = some_other_var
 

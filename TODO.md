@@ -1,31 +1,8 @@
 # Skald TODO
 
-## Next:
+## Future Features
 
-GO and EXIT are handled in grammar and set up in Skald.h. Just add actions for htem and get em added in.
-
-## Roadmap
-
-- [x] Operations on normal beats
-- [x] 2.4 Logic Beats
-    - [x] One-liners
-    - [x] Conditional logic beats
-    - [x] Else logic beats
-- [x] 3.1.3 Variables
-    - [x] Declarations
-    - [x] Variable carry-throughs
-    - [x] Operator rvalue methods
-    - [x] Operator rvalue variables
-- [x] 4.1.1 Module Transitions
-    - [x] 4.1.2 Module Entry Points
-    - [x] 4.2 Subfolder parsing
-- [x] 4.1.3 Conclusions
-    - [x] With arguments
-- [ ] 5.2 Testbeds
-    - [ ] Initial defaults
-    - [ ] Including for carry-throughs
-
-**Hold for later consideration**
+### Chance Insertions
 
 We should hold off on these because it seems like their primary use will be PCG stuff, and it is decently likely there will be a better way to do that. If that decision is finalized we will need to update the syntax docs accordingly.
 
@@ -36,9 +13,20 @@ We should hold off on these because it seems like their primary use will be PCG 
 - [ ] 2.5 Chance blocks
     - [ ] Weighting
     - [ ] With logic beats
-    
-**Then begin planning next steps:**
 
+### Smart Tags
+
+You can do something like the following:
+
+```
+Oh yes, of course I have heard of the [Imperium], also known as the [Imperium|Empire of Man]!
+```
+
+Where this will mark something as a "smart tag" (with an optional label right of the bar), that can be read by the parser for special text elements.
+
+
+## Next Steps
+    
 Writing code:
 
 - [ ] Syntax parser

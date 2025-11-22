@@ -1,0 +1,15 @@
+{
+  "name": "tree-sitter-skald",
+  "version": "0.1.0",
+  "author": "Tim Raveling",
+  "main": "bindings/node",
+  "tree-sitter": [
+    {
+      "scope": "source.skald",
+      "file-types": ["skald", "ska"]
+    }
+  ],
+  "license": "ISC",
+  "description": "",
+  "type": "commonjs"
+}

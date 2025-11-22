@@ -1,0 +1,6 @@
+*~
+build
+private
+/.vs
+/.vscode
+.DS_Store

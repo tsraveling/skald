@@ -1,0 +1,39 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "skald",
+      "camelcase": "Skald",
+      "title": "Skald",
+      "scope": "source.skald",
+      "file-types": [
+        "ska"
+      ],
+      "injection-regex": "^skald$",
+      "class-name": "TreeSitterSkald"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "A fast narrative scripting language for games and interactive fiction",
+    "authors": [
+      {
+        "name": "Tim Raveling",
+        "url": "https://tsraveling.github.io/"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/tsraveling/skald"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": false
+  }
+}
