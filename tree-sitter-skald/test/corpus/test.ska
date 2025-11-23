@@ -43,9 +43,10 @@ This is a normal text block with some ops on it
 
 -- The single asterisk is a "logic beat" with logic but no text
 -- The (? x) syntax is a conditional
+
 * (? should_transfer)
-  ~ test 
-  GO subfolder/other module.ska
+  ~ test = 5
+  GO subfolder/other_module.ska
 
 * (? should_transfer_directed)
   GO subfolder/other_module.ska -> some_tag
@@ -79,7 +80,7 @@ some_tag: This one is attributed!
 > Bye!
   EXIT 14
 > Next please!
-  GO next chapter.ska -- This GO moves us to a different Skald file.
+  GO next_chapter.ska -- This GO moves us to a different Skald file.
 > This is a choice
 > (? some_condition = "test") This choice is conditional
 > This one goes -> to_school

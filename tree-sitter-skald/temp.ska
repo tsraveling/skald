@@ -1,16 +1,28 @@
-#block_tag
+#test_block
 
-Beat text here, as always
+First beat
 
-> First choice
-> Exit choice
+Second beat with an {injection}.
+
+This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
+
+Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
+
+This is a normal text block with some ops on it
+  -> some_transition -- These intended commands following beats or choices are "operations"
+  ~ some_var = another_var
+
+* (? should_transfer)
+  ~ test = 1
+  GO subfolder/other_module.ska
+
+* (? should_transfer_directed)
+  GO subfolder/other_module.ska -> some_tag
+
+(? show_conditional) A conditional can precede a beat as well.
+
+* (else)
   EXIT 14
-> Go choice
-  GO next chapter.ska -- This GO moves us to a different Skald file.
-> (? some_condition = "test") This choice is conditional
-> This one goes -> to_school
-> This one mutates
-  ~ equate = :some_method(with_arg)
-  ~ add += 3
-  ~ add += :method_output("cat")
 
+* (? is_true) -> one_way
+* (else) ~ got_lost = true
