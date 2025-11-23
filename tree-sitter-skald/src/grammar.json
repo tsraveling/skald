@@ -28,6 +28,10 @@
         }
       ]
     },
+    "empty": {
+      "type": "PATTERN",
+      "value": "\\n"
+    },
     "comment": {
       "type": "TOKEN",
       "content": {
@@ -778,21 +782,25 @@
       ]
     },
     "indented_operation": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "PATTERN",
-          "value": "[ \\t]+"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "operation"
-        },
-        {
-          "type": "PATTERN",
-          "value": "\\n"
-        }
-      ]
+      "type": "PREC_RIGHT",
+      "value": 2,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "PATTERN",
+            "value": "[ \\t]+"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "operation"
+          },
+          {
+            "type": "PATTERN",
+            "value": "\\n"
+          }
+        ]
+      }
     },
     "operation": {
       "type": "CHOICE",
@@ -1135,11 +1143,15 @@
   "extras": [
     {
       "type": "PATTERN",
-      "value": "[ \\t\\n]"
+      "value": "[ \\t]"
     },
     {
       "type": "SYMBOL",
       "name": "comment"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "empty"
     }
   ],
   "conflicts": [],

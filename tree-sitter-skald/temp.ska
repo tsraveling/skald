@@ -3,14 +3,14 @@
 Beat text here, as always
 
 > First choice
--- > Exit choice
---   EXIT 14
--- > Go choice
---   GO next chapter.ska -- This GO moves us to a different Skald file.
--- > (? some_condition = "test") This choice is conditional
--- > This one goes -> to_school
--- > This one mutates
---   ~ equate = :some_method(with_arg)
---   ~ add += 3
---   ~ add += :method_output("cat")
+> Exit choice
+  EXIT 14
+> Go choice
+  GO next chapter.ska -- This GO moves us to a different Skald file.
+> (? some_condition = "test") This choice is conditional
+> This one goes -> to_school
+> This one mutates
+  ~ equate = :some_method(with_arg)
+  ~ add += 3
+  ~ add += :method_output("cat")
 

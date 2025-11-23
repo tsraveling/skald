@@ -2,16 +2,21 @@ module.exports = grammar({
   name: 'skald',
 
   extras: $ => [
-    /[ \t\n]/,
+    /[ \t]/,
     $.comment,
+    $.empty,
   ],
 
   rules: {
+
     source_file: $ => seq(
       repeat($.variable_declaration),
       repeat($.testbed),
       repeat($.block),
     ),
+
+    // Empty lines
+    empty: $ => /\n/,
 
     // Comments
     comment: $ => token(seq('--', /.*/)),
@@ -175,11 +180,11 @@ module.exports = grammar({
     ),
 
     // Operations (must be indented when on separate lines)
-    indented_operation: $ => seq(
+    indented_operation: $ => prec.right(2, seq(
       /[ \t]+/,
       $.operation,
       /\n/,
-    ),
+    )),
 
     operation: $ => choice(
       $.move_op,
