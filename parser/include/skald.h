@@ -382,13 +382,35 @@ public:
   }
 };
 
-class Skald {
+// SECTION: Gameplay structs
+
+struct Chunk {
+  std::string text;
+};
+
+struct Option {
+  std::vector<Chunk> text;
+  bool is_available;
+};
+
+struct Response {
+  std::string attribution = "";
+  std::vector<Chunk> text;
+  std::vector<Option> options;
+};
+
+struct TestStore {};
+
+class Engine {
 private:
   std::unique_ptr<Module> current;
 
 public:
   void load(std::string path);
   void trace(std::string path);
+
+  Response start_at(std::string tag);
+  Response get_next(int choice_index);
 };
 
 } // namespace Skald

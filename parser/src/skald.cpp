@@ -70,4 +70,8 @@ void Skald::trace(std::string path) {
   pegtl::standard_trace<grammar>(in);
 }
 
+Response Skald::start_at(std::string tag) {
+  return Response{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
+}
+
 } // namespace Skald
