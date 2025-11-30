@@ -37,7 +37,7 @@ inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
 
 struct Declaration {
   Variable var;
-  RValue initial_value;
+  SimpleRValue initial_value;
   bool is_imported = false;
 };
 
@@ -374,11 +374,12 @@ public:
   std::string filename;
   std::vector<Declaration> declarations;
   std::vector<Testbed> testbeds;
-  std::map<std::string, Block> blocks;
+  std::vector<Block> blocks;
+  std::unordered_map<std::string, size_t> block_lookup;
 
   Block *get_block(std::string tag) {
-    auto it = blocks.find(tag);
-    return (it != blocks.end()) ? &it->second : nullptr;
+    auto it = block_lookup.find(tag);
+    return it != block_lookup.end() ? &blocks[it->second] : nullptr;
   }
 };
 
@@ -399,7 +400,17 @@ struct Response {
   std::vector<Option> options;
 };
 
-struct TestStore {};
+struct TestStore {
+  std::unordered_map<std::string, SimpleRValue> state;
+
+  static TestStore generate_from(const Module &module) {
+    TestStore store;
+    for (auto &var : module.declarations) {
+      store.state[var.var.name] = var.initial_value;
+    }
+    return store;
+  }
+};
 
 class Engine {
 private:

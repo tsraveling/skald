@@ -1,13 +1,24 @@
 #include "skald.h"
 #include <iostream>
+#include <string>
+#include <vector>
 
 using namespace Skald;
 
 class SkaldTester {
+private:
+  /** This will stitch a vector of Skald chunks together into one string */
+  std::string stitch(std::vector<Chunk> &chunks) {
+    std::string ret = "";
+    for (auto &chunk : chunks) {
+      ret += chunk.text;
+    }
+    return ret;
+  }
+
 public:
   Engine engine;
 
-  // STUB: glue text together
   // STUB: debug store
   // STUB: PRocess and return choices
 };

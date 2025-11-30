@@ -59,6 +59,7 @@ struct r_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct r_variable : variable_name {};
 struct rvalue
     : sor<val_bool, val_string, val_float, val_int, r_variable, r_method> {};
+struct rvalue_simple : sor<val_bool, val_string, val_float, val_int> {};
 struct arg_separator : seq<ws, one<','>, ws> {};
 struct argument : rvalue {};
 struct arg_list : list<argument, arg_separator> {};
@@ -191,7 +192,7 @@ struct declaration_initial : one<'~'> {};
 struct declaration_import : one<'<'> {};
 struct declaration_line
     : seq<ws, sor<declaration_initial, declaration_import>, ws, identifier, ws,
-          one<'='>, ws, rvalue, ws, opt<end_line_comment>, eol> {};
+          one<'='>, ws, rvalue_simple, ws, opt<end_line_comment>, eol> {};
 
 // SECTION: BEATS
 

@@ -346,7 +346,7 @@ template <> struct action<declaration_line> {
   static void apply0(ParseState &state) {
     state.module.declarations.push_back(
         Declaration{.var = {state.pop_id()},
-                    .initial_value = state.rval_buffer_pop(),
+                    .initial_value = state.simple_rval_buffer_pop(),
                     .is_imported = state.last_declaration_was_import});
   }
 };

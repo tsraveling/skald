@@ -44,8 +44,8 @@ void Engine::load(std::string path) {
 
     std::cout << "\nSTRUCTURE:\n";
     // Print details about each block
-    for (const auto &[tag, block] : state.module.blocks) {
-      std::cout << "\n- Block '" << tag << "': " << block.beats.size()
+    for (const auto &block : state.module.blocks) {
+      std::cout << "\n- Block '" << block.tag << "': " << block.beats.size()
                 << " beats" << std::endl;
       for (const auto &beat : block.beats) {
         std::cout << "  - Beat: " << beat.dbg_desc() << "\n";

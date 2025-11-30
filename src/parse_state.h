@@ -48,6 +48,26 @@ struct ParseState {
     return back;
   }
 
+  SimpleRValue simple_rval_buffer_pop() {
+    dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+    auto back = rval_buffer.back();
+    rval_buffer.pop_back();
+
+    return std::visit(
+        [](auto &&val) -> SimpleRValue {
+          using T = std::decay_t<decltype(val)>;
+          if constexpr (std::is_same_v<T, std::string> ||
+                        std::is_same_v<T, bool> || std::is_same_v<T, int> ||
+                        std::is_same_v<T, float>) {
+            return val;
+          } else {
+            throw std::runtime_error(
+                "Expected simple RValue, got complex type");
+          }
+        },
+        back);
+  }
+
   /** Buffer for nesting conditionals */
   ConditionalAtom::Comparison current_comparison =
       ConditionalAtom::Comparison::TRUTHY;
@@ -174,9 +194,10 @@ struct ParseState {
 
     Block new_block;
     new_block.tag = tag;
-    module.blocks[tag] = new_block;
+    module.blocks.push_back(new_block);
+    module.block_lookup[tag] = module.blocks.size() - 1;
 
-    current_block = &module.blocks[tag];
+    current_block = &module.blocks.back();
   }
 
   /** Called whenever a text queue is concluded */
