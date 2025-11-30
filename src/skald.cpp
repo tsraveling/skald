@@ -13,7 +13,15 @@ namespace pegtl = tao::pegtl;
 
 namespace Skald {
 
-/* EXTERNAL API */
+// SECTION: GAMEPLAY
+
+Response Engine::start_at(std::string tag) {
+  auto *start_block = current->get_block(tag);
+  if (start_block == nullptr) {
+  }
+}
+
+// SECTION: FILE LOADING AND PARSING
 
 void Engine::load(std::string path) {
   try {
