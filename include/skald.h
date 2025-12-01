@@ -400,28 +400,25 @@ struct Response {
   std::vector<Option> options;
 };
 
-struct TestStore {
-  std::unordered_map<std::string, SimpleRValue> state;
-
-  static TestStore generate_from(const Module &module) {
-    TestStore store;
-    for (auto &var : module.declarations) {
-      store.state[var.var.name] = var.initial_value;
-    }
-    return store;
-  }
-};
-
 class Engine {
 private:
   std::unique_ptr<Module> current;
+  std::unordered_map<std::string, SimpleRValue> state;
+
+  void build_state(const Module &module);
 
 public:
   void load(std::string path);
   void trace(std::string path);
 
+  /** Start the Skald engine at a particular tag */
   Response start_at(std::string tag);
-  Response get_next(int choice_index);
+
+  /** Start the engine at the first block in the file */
+  Response start();
+
+  /** Get the next beat in line, optionally making a choice as well */
+  Response get_next(int choice_index = 0);
 };
 
 } // namespace Skald

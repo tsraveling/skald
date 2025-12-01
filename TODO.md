@@ -1,28 +1,5 @@
 # Skald TODO
 
-## Instantiating engine
-
-SkaldChunk:
-- text: string (or rich text?)
-- choices: []?
-
-Interface:
-- load: loads a Skald module into memory
-- set_delegate(delegate: SkaldDelegate)
-- next(): Steps to the next beat
-- choose(index): selects an active choice
-
-SkaldDelegate:
-
-```
-type simple = int | float | string | bool
-
-- set_value(key: string, value: simple)
-- get_value(key: string) -> simple
-- call_method(arg_list: [simple]) -> simple?
-- transition(filename: string, entry_point: string?)
-```
-
 ## Future Features
 
 ### Chance Insertions

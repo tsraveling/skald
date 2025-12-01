@@ -6,7 +6,7 @@
 using namespace Skald;
 
 class SkaldTester {
-private:
+public:
   /** This will stitch a vector of Skald chunks together into one string */
   std::string stitch(std::vector<Chunk> &chunks) {
     std::string ret = "";
@@ -16,7 +16,6 @@ private:
     return ret;
   }
 
-public:
   Engine engine;
 
   // STUB: debug store
@@ -35,6 +34,10 @@ int main() {
 
   std::cout << "Skald parse complete!\n";
   std::cout << "\n#####################\n";
+
+  auto response = tester.engine.start();
+
+  std::cout << "\n" << tester.stitch(response.text) << "\n";
 
   return 0;
 }
