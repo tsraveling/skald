@@ -394,10 +394,36 @@ struct Option {
   bool is_available;
 };
 
+/** This contains actual Skald content */
 struct Response {
   std::string attribution = "";
   std::vector<Chunk> text;
   std::vector<Option> options;
+};
+
+/** This contains a query from the Skald engine out to the client. This is
+ * mostly method calls. */
+struct Query {
+  MethodCall call;
+};
+
+/** Will be sent back by the client as an answer to the current open query */
+struct QueryAnswer {
+  std::optional<SimpleRValue> val;
+};
+
+/** Will be sent back by the client following a response, to indicate the next
+ * action */
+struct Action {
+  int selection;
+};
+
+/** Marks where we are in the module, and what is expected from the client next
+ */
+struct Cursor {
+  std::string current_block;
+  int current_beat_index;
+  // STUB: Some kind of queue of queries
 };
 
 class Engine {
