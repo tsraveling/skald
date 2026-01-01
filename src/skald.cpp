@@ -31,7 +31,7 @@ Response Engine::start_at(std::string tag) {
   }
 
   // FIXME: Replace this with beat text
-  return Response{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
+  return Content{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
 }
 
 Response Engine::start() {
@@ -43,8 +43,11 @@ Response Engine::start() {
   auto *start_block = &current->blocks.front();
 
   // FIXME: Replace this with beat text
-  return Response{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
+  return Content{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
 }
+
+Response Engine::act(int choice_index) { return End{}; }
+Response Engine::answer(QueryAnswer answer) { return End{}; }
 
 // SECTION: FILE LOADING AND PARSING
 

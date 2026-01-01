@@ -395,7 +395,7 @@ struct Option {
 };
 
 /** This contains actual Skald content */
-struct Response {
+struct Content {
   std::string attribution = "";
   std::vector<Chunk> text;
   std::vector<Option> options;
@@ -412,8 +412,14 @@ struct QueryAnswer {
   std::optional<SimpleRValue> val;
 };
 
-/** Will be sent back by the client following a response, to indicate the next
- * action */
+/** Empty struct signifying that the script is concluded. */
+struct End {};
+
+/** Will contain either a Content struct or a Query */
+using Response = std::variant<Content, Query, Exit, GoModule, End>;
+
+/** Will be sent back by the client following a response, to indicate the
+ * next action */
 struct Action {
   int selection;
 };
@@ -437,6 +443,7 @@ public:
   void load(std::string path);
   void trace(std::string path);
 
+  // Actions
   /** Start the Skald engine at a particular tag */
   Response start_at(std::string tag);
 
@@ -444,7 +451,13 @@ public:
   Response start();
 
   /** Get the next beat in line, optionally making a choice as well */
-  Response get_next(int choice_index = 0);
+  Response act(int choice_index = 0);
+
+  /** Get the current response that's awaiting action */
+  Response get_current();
+
+  /** Provide an answer if the current response is a Query */
+  Response answer(QueryAnswer a);
 };
 
 } // namespace Skald
