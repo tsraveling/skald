@@ -21,8 +21,48 @@ void Engine::build_state(const Module &module) {
     state[var.var.name] = var.initial_value;
   }
 }
+std::string Engine::resolve_simple(const SimpleInsertion &ins) {
+  // STUB: Implement resolution queue here
+  return rval_to_string(ins.rvalue);
+}
+std::string Engine::resolve_tern(const TernaryInsertion &tern) {
+  // STUB: Implement ternary resolution here
+  return tern.dbg_desc();
+}
+
+std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
+  std::vector<Chunk> ret;
+  for (auto &part : text_content.parts) {
+
+    // Resolve the part into a string
+    std::string part_text = std::visit(
+        [&](const auto &value) -> std::string {
+          using T = std::decay_t<decltype(value)>;
+          if constexpr (std::is_same_v<T, std::string>) {
+            return value;
+          } else if constexpr (std::is_same_v<T, SimpleInsertion>) {
+            return resolve_simple(value);
+          } else if constexpr (std::is_same_v<T, TernaryInsertion>) {
+            return resolve_tern(value);
+          }
+        },
+        part);
+
+    // Add to the return
+    ret.push_back(Chunk{part_text});
+  }
+  return ret;
+}
 
 // SECTION: GAMEPLAY
+
+// STUB: Implementation approach:
+// 1. Look ahead at the whole next beat.
+// 2. Stack anything that needs to be resolved (methods for now)
+// 3. Run the processing stack until it is empty
+// 4. Store returned values in a temporary storage keyed by call + args (e.g.
+// `pop_alert(14, juicy_var)` will be keyed as `pop_alert|14|juicy_var`
+// 5. Text can then be assembled thusly
 
 Response Engine::start_at(std::string tag) {
   auto *start_block = current->get_block(tag);

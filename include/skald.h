@@ -276,7 +276,7 @@ using TernaryOption = std::tuple<RValue, RValue>;
 struct TernaryInsertion {
   RValue check;
   std::vector<TernaryOption> options;
-  std::string dbg_desc() {
+  std::string dbg_desc() const {
     std::string ret = "{> " + rval_to_string(check) + "? ";
     for (auto &opt : options) {
       ret += rval_to_string(std::get<0>(opt)) + ":" +
@@ -405,6 +405,15 @@ struct Content {
  * mostly method calls. */
 struct Query {
   MethodCall call;
+
+  /** The key used to encode the answer for caching */
+  std::string get_key() {
+    std::string ret = call.method;
+    for (auto &arg : call.args) {
+      ret += "|" + rval_to_string(arg);
+    }
+    return ret;
+  }
 };
 
 /** Will be sent back by the client as an answer to the current open query */
@@ -424,12 +433,13 @@ struct Action {
   int selection;
 };
 
-/** Marks where we are in the module, and what is expected from the client next
+/** Marks where we are in the module, and what is expected from the client
+ * next
  */
 struct Cursor {
   std::string current_block;
   int current_beat_index;
-  // STUB: Some kind of queue of queries
+  std::vector<Query> resolution_stack;
 };
 
 class Engine {
@@ -438,16 +448,25 @@ private:
   std::unordered_map<std::string, SimpleRValue> state;
 
   void build_state(const Module &module);
+  std::string resolve_simple(const SimpleInsertion &ins);
+  std::string resolve_tern(const TernaryInsertion &tern);
+  std::vector<Chunk> resolve_text(const TextContent &text_content);
+
+  Cursor cursor;
+  // STUB: Next: see TODO>CURRENT
+  Response next();
 
 public:
   void load(std::string path);
   void trace(std::string path);
 
   // Actions
-  /** Start the Skald engine at a particular tag */
+  /** Start the Skald engine at a particular tag. This sets the cursor to the
+   * first beat in this block. */
   Response start_at(std::string tag);
 
-  /** Start the engine at the first block in the file */
+  /** Start the engine at the first block in the file. This sets the cursor to
+   * the first beat in the file as well. */
   Response start();
 
   /** Get the next beat in line, optionally making a choice as well */
