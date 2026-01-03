@@ -21,6 +21,12 @@ void Engine::build_state(const Module &module) {
     state[var.var.name] = var.initial_value;
   }
 }
+
+bool Engine::resolve_condition(const Conditional &cond) {
+  // STUB: Actually process conditional here
+  return true;
+}
+
 std::string Engine::resolve_simple(const SimpleInsertion &ins) {
   // STUB: Implement resolution queue here
   return rval_to_string(ins.rvalue);
@@ -54,6 +60,42 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
   return ret;
 }
 
+Option Engine::resolve_option(const Choice &choice) {
+  Option ret;
+  ret.text = resolve_text(choice.content);
+  if (choice.condition.has_value()) {
+    ret.is_available = resolve_condition(choice.condition.value());
+  } else {
+    ret.is_available = true;
+  }
+  return ret;
+}
+
+void Engine::process_cursor() {
+  // STUB: queue up any queries needed in the current beat
+}
+
+Response Engine::next() {
+  if (cursor.resolution_stack.size() > 0) {
+    // STUB: Do queries here
+  }
+  Block &block = current->blocks[cursor.current_block_index];
+  Beat &beat = block.beats[cursor.current_beat_index];
+
+  // STUB: Flush resolver cache here
+
+  Content content;
+  content.text = resolve_text(beat.content);
+
+  // If at end of block, include choices
+  if (cursor.current_beat_index == block.beats.size() - 1) {
+    for (auto &choice : block.choices) {
+      content.options.push_back(resolve_option(choice));
+    }
+  }
+  return content;
+}
+
 // SECTION: GAMEPLAY
 
 // STUB: Implementation approach:
@@ -65,13 +107,17 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
 // 5. Text can then be assembled thusly
 
 Response Engine::start_at(std::string tag) {
-  auto *start_block = current->get_block(tag);
-  if (start_block == nullptr) {
+  auto start_index = current->get_block_index(tag);
+  if (start_index < 0) {
     throw std::runtime_error("Block not found: " + tag);
   }
+  cursor.current_block_index = start_index;
+  cursor.current_beat_index = 0;
+  cursor.resolution_stack.clear();
 
-  // FIXME: Replace this with beat text
-  return Content{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
+  process_cursor();
+
+  return next();
 }
 
 Response Engine::start() {
@@ -79,11 +125,13 @@ Response Engine::start() {
   if (current->blocks.size() < 1) {
     throw std::runtime_error("There are no blocks in the current module");
   }
-  dbg_out("start blocks size: " << current->blocks.size());
-  auto *start_block = &current->blocks.front();
+  cursor.current_block_index = 0;
+  cursor.current_beat_index = 0;
+  cursor.resolution_stack.clear();
 
-  // FIXME: Replace this with beat text
-  return Content{.text = {Chunk{"One"}, Chunk{"Two"}, Chunk{"Three"}}};
+  process_cursor();
+
+  return next();
 }
 
 Response Engine::act(int choice_index) { return End{}; }

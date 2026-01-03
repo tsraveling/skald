@@ -377,9 +377,9 @@ public:
   std::vector<Block> blocks;
   std::unordered_map<std::string, size_t> block_lookup;
 
-  Block *get_block(std::string tag) {
+  size_t get_block_index(std::string tag) {
     auto it = block_lookup.find(tag);
-    return it != block_lookup.end() ? &blocks[it->second] : nullptr;
+    return it != block_lookup.end() ? it->second : -1;
   }
 };
 
@@ -437,7 +437,7 @@ struct Action {
  * next
  */
 struct Cursor {
-  std::string current_block;
+  int current_block_index;
   int current_beat_index;
   std::vector<Query> resolution_stack;
 };
@@ -448,13 +448,17 @@ private:
   std::unordered_map<std::string, SimpleRValue> state;
 
   void build_state(const Module &module);
+
+  bool resolve_condition(const Conditional &cond);
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
   std::vector<Chunk> resolve_text(const TextContent &text_content);
+  Option resolve_option(const Choice &choice);
 
   Cursor cursor;
   // STUB: Next: see TODO>CURRENT
   Response next();
+  void process_cursor();
 
 public:
   void load(std::string path);
