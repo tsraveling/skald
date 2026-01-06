@@ -22,6 +22,28 @@ void Engine::build_state(const Module &module) {
   }
 }
 
+std::vector<Query> queries_for_conditional(const Conditional &cond) {
+
+  std::vector<Query> result;
+
+  for (const auto &item : cond.items) {
+    if (auto *atom = std::get_if<ConditionalAtom>(&item)) {
+
+      // STUB: is .a a method? if so add to query
+      // STUB: is .b a method? if so add to query
+      // result.push_back(Query{ /* fill */ });
+    } else if (auto *nested =
+                   std::get_if<std::shared_ptr<Conditional>>(&item)) {
+      auto queries = queries_for_conditional(**nested);
+      result.insert(result.end(), queries.begin(), queries.end());
+    }
+  }
+
+  return result;
+}
+
+std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {}
+
 bool Engine::resolve_condition(const Conditional &cond) {
   // STUB: Actually process conditional here
   return true;
@@ -72,7 +94,21 @@ Option Engine::resolve_option(const Choice &choice) {
 }
 
 void Engine::process_cursor() {
-  // STUB: queue up any queries needed in the current beat
+  Block &block = current->blocks[cursor.current_block_index];
+  Beat &beat = block.beats[cursor.current_beat_index];
+
+  // STUB: 1. beat conditional
+  // STUB: 2. beat operations
+
+  // STUB: Method to detect if it's choice time
+  // STUB: Resolve queries on options
+
+  // If at end of block, include choices
+  // if (cursor.current_beat_index == block.beats.size() - 1) {
+  //   for (auto &choice : block.choices) {
+  //     content.options.push_back(resolve_option(choice));
+  //   }
+  // }
 }
 
 Response Engine::next() {
@@ -87,7 +123,12 @@ Response Engine::next() {
   Content content;
   content.text = resolve_text(beat.content);
 
+  // STUB: If queries are resolved, check if this beat is valid and if it isn't,
+  // skip forward
+
   // If at end of block, include choices
+  // STUB: Handle edge case where final beat is optional and you don't get it.
+  // still show choices!
   if (cursor.current_beat_index == block.beats.size() - 1) {
     for (auto &choice : block.choices) {
       content.options.push_back(resolve_option(choice));

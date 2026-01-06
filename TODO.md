@@ -2,7 +2,7 @@
 
 ## CURRENT
 
-- [ ] 1. Set cursor in `start` methods
+- [x] 1. Set cursor in `start` methods
 - [ ] 2. Pre-scan the beat for resolvers and add to the cursor stack
 - [ ] 3. Advance cursor with next here
 - [ ] 4. Return response of either Content or Query (if stack is not empty)

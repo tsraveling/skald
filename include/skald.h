@@ -449,6 +449,8 @@ private:
 
   void build_state(const Module &module);
 
+  std::vector<Query> queries_for_conditional(const Conditional &cond);
+  std::vector<Query> queries_for_operations(const std::vector<Operation> &ops);
   bool resolve_condition(const Conditional &cond);
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
