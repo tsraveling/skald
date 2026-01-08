@@ -4,9 +4,9 @@
 
 To docs / [[Syntax]]:
 
-- [ ] Choices are attached to the beat preceding them (the Anchor Beat)
-- [ ] Blocks with tags no longer need to end in choices
-- [ ] If no choices occur, the cursor will simply move to the first beat in the next block
+- [x] Choices are attached to the beat preceding them (the Anchor Beat)
+- [x] Blocks with tags no longer need to end in choices
+- [x] If no choices occur, the cursor will simply move to the first beat in the next block
 - [ ] Describe in detail the flow described below (maybe in the [[Engine]] doc)
 
 Refactor:
