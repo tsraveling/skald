@@ -71,15 +71,27 @@ Failure to resolve a block will result in an **error**.
 
 ## 2.2 Choices
 
-At the end of a block is a set of **choices** (at least one). A choice looks like this:
+Some beats are followed by one or more **choices**. These are selected by players, and will execute any redirects or logic attached to them.
 
 ```
-> This is a choice
+> This is a choice.
 ```
 
 An undecorated choice like this one will simply pass the player to the next block in the file, or to the next beat if the choice is in the middle of a block.
 
-### 2.2.1 Choice Redirects
+### 2.2.1 Anchor Beats
+
+The beat a set of choices are attached to is called their **anchor beat**. If an anchor beat is conditional and does not display, the choices will not be triggered either. So with:
+
+```
+(? should_show) This is an anchor beat
+> These are
+> anchor choices
+```
+
+Then if `should_show` is true, you will see the anchor beat text, and get the choices. If false, the beat text will not show, and the player will never be presented with those choices at all.
+
+### 2.2.2 Choice Redirects
 
 You can do a one-line choice **redirect** using arrow notation:
 
@@ -89,7 +101,7 @@ You can do a one-line choice **redirect** using arrow notation:
 
 This will immediately move the player to the beginning of `target-block`.
 
-### 2.2.2 Choice Operations
+### 2.2.3 Choice Operations
 
 You can invoke a number of **operations** (see 3.1 below) by indenting on the line below the choice:
 
@@ -109,6 +121,12 @@ Finally, you can have a conditional choice, that only appears if a given conditi
 ```
 
 See 3.2 **conditionals**, below, for conditional-specific syntax.
+
+### 2.2.4 Default Continuation
+
+If the player selects a choice without a redirect, the cursor will move to the next beat. If the choices are at the end of a block, or if a block ends without a redirect, the cursor will move to the first beat of the next block.
+
+If the cursor reaches the end of the file without an explicit `END` (4.1.3), an error will be thrown.
 
 ## 2.3 Insertions
 

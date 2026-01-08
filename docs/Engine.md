@@ -39,6 +39,20 @@ Let's assume the player wins the match. The event thread will look like this:
 
 ### 1.5 QueryAnswers
 
+## ?. Order of Operations
+
+TODO: document this once implemented:
+
+- [x] 1. Set cursor in `start` methods
+- [ ] 2. Pre-scan the beat for resolvers and add to the cursor stack
+    - [ ] Also scan its choices if it has any
+- [ ] 3. Advance cursor with next here
+- [ ] 4. Return response of either Content or Query (if stack is not empty)
+- [ ] 5. Implement the answer method and advance the cursor
+- [ ]   - Set up a simple cin answer in the test module
+- [ ] 6. Implement the answer cache
+- [ ] 7 . Finish the resolver
+
 ## 2. Starting and Ending Sessions
 
 TBD
