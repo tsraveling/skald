@@ -227,7 +227,8 @@ struct beat_line
 
 /** A text beat, optionally followed by some operations. */
 struct beat_clause
-    : seq<beat_line, star<op_line>, star<blank_line>, opt<choice_block>> {};
+    : seq<beat_line, star<op_line>, opt<seq<star<blank_line>, choice_block>>> {
+};
 
 // SECTION: BLOCKS
 

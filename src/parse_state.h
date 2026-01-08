@@ -24,8 +24,11 @@ struct ParseState {
   /** Current operations stack */
   std::vector<Operation> operation_queue;
 
-  /** The current beat stack */
+  /** The current text stack */
   std::vector<TextPart> text_content_queue;
+
+  /** The current beat content stack */
+  std::vector<TextPart> beat_content_queue;
 
   /** Tag holder, might be used by multiple entities */
   std::string current_tag;
@@ -207,6 +210,9 @@ struct ParseState {
     add_beat();
   }
 
+  /** Stores text content as beat text (avoiding choice text issues) */
+  void store_beat_text() { beat_content_queue = std::move(text_content_queue); }
+
   /** Creates a beat and adds it to the current block */
   void add_beat() {
     dbg_out(">>> add_beat()");
@@ -217,7 +223,7 @@ struct ParseState {
 
     Beat beat;
     beat.condition = conditional_buffer_pop();
-    beat.content.parts = std::move(text_content_queue);
+    beat.content.parts = std::move(beat_content_queue);
     beat.operations = std::move(operation_queue);
     beat.choices = std::move(choice_stack);
     beat.attribution = current_tag;

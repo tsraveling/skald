@@ -467,10 +467,18 @@ template <> struct action<beat_attribution> {
   }
 };
 
+template <> struct action<beat_line> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out("--> beat line:\n > " << input.string());
+    state.store_beat_text();
+  }
+};
+
 template <> struct action<beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> beat_line");
+    dbg_out("+++ BEAT CLAUSE END:\n > " << input.string());
     state.add_beat();
   }
 };
