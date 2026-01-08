@@ -194,6 +194,18 @@ struct declaration_line
     : seq<ws, sor<declaration_initial, declaration_import>, ws, identifier, ws,
           one<'='>, ws, rvalue_simple, ws, opt<end_line_comment>, eol> {};
 
+// SECTION: CHOICES
+
+struct inline_choice_move : op_move {};
+
+/** The initial line e.g. `> Some choice` */
+struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
+                         opt<inline_choice_move>, eol> {};
+
+/** The choice line with optional indented operation lines */
+struct choice_clause : seq<choice_line, star<op_line>> {};
+struct choice_block : plus<choice_clause> {};
+
 // SECTION: BEATS
 
 struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
@@ -214,27 +226,16 @@ struct beat_line
           opt<beat_attribution>, text_content, eol> {};
 
 /** A text beat, optionally followed by some operations. */
-struct beat_clause : seq<beat_line, star<op_line>> {};
-
-// SECTION: CHOICES
-
-struct inline_choice_move : op_move {};
-
-/** The initial line e.g. `> Some choice` */
-struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
-                         opt<inline_choice_move>, eol> {};
-
-/** The choice line with optional indented operation lines */
-struct choice_clause : seq<choice_line, star<op_line>> {};
-struct choice_block : plus<choice_clause> {};
+struct beat_clause
+    : seq<beat_line, star<op_line>, star<blank_line>, opt<choice_block>> {};
 
 // SECTION: BLOCKS
 
 struct block_tag_name : identifier {};
 struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
-struct block : seq<block_tag_line,
-                   star<sor<ignored, logic_beat_single, logic_beat_clause,
-                            beat_clause, choice_block>>> {};
+struct block : seq<block_tag_line, star<sor<ignored, logic_beat_single,
+                                            logic_beat_clause, beat_clause>>> {
+};
 
 // SECTION: FULL GRAMMAR
 

@@ -88,6 +88,7 @@ struct ParseState {
   /** The conditional stack. `.back()` is always the one that's open. */
   std::vector<Conditional> conditional_stack;
   std::optional<Conditional> conditional_buffer;
+  std::vector<Choice> choice_stack;
 
   void conditional_step_in() { conditional_stack.push_back(Conditional{}); }
 
@@ -218,6 +219,7 @@ struct ParseState {
     beat.condition = conditional_buffer_pop();
     beat.content.parts = std::move(text_content_queue);
     beat.operations = std::move(operation_queue);
+    beat.choices = std::move(choice_stack);
     beat.attribution = current_tag;
     current_block->beats.push_back(beat);
   }
@@ -252,7 +254,7 @@ struct ParseState {
     choice.content.parts = std::move(text_content_queue);
     choice.operations = std::move(operation_queue);
     choice.condition = conditional_buffer_pop();
-    current_block->choices.push_back(choice);
+    choice_stack.push_back(choice);
   }
 };
 

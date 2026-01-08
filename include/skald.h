@@ -351,6 +351,7 @@ struct Beat {
   TextContent content;
   bool is_logic_block = false;
   bool is_else = false;
+  std::vector<Choice> choices;
 
   std::string dbg_desc() const {
     return (condition ? condition->dbg_desc() + " " : "") +
@@ -366,7 +367,6 @@ struct Beat {
 struct Block {
   std::string tag;
   std::vector<Beat> beats{};
-  std::vector<Choice> choices;
 };
 
 class Module {

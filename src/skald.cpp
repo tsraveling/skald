@@ -42,7 +42,11 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
   return result;
 }
 
-std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {}
+std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
+  std::vector<Query> ret;
+
+  return ret;
+}
 
 bool Engine::resolve_condition(const Conditional &cond) {
   // STUB: Actually process conditional here
@@ -122,18 +126,13 @@ Response Engine::next() {
 
   Content content;
   content.text = resolve_text(beat.content);
+  for (auto &choice : beat.choices) {
+    content.options.push_back(resolve_option(choice));
+  }
 
   // STUB: If queries are resolved, check if this beat is valid and if it isn't,
   // skip forward
 
-  // If at end of block, include choices
-  // STUB: Handle edge case where final beat is optional and you don't get it.
-  // still show choices!
-  if (cursor.current_beat_index == block.beats.size() - 1) {
-    for (auto &choice : block.choices) {
-      content.options.push_back(resolve_option(choice));
-    }
-  }
   return content;
 }
 
@@ -214,10 +213,10 @@ void Engine::load(std::string path) {
                 << " beats" << std::endl;
       for (const auto &beat : block.beats) {
         std::cout << "  - Beat: " << beat.dbg_desc() << "\n";
-      }
-      for (const auto &choice : block.choices) {
-        std::cout << "    - Choice: " << choice.dbg_desc() << "\n";
-        std::cout << dbg_desc_ops(choice.operations);
+        for (const auto &choice : beat.choices) {
+          std::cout << "    > Choice: " << choice.dbg_desc() << "\n";
+          std::cout << dbg_desc_ops(choice.operations);
+        }
       }
     }
 
