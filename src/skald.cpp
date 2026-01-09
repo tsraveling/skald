@@ -47,6 +47,38 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
 
 std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
   std::vector<Query> ret;
+  for (auto &op : ops) {
+    auto *call = op_get_call(op);
+    if (call)
+      ret.push_back(Query{.call = *call});
+  }
+  return ret;
+}
+
+/** Sets up queries for a beat's conditionals, operations, choice conditionals,
+ *  and choice ops. */
+std::vector<Query> queries_for_beat(const Beat &beat) {
+  std::vector<Query> ret;
+  if (beat.condition) {
+    auto cond = queries_for_conditional(*beat.condition);
+    ret.insert(ret.end(), cond.begin(), cond.end());
+  }
+  if (beat.operations.size() > 0) {
+    auto op = queries_for_operations(beat.operations);
+    ret.insert(ret.end(), op.begin(), op.end());
+  }
+  if (beat.choices.size() > 0) {
+    for (auto &choice : beat.choices) {
+      if (choice.condition) {
+        auto cond = queries_for_conditional(*beat.condition);
+        ret.insert(ret.end(), cond.begin(), cond.end());
+      }
+      if (choice.operations.size() > 0) {
+        auto op = queries_for_operations(beat.operations);
+        ret.insert(ret.end(), op.begin(), op.end());
+      }
+    }
+  }
 
   return ret;
 }
@@ -104,11 +136,12 @@ void Engine::process_cursor() {
   Block &block = current->blocks[cursor.current_block_index];
   Beat &beat = block.beats[cursor.current_beat_index];
 
-  // STUB: 1. beat conditional
-  // STUB: 2. beat operations
+  // STUB: Index checking and error throwing system
 
-  // STUB: Method to detect if it's choice time
-  // STUB: Resolve queries on options
+  // Queue up any queries that need to happen
+  cursor.resolution_stack = queries_for_beat(beat);
+  dbg_out("< there are " << cursor.resolution_stack.size()
+                         << " queries queued >");
 
   // If at end of block, include choices
   // if (cursor.current_beat_index == block.beats.size() - 1) {
@@ -118,9 +151,23 @@ void Engine::process_cursor() {
   // }
 }
 
+ProgressResult Engine::progress_cursor() {
+  // STUB: Error handle here if there are resolutions left
+  Block &block = current->blocks[cursor.current_block_index];
+  cursor.current_beat_index++;
+  if (cursor.current_beat_index >= block.beats.size()) {
+    cursor.current_block_index++;
+    cursor.current_beat_index = 0;
+    if (cursor.current_block_index >= current->blocks.size()) {
+      return END_OF_FILE;
+    }
+  }
+  return OK;
+}
+
 Response Engine::next() {
   if (cursor.resolution_stack.size() > 0) {
-    // STUB: Do queries here
+    return cursor.resolution_stack.back();
   }
   Block &block = current->blocks[cursor.current_block_index];
   Beat &beat = block.beats[cursor.current_beat_index];
@@ -178,7 +225,11 @@ Response Engine::start() {
 }
 
 Response Engine::act(int choice_index) { return End{}; }
-Response Engine::answer(QueryAnswer answer) { return End{}; }
+Response Engine::answer(QueryAnswer answer) {
+  // STUB: Process the answer in here and cache it
+  cursor.resolution_stack.pop_back();
+  return next();
+}
 
 // SECTION: FILE LOADING AND PARSING
 

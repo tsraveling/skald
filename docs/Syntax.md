@@ -128,6 +128,8 @@ If the player selects a choice without a redirect, the cursor will move to the n
 
 If the cursor reaches the end of the file without an explicit `END` (4.1.3), an error will be thrown.
 
+If the cursor reaches a beat with choices, but none of those choices are available due to conditions, the cursor will accept any question index input and move on to the next beat as if no choices were present at all. The normal `Skald.continue()` approach works in this case as well (but will throw an error if any choices is available to the player).
+
 ## 2.3 Insertions
 
 ### 2.3.1 Direct Insertion

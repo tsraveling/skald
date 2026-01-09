@@ -53,6 +53,18 @@ TODO: document this once implemented:
 - [ ] 6. Implement the answer cache
 - [ ] 7 . Finish the resolver
 
+Currently ALL method calls for a block and its choices are made before presenting the block. So if you do:
+
+```
+-- some_val is false before this beat
+This is a beat.
+  ~ some_val = true
+
+> (? some_val) does this work?
+```
+
+That choice will not be available.
+
 ## 2. Starting and Ending Sessions
 
 TBD

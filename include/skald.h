@@ -280,6 +280,10 @@ struct Move {
 
 using Operation = std::variant<Move, MethodCall, Mutation, GoModule, Exit>;
 
+inline const MethodCall *op_get_call(const Operation &val) {
+  return std::get_if<MethodCall>(&val);
+}
+
 /* DEBUG OUTPUT STUFF TO DELETE LATER */
 
 struct OpDebugProcessor {
@@ -479,6 +483,11 @@ struct Cursor {
   std::vector<Query> resolution_stack;
 };
 
+enum ProgressResult {
+  OK,
+  END_OF_FILE,
+};
+
 class Engine {
 private:
   std::unique_ptr<Module> current;
@@ -486,8 +495,6 @@ private:
 
   void build_state(const Module &module);
 
-  std::vector<Query> queries_for_conditional(const Conditional &cond);
-  std::vector<Query> queries_for_operations(const std::vector<Operation> &ops);
   bool resolve_condition(const Conditional &cond);
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
@@ -498,6 +505,7 @@ private:
   // STUB: Next: see TODO>CURRENT
   Response next();
   void process_cursor();
+  ProgressResult progress_cursor();
 
 public:
   void load(std::string path);

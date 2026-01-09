@@ -1,6 +1,7 @@
 #test_block
 
 First beat
+  :resolve_me()
 
 Second beat.
 > This is an inline choice that does nothing!
