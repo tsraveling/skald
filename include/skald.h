@@ -19,16 +19,22 @@ using RValue = std::variant<std::string, bool, int, float, Variable,
                             std::shared_ptr<MethodCall>>;
 
 // Rval helper functions
-inline std::string *rval_get_str(RValue &val) {
+inline const std::string *rval_get_str(const RValue &val) {
   return std::get_if<std::string>(&val);
 }
-inline int *rval_get_int(RValue &val) { return std::get_if<int>(&val); }
-inline bool *rval_get_bool(RValue &val) { return std::get_if<bool>(&val); }
-inline float *rval_get_float(RValue &val) { return std::get_if<float>(&val); }
-inline Variable *rval_get_var(RValue &val) {
+inline const int *rval_get_int(const RValue &val) {
+  return std::get_if<int>(&val);
+}
+inline const bool *rval_get_bool(const RValue &val) {
+  return std::get_if<bool>(&val);
+}
+inline const float *rval_get_float(const RValue &val) {
+  return std::get_if<float>(&val);
+}
+inline const Variable *rval_get_var(const RValue &val) {
   return std::get_if<Variable>(&val);
 }
-inline MethodCall *rval_get_call(RValue &val) {
+inline const MethodCall *rval_get_call(const RValue &val) {
   if (auto *p = std::get_if<std::shared_ptr<MethodCall>>(&val)) {
     return p->get();
   }
@@ -38,14 +44,16 @@ inline MethodCall *rval_get_call(RValue &val) {
 using SimpleRValue = std::variant<std::string, bool, int, float>;
 
 // Simple RVal helper functions
-inline std::string *srval_get_str(SimpleRValue &val) {
+inline const std::string *srval_get_str(const SimpleRValue &val) {
   return std::get_if<std::string>(&val);
 }
-inline int *srval_get_int(SimpleRValue &val) { return std::get_if<int>(&val); }
-inline bool *srval_get_bool(SimpleRValue &val) {
+inline const int *srval_get_int(const SimpleRValue &val) {
+  return std::get_if<int>(&val);
+}
+inline const bool *srval_get_bool(const SimpleRValue &val) {
   return std::get_if<bool>(&val);
 }
-inline float *srval_get_float(SimpleRValue &val) {
+inline const float *srval_get_float(const SimpleRValue &val) {
   return std::get_if<float>(&val);
 }
 

@@ -28,11 +28,13 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
 
   for (const auto &item : cond.items) {
     if (auto *atom = std::get_if<ConditionalAtom>(&item)) {
-      MethodCall *a = rval_get_call(&atom->a);
+      const MethodCall *a = rval_get_call(atom->a);
+      const MethodCall *b = atom->b ? rval_get_call(*atom->b) : nullptr;
+      if (a)
+        result.push_back(Query{.call = *a});
+      if (b)
+        result.push_back(Query{.call = *b});
 
-      // STUB: is .a a method? if so add to query
-      // STUB: is .b a method? if so add to query
-      // result.push_back(Query{ /* fill */ });
     } else if (auto *nested =
                    std::get_if<std::shared_ptr<Conditional>>(&item)) {
       auto queries = queries_for_conditional(**nested);
