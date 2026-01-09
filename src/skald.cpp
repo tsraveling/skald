@@ -28,6 +28,7 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
 
   for (const auto &item : cond.items) {
     if (auto *atom = std::get_if<ConditionalAtom>(&item)) {
+      MethodCall *a = rval_get_call(&atom->a);
 
       // STUB: is .a a method? if so add to query
       // STUB: is .b a method? if so add to query

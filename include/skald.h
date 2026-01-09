@@ -18,7 +18,36 @@ struct MethodCall;
 using RValue = std::variant<std::string, bool, int, float, Variable,
                             std::shared_ptr<MethodCall>>;
 
+// Rval helper functions
+inline std::string *rval_get_str(RValue &val) {
+  return std::get_if<std::string>(&val);
+}
+inline int *rval_get_int(RValue &val) { return std::get_if<int>(&val); }
+inline bool *rval_get_bool(RValue &val) { return std::get_if<bool>(&val); }
+inline float *rval_get_float(RValue &val) { return std::get_if<float>(&val); }
+inline Variable *rval_get_var(RValue &val) {
+  return std::get_if<Variable>(&val);
+}
+inline MethodCall *rval_get_call(RValue &val) {
+  if (auto *p = std::get_if<std::shared_ptr<MethodCall>>(&val)) {
+    return p->get();
+  }
+  return nullptr;
+}
+
 using SimpleRValue = std::variant<std::string, bool, int, float>;
+
+// Simple RVal helper functions
+inline std::string *srval_get_str(SimpleRValue &val) {
+  return std::get_if<std::string>(&val);
+}
+inline int *srval_get_int(SimpleRValue &val) { return std::get_if<int>(&val); }
+inline bool *srval_get_bool(SimpleRValue &val) {
+  return std::get_if<bool>(&val);
+}
+inline float *srval_get_float(SimpleRValue &val) {
+  return std::get_if<float>(&val);
+}
 
 /** Attempts to cast an RValue to a SimpleRValue, returnig nullopt if this is
  * impossible. */
