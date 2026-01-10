@@ -226,7 +226,14 @@ Response Engine::start() {
 
 Response Engine::act(int choice_index) { return End{}; }
 Response Engine::answer(QueryAnswer answer) {
-  // STUB: Process the answer in here and cache it
+  // STUB: Error handling for empty queue
+  auto &answering = cursor.resolution_stack.back();
+  auto key = answering.get_key();
+  if (answer.val) {
+    query_cache.insert_or_assign(key, *answer.val);
+  } else {
+    query_cache.erase(key);
+  }
   cursor.resolution_stack.pop_back();
   return next();
 }

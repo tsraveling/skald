@@ -103,6 +103,9 @@ int main() {
           }
         },
         response);
+
+    std::cout << "\n----Q CACHE----\n"
+              << tester.engine.dbg_print_cache() << "-----\n";
   }
 
   std::cout << "\n\nScript concluded!\n";

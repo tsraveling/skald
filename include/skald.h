@@ -105,6 +105,15 @@ inline std::string rval_to_string(const VariantType &val) {
       val);
 }
 
+/** The key used to encode a query for answer caching */
+inline std::string key_for_call(MethodCall &call) {
+  std::string ret = call.method;
+  for (auto &arg : call.args) {
+    ret += "|" + rval_to_string(arg);
+  }
+  return ret;
+}
+
 // Now define MethodCall::dbg_desc after rval_to_string is available
 inline std::string MethodCall::dbg_desc() const {
   std::string ret = "CALL " + method + ": ";
@@ -446,18 +455,12 @@ struct Content {
  * mostly method calls. */
 struct Query {
   MethodCall call;
-
-  /** The key used to encode the answer for caching */
-  std::string get_key() {
-    std::string ret = call.method;
-    for (auto &arg : call.args) {
-      ret += "|" + rval_to_string(arg);
-    }
-    return ret;
-  }
+  std::string get_key() { return key_for_call(call); }
 };
 
-/** Will be sent back by the client as an answer to the current open query */
+/** Will be sent back by the client as an answer to the current open query --
+ *  will be undefined if no value is returned. Undefined will not be keyed into
+ *  the map, which will be treated as falsy if used in a conditional. */
 struct QueryAnswer {
   std::optional<SimpleRValue> val;
 };
@@ -492,6 +495,7 @@ class Engine {
 private:
   std::unique_ptr<Module> current;
   std::unordered_map<std::string, SimpleRValue> state;
+  std::unordered_map<std::string, SimpleRValue> query_cache;
 
   void build_state(const Module &module);
 
@@ -528,6 +532,14 @@ public:
 
   /** Provide an answer if the current response is a Query */
   Response answer(QueryAnswer a);
+
+  std::string dbg_print_cache() {
+    std::string ret;
+    for (const auto &[key, value] : query_cache) {
+      ret += key + ": " + rval_to_string(value) + "\n";
+    }
+    return ret;
+  }
 };
 
 } // namespace Skald
