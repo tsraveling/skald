@@ -98,6 +98,10 @@ int main() {
             // TODO: Output specifics
             std::cout << "GOMOD!";
             return End{};
+          } else if constexpr (std::is_same_v<T, Error>) {
+            std::cout << "<! ERROR code " << value.code << " on line "
+                      << value.line_number << ": " << value.message << " !>\n";
+            return End{};
           } else { // Any unhandled cases just exit
             return End{};
           }

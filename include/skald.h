@@ -9,6 +9,10 @@
 
 namespace Skald {
 
+struct LineEntity {
+  size_t line_number = 0;
+};
+
 struct Variable {
   std::string name;
 };
@@ -72,13 +76,13 @@ inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
       rval);
 }
 
-struct Declaration {
+struct Declaration : LineEntity {
   Variable var;
   SimpleRValue initial_value;
   bool is_imported = false;
 };
 
-struct MethodCall {
+struct MethodCall : LineEntity {
   std::string method;
   std::vector<RValue> args;
   std::string dbg_desc() const; // Declare only for circular dep reasons
@@ -183,7 +187,7 @@ using ConditionalItem =
  * a clause. */
 std::string dbg_desc_conditional_item(const ConditionalItem &item);
 
-struct Conditional {
+struct Conditional : LineEntity {
   enum Type { AND, OR };
   Type type = Type::AND;
   std::vector<ConditionalItem> items;
@@ -215,7 +219,7 @@ inline std::string dbg_desc_conditional_item(const ConditionalItem &item) {
       item);
 }
 
-struct TestbedDeclaration {
+struct TestbedDeclaration : LineEntity {
   std::string variable;
   SimpleRValue test_value;
   std::string dbg_desc() const {
@@ -223,7 +227,7 @@ struct TestbedDeclaration {
   }
 };
 
-struct Testbed {
+struct Testbed : LineEntity {
   std::string name;
   std::vector<TestbedDeclaration> declarations;
   std::string dbg_desc() const {
@@ -235,7 +239,7 @@ struct Testbed {
   }
 };
 
-struct Mutation {
+struct Mutation : LineEntity {
   enum Type { EQUATE, SWITCH, ADD, SUBTRACT };
   std::string lvalue;
   Type type;
@@ -263,7 +267,7 @@ struct Mutation {
   }
 };
 
-struct GoModule {
+struct GoModule : LineEntity {
   std::string module_path;
   std::string dbg_desc() const {
     return module_path +
@@ -272,7 +276,7 @@ struct GoModule {
   std::string start_in_tag;
 };
 
-struct Exit {
+struct Exit : LineEntity {
   std::optional<RValue> argument;
   std::string dbg_desc() const {
     if (argument) {
@@ -283,7 +287,7 @@ struct Exit {
   }
 };
 
-struct Move {
+struct Move : LineEntity {
   std::string target_tag;
 };
 
@@ -383,7 +387,7 @@ struct TextContent {
   }
 };
 
-struct Choice {
+struct Choice : LineEntity {
   std::optional<Conditional> condition;
   TextContent content;
   std::vector<Operation> operations;
@@ -394,7 +398,7 @@ struct Choice {
   }
 };
 
-struct Beat {
+struct Beat : LineEntity {
   std::optional<Conditional> condition;
   std::string attribution;
   std::vector<Operation> operations;
@@ -414,7 +418,7 @@ struct Beat {
 
 // TODO: Support the "auto-continue" block
 // (that is untagged and follows an inline choice block)
-struct Block {
+struct Block : LineEntity {
   std::string tag;
   std::vector<Beat> beats{};
 };
@@ -458,6 +462,16 @@ struct Query {
   std::string get_key() { return key_for_call(call); }
 };
 
+/** This carries error information for anything that goes so wrong that the
+ *  engine has to stop */
+const uint ERROR_UNKNOWN = 0;
+const uint ERROR_EOF = 1;
+struct Error {
+  uint code = 0;
+  std::string message;
+  size_t line_number;
+};
+
 /** Will be sent back by the client as an answer to the current open query --
  *  will be undefined if no value is returned. Undefined will not be keyed into
  *  the map, which will be treated as falsy if used in a conditional. */
@@ -469,7 +483,7 @@ struct QueryAnswer {
 struct End {};
 
 /** Will contain either a Content struct or a Query */
-using Response = std::variant<Content, Query, Exit, GoModule, End>;
+using Response = std::variant<Content, Query, Exit, GoModule, End, Error>;
 
 /** Will be sent back by the client following a response, to indicate the
  * next action */

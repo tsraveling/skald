@@ -4,6 +4,7 @@
 #include "parse_state.h"
 #include "skald.h"
 #include "skald_grammar.h"
+#include "tao/pegtl/position.hpp"
 #include <optional>
 #include <string>
 #include <vector>
@@ -316,7 +317,8 @@ template <> struct action<op_exit> {
 template <> struct action<op_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.operation_queue.push_back(Move{state.pop_id()});
+    state.operation_queue.push_back(
+        Move{input.position().line, state.pop_id()});
     dbg_out(">>> op_move: " << input.string());
   }
 };
@@ -325,7 +327,8 @@ template <> struct action<op_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.operation_queue.push_back(
-        MethodCall{state.pop_id(), std::move(state.argument_queue)});
+        MethodCall{input.position().line, state.pop_id(),
+                   std::move(state.argument_queue)});
     dbg_out(">>> op_method: " << input.string());
   }
 };
@@ -357,31 +360,34 @@ template <> struct action<op_mutate_subtract> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_subtract: " << input.string());
-    state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::SUBTRACT, state.rval_buffer_pop()});
+    state.operation_queue.push_back(Mutation{input.position().line,
+                                             state.pop_id(), Mutation::SUBTRACT,
+                                             state.rval_buffer_pop()});
   }
 };
 template <> struct action<op_mutate_add> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_add: " << input.string());
-    state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::ADD, state.rval_buffer_pop()});
+    state.operation_queue.push_back(Mutation{input.position().line,
+                                             state.pop_id(), Mutation::ADD,
+                                             state.rval_buffer_pop()});
   }
 };
 template <> struct action<op_mutate_equate> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_equate: " << input.string());
-    state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::EQUATE, state.rval_buffer_pop()});
+    state.operation_queue.push_back(Mutation{input.position().line,
+                                             state.pop_id(), Mutation::EQUATE,
+                                             state.rval_buffer_pop()});
   }
 };
 template <> struct action<op_mutate_switch> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.operation_queue.push_back(
-        Mutation{state.pop_id(), Mutation::SWITCH, {}});
+        Mutation{input.position().line, state.pop_id(), Mutation::SWITCH, {}});
   }
 };
 
@@ -401,7 +407,8 @@ template <> struct action<inline_choice_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
-    state.operation_queue.push_back(Move{state.pop_id()});
+    state.operation_queue.push_back(
+        Move{input.position().line, state.pop_id()});
     dbg_out(">>> inline_choice_move: " << text);
   }
 };
@@ -428,15 +435,16 @@ template <> struct action<logic_beat_single> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> logic_beat_single: " << input.string());
-    state.add_logic_beat();
+    auto *beat = state.add_logic_beat();
+    beat->line_number = input.position().line;
   }
 };
 
-template <> struct action<logic_beat_conditional> {
-  static void apply0(ParseState &state) {
-    dbg_out(">>> logic_beat_conditional");
-  }
-};
+// template <> struct action<logic_beat_conditional> {
+//   static void apply0(ParseState &state) {
+//     dbg_out(">>> logic_beat_conditional");
+//   }
+// };
 
 template <> struct action<logic_beat_else> {
   static void apply0(ParseState &state) {
@@ -449,7 +457,8 @@ template <> struct action<logic_beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> logic_beat_clause:\n" << input.string());
-    state.add_logic_beat();
+    auto *beat = state.add_logic_beat();
+    beat->line_number = input.position().line;
   }
 };
 
@@ -470,7 +479,8 @@ template <> struct action<beat_attribution> {
 template <> struct action<beat_line> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out("--> beat line:\n > " << input.string());
+    const position p = input.position();
+    dbg_out("--> " << p << ": beat line:\n > " << input.string());
     state.store_beat_text();
   }
 };
@@ -478,8 +488,10 @@ template <> struct action<beat_line> {
 template <> struct action<beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out("+++ BEAT CLAUSE END:\n > " << input.string());
-    state.add_beat();
+    const position p = input.position();
+    dbg_out("+++ " << p << ": BEAT CLAUSE END:\n > " << input.string());
+    auto *beat = state.add_beat();
+    beat->line_number = input.position().line;
   }
 };
 

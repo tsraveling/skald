@@ -214,7 +214,7 @@ struct ParseState {
   void store_beat_text() { beat_content_queue = std::move(text_content_queue); }
 
   /** Creates a beat and adds it to the current block */
-  void add_beat() {
+  Beat *add_beat() {
     dbg_out(">>> add_beat()");
     if (!current_block) {
       Log::err("Found beat but there is no current block!");
@@ -228,13 +228,14 @@ struct ParseState {
     beat.choices = std::move(choice_stack);
     beat.attribution = current_tag;
     current_block->beats.push_back(beat);
+    return &current_block->beats.back();
   }
 
   /** Stores an `(else)` flag for a logic block */
   bool store_is_else = false;
 
   /** Creates a beat and adds it to the current block */
-  void add_logic_beat() {
+  Beat *add_logic_beat() {
     dbg_out(">>> add_logic_beat()");
     if (!current_block) {
       Log::err("Found a logic beat but there is no current block!");
@@ -248,12 +249,13 @@ struct ParseState {
     beat.is_else = store_is_else;
     current_block->beats.push_back(beat);
     store_is_else = false;
+    return &current_block->beats.back();
   }
 
-  void add_choice() {
+  Choice *add_choice() {
     if (!current_block) {
       Log::err("Found choice but there is no current block!");
-      return;
+      return nullptr;
     }
     Log::verbose(" - Adding choice.");
     Choice choice;
@@ -261,6 +263,7 @@ struct ParseState {
     choice.operations = std::move(operation_queue);
     choice.condition = conditional_buffer_pop();
     choice_stack.push_back(choice);
+    return &choice_stack.back();
   }
 };
 
