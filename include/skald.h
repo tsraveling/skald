@@ -466,10 +466,15 @@ struct Query {
  *  engine has to stop */
 const uint ERROR_UNKNOWN = 0;
 const uint ERROR_EOF = 1;
+const uint ERROR_EMPTY_MODULE = 2;
+const uint ERROR_MODULE_TAG_NOT_FOUND = 3;
 struct Error {
   uint code = 0;
   std::string message;
   size_t line_number;
+
+  Error(uint code, std::string message, size_t line_number)
+      : code(code), message(std::move(message)), line_number(line_number) {}
 };
 
 /** Will be sent back by the client as an answer to the current open query --
@@ -491,12 +496,16 @@ struct Action {
   int selection;
 };
 
+/** This is the phase of processing for a given beat. */
+enum class ProcessPhase { Conditional, Resolution, Presentation, Application };
+
 /** Marks where we are in the module, and what is expected from the client
  * next
  */
 struct Cursor {
-  int current_block_index;
-  int current_beat_index;
+  ProcessPhase current_phase = ProcessPhase::Conditional;
+  int current_block_index = 0;
+  int current_beat_index = 0;
   std::vector<Query> resolution_stack;
 };
 
@@ -513,6 +522,24 @@ private:
 
   void build_state(const Module &module);
 
+  // Util
+  std::pair<Block &, Beat &> getCurrentBlockAndBeat();
+
+  // Entrance and nav
+  Response enter(int block, int beat);
+
+  // 1. Conditional phase
+
+  void setup_beat();
+
+  // 2. Resolution phase
+
+  void process_beat();
+
+  // 3. Presentation phase
+
+  // 4. Application phase
+
   bool resolve_condition(const Conditional &cond);
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
@@ -522,7 +549,6 @@ private:
   Cursor cursor;
   // STUB: Next: see TODO>CURRENT
   Response next();
-  void process_cursor();
   ProgressResult progress_cursor();
 
 public:

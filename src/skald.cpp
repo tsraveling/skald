@@ -13,6 +13,14 @@ namespace pegtl = tao::pegtl;
 
 namespace Skald {
 
+// SECTION: UTIL
+
+std::pair<Block &, Beat &> Engine::getCurrentBlockAndBeat() {
+  Block &block = current->blocks[cursor.current_block_index];
+  Beat &beat = block.beats[cursor.current_beat_index];
+  return {block, beat};
+}
+
 // SECTION: STATE
 
 void Engine::build_state(const Module &module) {
@@ -55,14 +63,22 @@ std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
   return ret;
 }
 
-/** Sets up queries for a beat's conditionals, operations, choice conditionals,
- *  and choice ops. */
-std::vector<Query> queries_for_beat(const Beat &beat) {
+/** This is called in the Conditional beat phase, to check if the beat should be
+ * processed at all */
+std::vector<Query> queries_for_beat_conditional(const Beat &beat) {
   std::vector<Query> ret;
   if (beat.condition) {
     auto cond = queries_for_conditional(*beat.condition);
     ret.insert(ret.end(), cond.begin(), cond.end());
   }
+  return ret;
+}
+
+/** Sets up queries for a beat's operations, choice conditionals,
+ *  and choice ops. Will be called only if its conditionals have previously been
+ * queried and resolved to true. */
+std::vector<Query> queries_for_beat(const Beat &beat) {
+  std::vector<Query> ret;
   if (beat.operations.size() > 0) {
     auto op = queries_for_operations(beat.operations);
     ret.insert(ret.end(), op.begin(), op.end());
@@ -83,6 +99,8 @@ std::vector<Query> queries_for_beat(const Beat &beat) {
   return ret;
 }
 
+// SECTION: RESOLVERS
+
 bool Engine::resolve_condition(const Conditional &cond) {
   // STUB: Actually process conditional here
   return true;
@@ -96,6 +114,36 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
   // STUB: Implement ternary resolution here
   return tern.dbg_desc();
 }
+
+// SECTION: 1 - BEAT CONDITIONAL
+
+/** This sets the phase to first and queues the beat's conditional for
+ *  processing. */
+void Engine::setup_beat() {
+  auto [block, beat] = getCurrentBlockAndBeat();
+  cursor.resolution_stack = queries_for_beat_conditional(beat);
+  dbg_out("< phase 1: there are " << cursor.resolution_stack.size()
+                                  << " queries queued >");
+  cursor.current_phase = ProcessPhase::Conditional;
+}
+
+// SECTION: 2 - BEAT RESOLUTION
+
+/** This sets the phase to second and queues the beat's ops and choices for
+ *  processing. */
+void Engine::process_beat() {
+  auto [block, beat] = getCurrentBlockAndBeat();
+
+  // STUB: Index checking and error throwing system
+
+  // Queue up any queries that need to happen
+  cursor.resolution_stack = queries_for_beat(beat);
+  cursor.current_phase = ProcessPhase::Resolution;
+  dbg_out("< phase 2: there are " << cursor.resolution_stack.size()
+                                  << " queries queued >");
+}
+
+// SECTION: 3 - PRESENTATION
 
 std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
   std::vector<Chunk> ret;
@@ -132,25 +180,6 @@ Option Engine::resolve_option(const Choice &choice) {
   return ret;
 }
 
-void Engine::process_cursor() {
-  Block &block = current->blocks[cursor.current_block_index];
-  Beat &beat = block.beats[cursor.current_beat_index];
-
-  // STUB: Index checking and error throwing system
-
-  // Queue up any queries that need to happen
-  cursor.resolution_stack = queries_for_beat(beat);
-  dbg_out("< there are " << cursor.resolution_stack.size()
-                         << " queries queued >");
-
-  // If at end of block, include choices
-  // if (cursor.current_beat_index == block.beats.size() - 1) {
-  //   for (auto &choice : block.choices) {
-  //     content.options.push_back(resolve_option(choice));
-  //   }
-  // }
-}
-
 ProgressResult Engine::progress_cursor() {
   // STUB: Error handle here if there are resolutions left
   Block &block = current->blocks[cursor.current_block_index];
@@ -172,6 +201,8 @@ Response Engine::next() {
   Block &block = current->blocks[cursor.current_block_index];
   Beat &beat = block.beats[cursor.current_beat_index];
 
+  // STUB: Handle the loop for discarded beats
+
   // STUB: Flush resolver cache here
 
   Content content;
@@ -180,8 +211,8 @@ Response Engine::next() {
     content.options.push_back(resolve_option(choice));
   }
 
-  // STUB: If queries are resolved, check if this beat is valid and if it isn't,
-  // skip forward
+  // STUB: If queries are resolved, check if this beat is valid and if it
+  // isn't, skip forward
 
   return content;
 }
@@ -199,32 +230,37 @@ Response Engine::next() {
 Response Engine::start_at(std::string tag) {
   auto start_index = current->get_block_index(tag);
   if (start_index < 0) {
-    throw std::runtime_error("Block not found: " + tag);
+    return Error(ERROR_MODULE_TAG_NOT_FOUND,
+                 "No block was found for tag: " + tag, 0);
   }
-  cursor.current_block_index = start_index;
-  cursor.current_beat_index = 0;
-  cursor.resolution_stack.clear();
-
-  process_cursor();
-
-  return next();
+  return enter(start_index, 0);
 }
 
 Response Engine::start() {
   dbg_out("engine start");
   if (current->blocks.size() < 1) {
-    throw std::runtime_error("There are no blocks in the current module");
+    return Error(ERROR_EMPTY_MODULE,
+                 "No blocks were found in the current module!", 0);
   }
+  return enter(0, 0);
+}
+
+/** This zeroes the state and drops us in at this beat index, e.g. from an
+ *  external entry point */
+Response Engine::enter(int block, int beat) {
   cursor.current_block_index = 0;
   cursor.current_beat_index = 0;
   cursor.resolution_stack.clear();
-
-  process_cursor();
-
+  setup_beat();
   return next();
 }
 
+/** Call this to answer to a Content response; either the index of a
+ * choice if there are choices, or any integer otherwise. */
 Response Engine::act(int choice_index) { return End{}; }
+
+/** Call this to answer a Query reponse; either the value that should be
+ * returned if a return is expected, or null if not. */
 Response Engine::answer(QueryAnswer answer) {
   // STUB: Error handling for empty queue
   auto &answering = cursor.resolution_stack.back();
