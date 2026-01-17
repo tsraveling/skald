@@ -177,7 +177,7 @@ struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
 struct module_path : plus<seq<not_at<move_marker>, not_one<'\r', '\n'>>> {};
 struct keyword_go : keyword<'G', 'O'> {};
 struct keyword_exit : keyword<'E', 'X', 'I', 'T'> {};
-struct op_exit : seq<keyword_exit, plus<space>, opt<rvalue>> {};
+struct op_exit : seq<keyword_exit, opt<seq<plus<blank>, rvalue>>> {};
 struct op_go_start_tag : seq<plus<blank>, move_marker, ws, identifier, ws> {};
 struct op_go : seq<keyword_go, plus<space>, module_path, opt<op_go_start_tag>> {
 };
