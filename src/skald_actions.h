@@ -310,7 +310,10 @@ template <> struct action<op_exit> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_exit: " << input.string() << " (pushing onto queue)");
-    state.operation_queue.push_back(Exit{.argument = state.rval_buffer_pop()});
+    std::optional<RValue> arg = std::nullopt;
+    if (state.rval_buffer.size() > 0)
+      arg = state.rval_buffer_pop();
+    state.operation_queue.push_back(Exit{.argument = arg});
   }
 };
 
