@@ -527,6 +527,7 @@ private:
 
   // Entrance and nav
   Response enter(int block, int beat);
+  ProgressResult advance_cursor();
 
   // 1. Conditional phase
 
@@ -541,6 +542,7 @@ private:
   // 4. Application phase
 
   bool resolve_condition(const Conditional &cond);
+  // STUB: Add a perform_operation() method
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
   std::vector<Chunk> resolve_text(const TextContent &text_content);
@@ -549,7 +551,6 @@ private:
   Cursor cursor;
   // STUB: Next: see TODO>CURRENT
   Response next();
-  ProgressResult progress_cursor();
 
 public:
   void load(std::string path);

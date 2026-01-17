@@ -180,7 +180,7 @@ Option Engine::resolve_option(const Choice &choice) {
   return ret;
 }
 
-ProgressResult Engine::progress_cursor() {
+ProgressResult Engine::advance_cursor() {
   // STUB: Error handle here if there are resolutions left
   Block &block = current->blocks[cursor.current_block_index];
   cursor.current_beat_index++;
@@ -194,12 +194,55 @@ ProgressResult Engine::progress_cursor() {
   return OK;
 }
 
+/** This steps forward to whatever the next thing is that needs to happen, and
+ *  as soon as any response is pending, returns it. */
 Response Engine::next() {
+
+  // If there's a pending query, do that.
   if (cursor.resolution_stack.size() > 0) {
     return cursor.resolution_stack.back();
   }
-  Block &block = current->blocks[cursor.current_block_index];
-  Beat &beat = block.beats[cursor.current_beat_index];
+
+  // If we get here, it means we're ready to do logic
+
+  auto [block, beat] = getCurrentBlockAndBeat();
+
+  // Processor loop
+  while (true) {
+    switch (cursor.current_phase) {
+    case ProcessPhase::Conditional:
+      if (beat.condition) {
+        if (resolve_condition(*beat.condition)) {
+          process_beat(); // This advances cursor as well
+        } else {
+          auto result = advance_cursor();
+          // Handle running into the end of the file before expected
+          if (result == END_OF_FILE)
+            return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
+                         beat.line_number);
+          setup_beat();
+        }
+      }
+      break;
+    case ProcessPhase::Resolution:
+      // STUB: Apply beat effects here
+      cursor.current_phase = ProcessPhase::Presentation;
+      break;
+    case ProcessPhase::Presentation:
+      // STUB: Return the beat's content here
+      // NOTE: at this point, the cursor will advance via ::act()
+      return Content{};
+      break;
+    case ProcessPhase::Application:
+      // STUB: Maybe apply choice effects in ::act? if so, delete this phase.
+      break;
+    }
+
+    // If we have added any queries, break the loop
+    if (cursor.resolution_stack.size() > 0) {
+      break;
+    }
+  }
 
   // STUB: Handle the loop for discarded beats
 
@@ -257,7 +300,10 @@ Response Engine::enter(int block, int beat) {
 
 /** Call this to answer to a Content response; either the index of a
  * choice if there are choices, or any integer otherwise. */
-Response Engine::act(int choice_index) { return End{}; }
+Response Engine::act(int choice_index) {
+  // STUB: Either advance_cursor() or apply choice effects if there are any
+  return End{};
+}
 
 /** Call this to answer a Query reponse; either the value that should be
  * returned if a return is expected, or null if not. */
