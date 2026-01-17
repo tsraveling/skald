@@ -1,9 +1,9 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -468,6 +468,8 @@ const uint ERROR_UNKNOWN = 0;
 const uint ERROR_EOF = 1;
 const uint ERROR_EMPTY_MODULE = 2;
 const uint ERROR_MODULE_TAG_NOT_FOUND = 3;
+const uint ERROR_CHOICE_OUT_OF_BOUNDS = 4;
+const uint ERROR_CHOICE_UNAVAILABLE = 5;
 struct Error {
   uint code = 0;
   std::string message;
@@ -496,23 +498,44 @@ struct Action {
   int selection;
 };
 
-/** This is the phase of processing for a given beat. */
-enum class ProcessPhase { Conditional, Resolution, Presentation, Application };
+/** This is the phase of processing for a given beat:
+ *  1. Conditional: checking to see if the beat should be played at all.
+ *  2. Resolution: applying the beat's effects.
+ *  3. Presentation: returning the content to the client and waiting for player
+ *  4. Execution: applying effects of the selected choice, if there is one
+ * */
+enum class ProcessPhase { Conditional, Resolution, Presentation, Execution };
 
 /** Marks where we are in the module, and what is expected from the client
  * next
  */
 struct Cursor {
+
+  /** If this is not empty, it marks the block that the engine should jump to on
+   * the next advance_cursor */
+  std::string queued_transition;
+
+  /** Each beat has a conditional, resolution, and presentation phase. These
+   *  check if the beat is valid, calculate values via method calls etc. to the
+   *  external client, and present the content, respectively. */
   ProcessPhase current_phase = ProcessPhase::Conditional;
+
+  /** Which block are we currently in */
   int current_block_index = 0;
+
+  /** Which beat are we currently working through */
   int current_beat_index = 0;
+
+  /** Which choice do we need to process? */
+  int choice_selection = 0;
+
+  /** These track method calls etc. that require queries to the external client.
+   *  These have to be resolved by the client via the answer() method before the
+   *  engine will proceed. */
   std::vector<Query> resolution_stack;
 };
 
-enum ProgressResult {
-  OK,
-  END_OF_FILE,
-};
+enum ProgressResult { OK, END_OF_FILE, MODULE_NOT_FOUND };
 
 class Engine {
 private:
@@ -527,7 +550,11 @@ private:
 
   // Entrance and nav
   Response enter(int block, int beat);
-  ProgressResult advance_cursor();
+  std::optional<Error> advance_cursor(int from_line_number = 0);
+
+  // Shared
+
+  void do_operation(Operation &op);
 
   // 1. Conditional phase
 
@@ -539,14 +566,16 @@ private:
 
   // 3. Presentation phase
 
-  // 4. Application phase
+  // 4. Execution phase
 
+  void setup_choice();
+
+  bool resolve_condition(const std::optional<Conditional> &cond);
   bool resolve_condition(const Conditional &cond);
   // STUB: Add a perform_operation() method
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
   std::vector<Chunk> resolve_text(const TextContent &text_content);
-  Option resolve_option(const Choice &choice);
 
   Cursor cursor;
   // STUB: Next: see TODO>CURRENT
@@ -565,13 +594,15 @@ public:
    * the first beat in the file as well. */
   Response start();
 
-  /** Get the next beat in line, optionally making a choice as well */
+  /** Call this to answer to a Content response; either the index of a
+   *  choice if there are choices, or any integer otherwise. */
   Response act(int choice_index = 0);
 
   /** Get the current response that's awaiting action */
   Response get_current();
 
-  /** Provide an answer if the current response is a Query */
+  /** Call this to answer a Query reponse; either the value that should be
+   * returned if a return is expected, or null if not. */
   Response answer(QueryAnswer a);
 
   std::string dbg_print_cache() {

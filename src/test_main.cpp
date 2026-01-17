@@ -52,7 +52,9 @@ public:
 
       return engine.act(selected_choice);
     } else {
-      std::cin.get();
+      int discard;
+      std::cout << "\n (continue) > ";
+      std::cin >> discard;
       return engine.act(0);
     }
   }

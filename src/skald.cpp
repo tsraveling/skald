@@ -4,7 +4,10 @@
 #include "skald_actions.h"
 #include "skald_grammar.h"
 #include "tao/pegtl/parse.hpp"
+#include <cstdio>
 #include <iostream>
+#include <optional>
+#include <string>
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/trace.hpp>
 #include <vector>
@@ -86,21 +89,32 @@ std::vector<Query> queries_for_beat(const Beat &beat) {
   if (beat.choices.size() > 0) {
     for (auto &choice : beat.choices) {
       if (choice.condition) {
-        auto cond = queries_for_conditional(*beat.condition);
+        auto cond = queries_for_conditional(*choice.condition);
         ret.insert(ret.end(), cond.begin(), cond.end());
       }
-      if (choice.operations.size() > 0) {
-        auto op = queries_for_operations(beat.operations);
-        ret.insert(ret.end(), op.begin(), op.end());
-      }
+      // We only process ops if this choice is selected.
     }
   }
 
   return ret;
 }
 
+std::vector<Query> queries_for_choice_exec(const Choice &choice) {
+  std::vector<Query> ret;
+  if (choice.operations.size() > 0) {
+    auto op = queries_for_operations(choice.operations);
+    ret.insert(ret.end(), op.begin(), op.end());
+  }
+  return ret;
+}
+
 // SECTION: RESOLVERS
 
+bool Engine::resolve_condition(const std::optional<Conditional> &cond) {
+  if (cond)
+    return resolve_condition(*cond);
+  return true;
+}
 bool Engine::resolve_condition(const Conditional &cond) {
   // STUB: Actually process conditional here
   return true;
@@ -114,6 +128,9 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
   // STUB: Implement ternary resolution here
   return tern.dbg_desc();
 }
+void Engine::do_operation(Operation &op) {
+  // STUB: Implement op resolution here
+}
 
 // SECTION: 1 - BEAT CONDITIONAL
 
@@ -122,8 +139,9 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
 void Engine::setup_beat() {
   auto [block, beat] = getCurrentBlockAndBeat();
   cursor.resolution_stack = queries_for_beat_conditional(beat);
-  dbg_out("< phase 1: there are " << cursor.resolution_stack.size()
-                                  << " queries queued >");
+  dbg_out("     (" << block.tag << ":" << cursor.current_beat_index
+                   << ") -> [COND: " << cursor.resolution_stack.size()
+                   << " queries queued ]");
   cursor.current_phase = ProcessPhase::Conditional;
 }
 
@@ -139,8 +157,8 @@ void Engine::process_beat() {
   // Queue up any queries that need to happen
   cursor.resolution_stack = queries_for_beat(beat);
   cursor.current_phase = ProcessPhase::Resolution;
-  dbg_out("< phase 2: there are " << cursor.resolution_stack.size()
-                                  << " queries queued >");
+  dbg_out("      [PROCESS: there are " << cursor.resolution_stack.size()
+                                       << " queries queued ]");
 }
 
 // SECTION: 3 - PRESENTATION
@@ -169,106 +187,172 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
   return ret;
 }
 
-Option Engine::resolve_option(const Choice &choice) {
-  Option ret;
-  ret.text = resolve_text(choice.content);
-  if (choice.condition.has_value()) {
-    ret.is_available = resolve_condition(choice.condition.value());
-  } else {
-    ret.is_available = true;
-  }
-  return ret;
+// SECTION: 4 - EXECUTION
+
+void Engine::setup_choice() {
+  auto [block, beat] = getCurrentBlockAndBeat();
+  auto &choice = beat.choices[cursor.choice_selection];
+  cursor.resolution_stack = queries_for_choice_exec(choice);
+  dbg_out("     [CHOICE EXEC: there are " << cursor.resolution_stack.size()
+                                          << " queries queued ]");
+  // STUB: NEXT: tie this back into next()
+  cursor.current_phase = ProcessPhase::Execution;
 }
 
-ProgressResult Engine::advance_cursor() {
-  // STUB: Error handle here if there are resolutions left
+std::optional<Error> Engine::advance_cursor(int from_line_number) {
+  // consuming the queued transition tag as we do so.
+  if (cursor.queued_transition.length() > 0) {
+    auto new_index = current->get_block_index(cursor.queued_transition);
+    if (new_index == -1)
+      return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
+                   from_line_number);
+
+    cursor.current_block_index = new_index;
+
+    // This allows the next clause to check for empty block
+    cursor.current_beat_index = -1;
+    cursor.queued_transition = "";
+  }
+
   Block &block = current->blocks[cursor.current_block_index];
   cursor.current_beat_index++;
   if (cursor.current_beat_index >= block.beats.size()) {
     cursor.current_block_index++;
     cursor.current_beat_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
-      return END_OF_FILE;
+      return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
+                   from_line_number);
     }
   }
-  return OK;
+  dbg_out("CURSOR --> " << cursor.current_block_index << ", "
+                        << cursor.current_beat_index);
+  setup_beat();
+  return std::nullopt;
 }
+
+// SECTION: CORE ITERATOR
 
 /** This steps forward to whatever the next thing is that needs to happen, and
  *  as soon as any response is pending, returns it. */
 Response Engine::next() {
-
-  // If there's a pending query, do that.
-  if (cursor.resolution_stack.size() > 0) {
-    return cursor.resolution_stack.back();
-  }
-
-  // If we get here, it means we're ready to do logic
-
-  auto [block, beat] = getCurrentBlockAndBeat();
-
   // Processor loop
+  int debug_blocker = 0;
   while (true) {
+    debug_blocker++;
+    if (debug_blocker > 50) {
+      dbg_out(">>> Engine::next infinite loop exception! breaking.");
+      return End{};
+    }
+    // If there's a pending query, do that.
+    if (cursor.resolution_stack.size() > 0) {
+      return cursor.resolution_stack.back();
+    }
+
+    // If we get here, it means we're ready to do logic
+
+    auto [block, beat] = getCurrentBlockAndBeat();
     switch (cursor.current_phase) {
-    case ProcessPhase::Conditional:
-      if (beat.condition) {
-        if (resolve_condition(*beat.condition)) {
-          process_beat(); // This advances cursor as well
-        } else {
-          auto result = advance_cursor();
-          // Handle running into the end of the file before expected
-          if (result == END_OF_FILE)
-            return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
-                         beat.line_number);
-          setup_beat();
-        }
+    case ProcessPhase::Conditional: {
+      if (resolve_condition(beat.condition)) {
+        process_beat(); // This advances cursor as well
+      } else {
+        auto err = advance_cursor();
+        if (err)
+          return *err;
       }
       break;
-    case ProcessPhase::Resolution:
-      // STUB: Apply beat effects here
+    }
+    case ProcessPhase::Resolution: {
+      // Do the operations that are connected to the beat itself
+      for (auto &op : beat.operations) {
+        do_operation(op);
+      }
+      // Then present the text
       cursor.current_phase = ProcessPhase::Presentation;
       break;
-    case ProcessPhase::Presentation:
-      // STUB: Return the beat's content here
-      // NOTE: at this point, the cursor will advance via ::act()
-      return Content{};
-      break;
-    case ProcessPhase::Application:
-      // STUB: Maybe apply choice effects in ::act? if so, delete this phase.
+    }
+    case ProcessPhase::Presentation: {
+      // Assemble the content to return. After this, the cursor will advance via
+      // act. Choice effects will also be applied in act(), so next() hangs here
+      // until user input occurs.
+      auto content = Content{};
+      content.text = resolve_text(beat.content);
+      for (auto &choice : beat.choices) {
+        auto opt = Option{};
+        opt.text = resolve_text(choice.content);
+        opt.is_available = resolve_condition(choice.condition);
+        content.options.push_back(opt);
+      }
+      return content;
+    }
+    case ProcessPhase::Execution: {
+      // Now that e have queried any method calls, do all the operations
+      auto &choice = beat.choices[cursor.choice_selection];
+      for (auto &op : choice.operations) {
+        do_operation(op);
+      }
+
+      // And proceed
+      advance_cursor(choice.line_number);
       break;
     }
-
-    // If we have added any queries, break the loop
-    if (cursor.resolution_stack.size() > 0) {
-      break;
     }
   }
-
-  // STUB: Handle the loop for discarded beats
-
-  // STUB: Flush resolver cache here
-
-  Content content;
-  content.text = resolve_text(beat.content);
-  for (auto &choice : beat.choices) {
-    content.options.push_back(resolve_option(choice));
-  }
-
-  // STUB: If queries are resolved, check if this beat is valid and if it
-  // isn't, skip forward
-
-  return content;
 }
 
-// SECTION: GAMEPLAY
+// SECTION: PLAYER INPUT
 
-// STUB: Implementation approach:
-// 1. Look ahead at the whole next beat.
-// 2. Stack anything that needs to be resolved (methods for now)
-// 3. Run the processing stack until it is empty
-// 4. Store returned values in a temporary storage keyed by call + args (e.g.
-// `pop_alert(14, juicy_var)` will be keyed as `pop_alert|14|juicy_var`
-// 5. Text can then be assembled thusly
+Response Engine::act(int choice_index) {
+  auto [block, beat] = getCurrentBlockAndBeat();
+  if (beat.choices.size() > 0) {
+
+    // Make sure the selection is in bounds
+    if (choice_index >= beat.choices.size()) {
+      return Error(ERROR_CHOICE_OUT_OF_BOUNDS,
+                   "You picked choice " + std::to_string(choice_index) +
+                       ", but there are only " +
+                       std::to_string(beat.choices.size()) +
+                       " choices available!",
+                   beat.line_number);
+    }
+
+    auto &choice = beat.choices[choice_index];
+
+    // Make sure the selection is valid
+    if (!resolve_condition(choice.condition)) {
+      return Error(ERROR_CHOICE_UNAVAILABLE,
+                   "You picked choice " + std::to_string(choice_index) +
+                       ", but it is unavailable.",
+                   choice.line_number);
+    }
+
+    // Process any queries that are needed
+    cursor.choice_selection = choice_index;
+    setup_choice(); // This also sets us to execution phase
+  } else {
+
+    // If there are no choices, just proceed to next
+    auto err = advance_cursor(beat.line_number);
+    if (err)
+      return *err;
+  }
+  return next();
+}
+
+Response Engine::answer(QueryAnswer answer) {
+  // STUB: Error handling for empty queue
+  auto &answering = cursor.resolution_stack.back();
+  auto key = answering.get_key();
+  if (answer.val) {
+    query_cache.insert_or_assign(key, *answer.val);
+  } else {
+    query_cache.erase(key);
+  }
+  cursor.resolution_stack.pop_back();
+  return next();
+}
+
+// SECTION: MODULE ENTRY
 
 Response Engine::start_at(std::string tag) {
   auto start_index = current->get_block_index(tag);
@@ -285,7 +369,7 @@ Response Engine::start() {
     return Error(ERROR_EMPTY_MODULE,
                  "No blocks were found in the current module!", 0);
   }
-  return enter(0, 0);
+  return enter(1, 0);
 }
 
 /** This zeroes the state and drops us in at this beat index, e.g. from an
@@ -295,28 +379,6 @@ Response Engine::enter(int block, int beat) {
   cursor.current_beat_index = 0;
   cursor.resolution_stack.clear();
   setup_beat();
-  return next();
-}
-
-/** Call this to answer to a Content response; either the index of a
- * choice if there are choices, or any integer otherwise. */
-Response Engine::act(int choice_index) {
-  // STUB: Either advance_cursor() or apply choice effects if there are any
-  return End{};
-}
-
-/** Call this to answer a Query reponse; either the value that should be
- * returned if a return is expected, or null if not. */
-Response Engine::answer(QueryAnswer answer) {
-  // STUB: Error handling for empty queue
-  auto &answering = cursor.resolution_stack.back();
-  auto key = answering.get_key();
-  if (answer.val) {
-    query_cache.insert_or_assign(key, *answer.val);
-  } else {
-    query_cache.erase(key);
-  }
-  cursor.resolution_stack.pop_back();
   return next();
 }
 
