@@ -301,26 +301,30 @@ inline const MethodCall *op_get_call(const Operation &val) {
 
 struct OpDebugProcessor {
   std::string operator()(const Move &move) {
-    return "\n    * MOVE TO: " + move.target_tag;
+    return "MOVE TO: " + move.target_tag;
   }
   std::string operator()(const MethodCall &method_call) {
-    return "\n    * CALL: " + method_call.dbg_desc();
+    return "CALL: " + method_call.dbg_desc();
   }
   std::string operator()(const Mutation &mutation) {
-    return "\n    * MUTATE: " + mutation.dbg_desc();
+    return "MUTATE: " + mutation.dbg_desc();
   }
   std::string operator()(const GoModule &go) {
-    return "\n    * GO TO: " + go.dbg_desc();
+    return "GO TO: " + go.dbg_desc();
   }
   std::string operator()(const Exit &exit) {
-    return "\n    * EXIT: " + exit.dbg_desc();
+    return "EXIT: " + exit.dbg_desc();
   }
 };
+
+inline std::string dbg_dsc_op(const Operation &op) {
+  return std::visit(OpDebugProcessor{}, op);
+}
 
 inline std::string dbg_desc_ops(const std::vector<Operation> &ops) {
   std::string ret = "";
   for (auto &op : ops) {
-    ret += std::visit(OpDebugProcessor{}, op);
+    ret += "\n    * " + dbg_dsc_op(op);
   }
   return ret;
 }

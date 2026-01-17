@@ -492,7 +492,7 @@ template <> struct action<beat_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     const position p = input.position();
-    dbg_out("+++ " << p << ": BEAT CLAUSE END:\n > " << input.string());
+    dbg_out("+++ " << p << ": BEAT CLAUSE END:\n" << input.string());
     auto *beat = state.add_beat();
     beat->line_number = input.position().line;
   }

@@ -130,6 +130,7 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
 }
 void Engine::do_operation(Operation &op) {
   // STUB: Implement op resolution here
+  dbg_out("    x-x " << dbg_dsc_op(op));
 }
 
 // SECTION: 1 - BEAT CONDITIONAL
