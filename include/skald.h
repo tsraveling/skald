@@ -463,6 +463,8 @@ struct Content {
  * mostly method calls. */
 struct Query {
   MethodCall call;
+  bool expects_response = false;
+  size_t line_number = 0;
   std::string get_key() { return key_for_call(call); }
 };
 
@@ -474,6 +476,8 @@ const uint ERROR_EMPTY_MODULE = 2;
 const uint ERROR_MODULE_TAG_NOT_FOUND = 3;
 const uint ERROR_CHOICE_OUT_OF_BOUNDS = 4;
 const uint ERROR_CHOICE_UNAVAILABLE = 5;
+const uint ERROR_EXPECTED_ANSWER = 6;
+const uint ERROR_RESOLUTION_QUEUE_EMPTY = 7;
 struct Error {
   uint code = 0;
   std::string message;
@@ -607,7 +611,7 @@ public:
 
   /** Call this to answer a Query reponse; either the value that should be
    * returned if a return is expected, or null if not. */
-  Response answer(QueryAnswer a);
+  Response answer(std::optional<QueryAnswer> answer);
 
   std::string dbg_print_cache() {
     std::string ret;

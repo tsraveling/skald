@@ -1,5 +1,6 @@
 #include "skald.h"
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,11 +18,40 @@ public:
   }
 
   Response handle_query(const Query &query) { // TODO: Fix this up
-    std::cout << "\nQUERY: " << query.call.method << " > ";
+    if (query.expects_response) {
+      std::cout << "\nQUERY: " << query.call.method << " > ";
+    } else {
+      std::cout << "\nCALL: " << query.call.method << " (input anything) > ";
+    }
     std::string val;
     std::cin >> val;
-    // TODO: add support for bools and ints
-    return engine.answer(QueryAnswer{val});
+
+    std::optional<QueryAnswer> ret = std::nullopt;
+    if (query.expects_response) {
+      SimpleRValue parsed = false;
+      if (val == "true") {
+        parsed = true;
+      } else if (val == "false") {
+        parsed = false;
+      } else {
+        // Try int first (more restrictive than float)
+        char *end;
+        long lval = std::strtol(val.c_str(), &end, 10);
+        if (*end == '\0' && end != val.c_str()) {
+          parsed = static_cast<int>(lval);
+        } else {
+          // Try float
+          float fval = std::strtof(val.c_str(), &end);
+          if (*end == '\0' && end != val.c_str()) {
+            parsed = fval;
+          } else {
+            parsed = val;
+          }
+        }
+      }
+      ret = QueryAnswer{parsed};
+    }
+    return engine.answer(ret);
   }
 
   Response handle_content(const Content &content) {

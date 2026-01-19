@@ -42,9 +42,13 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
       const MethodCall *a = rval_get_call(atom->a);
       const MethodCall *b = atom->b ? rval_get_call(*atom->b) : nullptr;
       if (a)
-        result.push_back(Query{.call = *a});
+        result.push_back(Query{.call = *a,
+                               .expects_response = true,
+                               .line_number = a->line_number});
       if (b)
-        result.push_back(Query{.call = *b});
+        result.push_back(Query{.call = *b,
+                               .expects_response = true,
+                               .line_number = b->line_number});
 
     } else if (auto *nested =
                    std::get_if<std::shared_ptr<Conditional>>(&item)) {
@@ -61,7 +65,9 @@ std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
   for (auto &op : ops) {
     auto *call = op_get_call(op);
     if (call)
-      ret.push_back(Query{.call = *call});
+      ret.push_back(Query{.call = *call,
+                          .expects_response = false,
+                          .line_number = call->line_number});
   }
   return ret;
 }
@@ -340,14 +346,27 @@ Response Engine::act(int choice_index) {
   return next();
 }
 
-Response Engine::answer(QueryAnswer answer) {
-  // STUB: Error handling for empty queue
+Response Engine::answer(std::optional<QueryAnswer> answer) {
+  if (cursor.resolution_stack.empty()) {
+    return Error(ERROR_RESOLUTION_QUEUE_EMPTY,
+                 "Received an answer, but the resolution queue is empty!",
+                 0); // TODO: add a "last at" line number and use it here
+  }
   auto &answering = cursor.resolution_stack.back();
-  auto key = answering.get_key();
-  if (answer.val) {
-    query_cache.insert_or_assign(key, *answer.val);
-  } else {
-    query_cache.erase(key);
+  if (answering.expects_response) {
+    if (!answer) {
+      return Error(ERROR_EXPECTED_ANSWER,
+                   "Expected an answer for " + answering.get_key() +
+                       ", but received none.",
+                   answering.line_number);
+    }
+    auto key = answering.get_key();
+    auto a = *answer;
+    if (a.val) {
+      query_cache.insert_or_assign(key, *a.val);
+    } else {
+      query_cache.erase(key);
+    }
   }
   cursor.resolution_stack.pop_back();
   return next();
