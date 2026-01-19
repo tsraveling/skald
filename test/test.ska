@@ -1,14 +1,25 @@
-#test_block
+#intro
 
-First beat
-  :resolve_me()
+First, let's play a chess game. If we win, we'll continue. Otherwise we'll move to the loss block.
 
-Second beat.
-> This is an inline choice that does nothing!
+opponent: Ready, bro?
 
-Final beat.
-> first choice
-> second choice
+How did it go? (the next beat is a logic beat with a method query)
 
-Finale
+* (? :did_win_chess())
+  -> win
+
+You lost! Such a shame.
+
+> Try again -> intro
+> I'm done.
+
+opponent: Goodbye, compadre.
+  EXIT
+
+#win
+
+You won!
+
+opponent: Good game, friendo.
   EXIT

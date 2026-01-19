@@ -207,6 +207,9 @@ struct choice_clause : seq<choice_line, star<op_line>> {};
 struct choice_block : plus<choice_clause> {};
 
 // SECTION: BEATS
+//
+struct block_tag_name : identifier {};
+struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
 
 struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
 struct logic_beat_conditional : sor<conditional, logic_beat_else> {};
@@ -222,8 +225,8 @@ struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
 
 /** A line with an optional attribution that is not indented or blank */
 struct beat_line
-    : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>, opt<conditional>, ws,
-          opt<beat_attribution>, text_content, eol> {};
+    : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>, not_at<block_tag_line>,
+          opt<conditional>, ws, opt<beat_attribution>, text_content, eol> {};
 
 /** A text beat, optionally followed by some operations. */
 struct beat_clause
@@ -232,8 +235,6 @@ struct beat_clause
 
 // SECTION: BLOCKS
 
-struct block_tag_name : identifier {};
-struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
 struct block : seq<block_tag_line, star<sor<ignored, logic_beat_single,
                                             logic_beat_clause, beat_clause>>> {
 };

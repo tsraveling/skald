@@ -199,6 +199,8 @@ struct ParseState {
     Block new_block;
     new_block.tag = tag;
     module.blocks.push_back(new_block);
+    dbg_out(">>> [] block_lookup[" << tag
+                                   << "] = " << module.blocks.size() - 1);
     module.block_lookup[tag] = module.blocks.size() - 1;
 
     current_block = &module.blocks.back();

@@ -17,7 +17,7 @@ public:
     return ret;
   }
 
-  Response handle_query(const Query &query) { // TODO: Fix this up
+  Response handle_query(const Query &query) {
     if (query.expects_response) {
       std::cout << "\nQUERY: " << query.call.method << " > ";
     } else {

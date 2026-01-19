@@ -1,5 +1,9 @@
 # Skald TODO
 
+## Immediate:
+
+- [ ] Conditonal resolution not working -- actually need to implement cache and state! (A)
+
 ## CHOICE STRUCTURE CHANGE
 
 To docs / [[Syntax]]:

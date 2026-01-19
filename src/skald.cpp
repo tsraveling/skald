@@ -6,6 +6,7 @@
 #include "tao/pegtl/parse.hpp"
 #include <cstdio>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <tao/pegtl.hpp>
@@ -116,13 +117,107 @@ std::vector<Query> queries_for_choice_exec(const Choice &choice) {
 
 // SECTION: RESOLVERS
 
+/** Resolves an rvalue (potentialy including method calls or variables) down to
+ *  a simple value based on the current state and query cache. If no key exists,
+ *  boolean false will be returned. */
+SimpleRValue Engine::resolve_rval_to_simple(const RValue &rval) {
+  return std::visit(
+      [this](const auto &value) -> SimpleRValue {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, std::shared_ptr<MethodCall>>) {
+          auto key = key_for_call(*value);
+          auto it = query_cache.find(key);
+          auto val = it != query_cache.end() ? it->second : SimpleRValue{false};
+          dbg_out(">>> lookup for " << key << ": val=" << rval_to_string(val));
+          return val;
+        } else if constexpr (std::is_same_v<T, Variable>) {
+          auto it = state.find(value.name);
+          return it != state.end() ? it->second : SimpleRValue{false};
+        } else {
+          return value;
+        }
+      },
+      rval);
+}
+
+bool Engine::resolve_conditional_atom(const ConditionalAtom &atom) {
+  SimpleRValue ra = resolve_rval_to_simple(atom.a);
+
+  // First, handle single-value checks
+  switch (atom.comparison) {
+  case ConditionalAtom::Comparison::TRUTHY:
+    return is_simple_rval_truthy(ra);
+  case ConditionalAtom::Comparison::NOT_TRUTHY:
+    return !is_simple_rval_truthy(ra);
+  default:
+    break;
+  }
+
+  // Now comparisons
+  SimpleRValue rb = resolve_rval_to_simple(*atom.b);
+
+  // Unequal types always return false in comparisons
+  if (ra.index() != rb.index()) {
+    return false;
+  }
+
+  // Different comparison logic per type
+  return std::visit(
+      [&](const auto &val_a) -> bool {
+        using T = std::decay_t<decltype(val_a)>;
+        const T &val_b = std::get<T>(rb);
+        switch (atom.comparison) {
+        case ConditionalAtom::Comparison::EQUALS:
+          return val_a == val_b;
+        case ConditionalAtom::Comparison::NOT_EQUALS:
+          return val_a != val_b;
+        case ConditionalAtom::Comparison::MORE:
+          return val_a > val_b;
+        case ConditionalAtom::Comparison::LESS:
+          return val_a < val_b;
+        case ConditionalAtom::Comparison::MORE_EQUAL:
+          return val_a >= val_b;
+        case ConditionalAtom::Comparison::LESS_EQUAL:
+          return val_a <= val_b;
+        default:
+          return false; // Any unhandled comparisons just return false
+        }
+      },
+      ra);
+}
+
+bool Engine::resolve_conditional_item(const ConditionalItem &item) {
+  return std::visit(
+      [&](const auto &c) -> bool {
+        using T = std::decay_t<decltype(c)>;
+        if constexpr (std::is_same_v<T, ConditionalAtom>) {
+          return resolve_conditional_atom(c);
+        } else if constexpr (std::is_same_v<T, std::shared_ptr<Conditional>>) {
+          return resolve_condition(*c);
+        }
+      },
+      item);
+}
+
+bool Engine::resolve_condition(const Conditional &cond) {
+  for (auto &i : cond.items) {
+    bool result = resolve_conditional_item(i);
+
+    // If the conditional is OR, any item can be true to validate
+    if (result && cond.type == Conditional::OR)
+      return true;
+
+    // If AND, *any* false item validates the whole conditional to false
+    if (!result && cond.type == Conditional::AND)
+      return false;
+  }
+  // If we're still here as an OR nothing was true; vice versa for AND.
+  return cond.type == Conditional::AND;
+}
+
 bool Engine::resolve_condition(const std::optional<Conditional> &cond) {
   if (cond)
     return resolve_condition(*cond);
-  return true;
-}
-bool Engine::resolve_condition(const Conditional &cond) {
-  // STUB: Actually process conditional here
   return true;
 }
 
@@ -135,8 +230,27 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
   return tern.dbg_desc();
 }
 void Engine::do_operation(Operation &op) {
-  // STUB: Implement op resolution here
   dbg_out("    x-x " << dbg_dsc_op(op));
+  std::visit(
+      [&](auto &o) {
+        using T = std::decay_t<decltype(o)>;
+        if constexpr (std::is_same_v<T, Move>) {
+          dbg_out("   ---> going to " << o.target_tag);
+          cursor.queued_transition = o.target_tag;
+        } else if constexpr (std::is_same_v<T, MethodCall>) {
+          dbg_out("   (alraedy called)");
+          // This has already been done in the resolution phase; do nothing
+        } else if constexpr (std::is_same_v<T, Mutation>) {
+          // STUB: Perform mutation here
+        } else if constexpr (std::is_same_v<T, GoModule>) {
+          dbg_out("    --->> CHANGING MODULE");
+          cursor.queued_go = &o;
+        } else if constexpr (std::is_same_v<T, Exit>) {
+          dbg_out("    ---X EXITING");
+          cursor.queued_exit = &o;
+        }
+      },
+      op);
 }
 
 // SECTION: 1 - BEAT CONDITIONAL
@@ -209,12 +323,15 @@ void Engine::setup_choice() {
 std::optional<Error> Engine::advance_cursor(int from_line_number) {
   // consuming the queued transition tag as we do so.
   if (cursor.queued_transition.length() > 0) {
+    dbg_out("    >>> transitioning to " << cursor.queued_transition);
     auto new_index = current->get_block_index(cursor.queued_transition);
     if (new_index == -1)
-      return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
+      return Error(ERROR_MODULE_TAG_NOT_FOUND,
+                   "Module tag not found: " + cursor.queued_transition,
                    from_line_number);
 
     cursor.current_block_index = new_index;
+    dbg_out("    >>> now on block index " << new_index);
 
     // This allows the next clause to check for empty block
     cursor.current_beat_index = -1;
@@ -223,8 +340,13 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
 
   Block &block = current->blocks[cursor.current_block_index];
   cursor.current_beat_index++;
+  dbg_out("    >>> now on beat index " << cursor.current_beat_index << ", of "
+                                       << block.beats.size());
   if (cursor.current_beat_index >= block.beats.size()) {
     cursor.current_block_index++;
+    dbg_out(
+        "    >>> passed end of block, jumping in at first beat of next block: "
+        << cursor.current_block_index);
     cursor.current_beat_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
       return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
@@ -250,6 +372,15 @@ Response Engine::next() {
       dbg_out(">>> Engine::next infinite loop exception! breaking.");
       return End{};
     }
+
+    // Handle exits and module transitions
+    if (cursor.queued_exit) {
+      return *cursor.queued_exit;
+    }
+    if (cursor.queued_go) {
+      return *cursor.queued_go;
+    }
+
     // If there's a pending query, do that.
     if (cursor.resolution_stack.size() > 0) {
       return cursor.resolution_stack.back();
@@ -279,6 +410,15 @@ Response Engine::next() {
       break;
     }
     case ProcessPhase::Presentation: {
+
+      // Logic beats just progress
+      if (beat.is_logic_block) {
+        auto err = advance_cursor();
+        if (err)
+          return *err;
+        break;
+      }
+
       // Assemble the content to return. After this, the cursor will advance via
       // act. Choice effects will also be applied in act(), so next() hangs here
       // until user input occurs.
@@ -395,9 +535,9 @@ Response Engine::start() {
 /** This zeroes the state and drops us in at this beat index, e.g. from an
  *  external entry point */
 Response Engine::enter(int block, int beat) {
+  cursor.reset();
   cursor.current_block_index = 0;
   cursor.current_beat_index = 0;
-  cursor.resolution_stack.clear();
   setup_beat();
   return next();
 }

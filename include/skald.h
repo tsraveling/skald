@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -61,6 +62,20 @@ inline const float *srval_get_float(const SimpleRValue &val) {
   return std::get_if<float>(&val);
 }
 
+/** Returns a bool reflecting the truthiness of a given simple RValue */
+inline bool is_simple_rval_truthy(const SimpleRValue &val) {
+  return std::visit(
+      [](const auto &value) -> bool {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, std::string>) {
+          return value.length() > 0;
+        } else {
+          return !!value;
+        }
+      },
+      val);
+}
+
 /** Attempts to cast an RValue to a SimpleRValue, returnig nullopt if this is
  * impossible. */
 inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
@@ -97,7 +112,7 @@ inline std::string rval_to_string(const VariantType &val) {
         if constexpr (std::is_same_v<T, std::string>) {
           return value;
         } else if constexpr (std::is_same_v<T, bool>) {
-          return value ? "true" : "false";
+          return value ? "{T}" : "{F}";
         } else if constexpr (std::is_arithmetic_v<T>) {
           return std::to_string(value);
         } else if constexpr (std::is_same_v<T, Variable>) {
@@ -537,10 +552,27 @@ struct Cursor {
   /** Which choice do we need to process? */
   int choice_selection = 0;
 
+  /** If this is present, do an exit */
+  Exit *queued_exit;
+
+  /** If this is present, do a transition */
+  GoModule *queued_go;
+
   /** These track method calls etc. that require queries to the external client.
    *  These have to be resolved by the client via the answer() method before the
    *  engine will proceed. */
   std::vector<Query> resolution_stack;
+
+  /** This will reset the cursor to a "new" state */
+  void reset() {
+    resolution_stack.clear();
+    queued_exit = NULL;
+    queued_go = NULL;
+    queued_transition = "";
+    choice_selection = 0;
+    current_block_index = 0;
+    current_beat_index = 0;
+  }
 };
 
 enum ProgressResult { OK, END_OF_FILE, MODULE_NOT_FOUND };
@@ -578,6 +610,9 @@ private:
 
   void setup_choice();
 
+  SimpleRValue resolve_rval_to_simple(const RValue &rval);
+  bool resolve_conditional_atom(const ConditionalAtom &atom);
+  bool resolve_conditional_item(const ConditionalItem &item);
   bool resolve_condition(const std::optional<Conditional> &cond);
   bool resolve_condition(const Conditional &cond);
   // STUB: Add a perform_operation() method
