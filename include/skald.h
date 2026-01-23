@@ -493,6 +493,7 @@ const uint ERROR_CHOICE_OUT_OF_BOUNDS = 4;
 const uint ERROR_CHOICE_UNAVAILABLE = 5;
 const uint ERROR_EXPECTED_ANSWER = 6;
 const uint ERROR_RESOLUTION_QUEUE_EMPTY = 7;
+const uint ERROR_TYPE_MISMATCH = 8;
 struct Error {
   uint code = 0;
   std::string message;
@@ -588,13 +589,16 @@ private:
   // Util
   std::pair<Block &, Beat &> getCurrentBlockAndBeat();
 
-  // Entrance and nav
+  /** This zeroes the state and drops us in at this beat index, e.g. from an
+   *  external entry point. It also initializes Skald state, leaving extant
+   *  state intact. */
   Response enter(int block, int beat);
+
   std::optional<Error> advance_cursor(int from_line_number = 0);
 
   // Shared
 
-  void do_operation(Operation &op);
+  std::optional<Error> do_operation(Operation &op);
 
   // 1. Conditional phase
 

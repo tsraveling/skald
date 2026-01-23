@@ -2,7 +2,8 @@
 
 ## Immediate:
 
-- [ ] Conditonal resolution not working -- actually need to implement cache and state! (A)
+- [x] Conditonal resolution not working -- actually need to implement cache and state! (A)
+- [ ] Implement ternary resolution
 
 ## CHOICE STRUCTURE CHANGE
 

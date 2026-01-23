@@ -30,8 +30,47 @@ std::pair<Block &, Beat &> Engine::getCurrentBlockAndBeat() {
 void Engine::build_state(const Module &module) {
   state.clear();
   for (auto &var : module.declarations) {
-    state[var.var.name] = var.initial_value;
+    // We don't overwrite variables that are already in state
+    if (!state.count(var.var.name))
+      state[var.var.name] = var.initial_value;
   }
+}
+
+bool compare(SimpleRValue ra, SimpleRValue rb,
+             ConditionalAtom::Comparison comparison) {
+
+  // Unequal types always return false in comparisons
+  if (ra.index() != rb.index()) {
+    return false;
+  }
+
+  // Different comparison logic per type
+  return std::visit(
+      [&](const auto &val_a) -> bool {
+        using T = std::decay_t<decltype(val_a)>;
+        const T &val_b = std::get<T>(rb);
+        switch (comparison) {
+        case ConditionalAtom::Comparison::EQUALS:
+          return val_a == val_b;
+        case ConditionalAtom::Comparison::NOT_EQUALS:
+          return val_a != val_b;
+        case ConditionalAtom::Comparison::MORE:
+          return val_a > val_b;
+        case ConditionalAtom::Comparison::LESS:
+          return val_a < val_b;
+        case ConditionalAtom::Comparison::MORE_EQUAL:
+          return val_a >= val_b;
+        case ConditionalAtom::Comparison::LESS_EQUAL:
+          return val_a <= val_b;
+        default:
+          return false; // Any unhandled comparisons just return false
+        }
+      },
+      ra);
+}
+
+bool equals(SimpleRValue ra, SimpleRValue rb) {
+  return compare(ra, rb, ConditionalAtom::Comparison::EQUALS);
 }
 
 std::vector<Query> queries_for_conditional(const Conditional &cond) {
@@ -155,35 +194,7 @@ bool Engine::resolve_conditional_atom(const ConditionalAtom &atom) {
 
   // Now comparisons
   SimpleRValue rb = resolve_rval_to_simple(*atom.b);
-
-  // Unequal types always return false in comparisons
-  if (ra.index() != rb.index()) {
-    return false;
-  }
-
-  // Different comparison logic per type
-  return std::visit(
-      [&](const auto &val_a) -> bool {
-        using T = std::decay_t<decltype(val_a)>;
-        const T &val_b = std::get<T>(rb);
-        switch (atom.comparison) {
-        case ConditionalAtom::Comparison::EQUALS:
-          return val_a == val_b;
-        case ConditionalAtom::Comparison::NOT_EQUALS:
-          return val_a != val_b;
-        case ConditionalAtom::Comparison::MORE:
-          return val_a > val_b;
-        case ConditionalAtom::Comparison::LESS:
-          return val_a < val_b;
-        case ConditionalAtom::Comparison::MORE_EQUAL:
-          return val_a >= val_b;
-        case ConditionalAtom::Comparison::LESS_EQUAL:
-          return val_a <= val_b;
-        default:
-          return false; // Any unhandled comparisons just return false
-        }
-      },
-      ra);
+  return compare(ra, rb, atom.comparison);
 }
 
 bool Engine::resolve_conditional_item(const ConditionalItem &item) {
@@ -221,16 +232,33 @@ bool Engine::resolve_condition(const std::optional<Conditional> &cond) {
   return true;
 }
 
-std::string Engine::resolve_simple(const SimpleInsertion &ins) {
-  // STUB: Implement resolution queue here
-  return rval_to_string(ins.rvalue);
+/** Internal helper function to print values as an engine output */
+std::string string_for_val(SimpleRValue val) {
+  return std::visit(
+      [](const auto &value) -> std::string {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, std::string>) {
+          return value;
+        } else {
+          return std::to_string(value);
+        }
+      },
+      val);
 }
+
+std::string Engine::resolve_simple(const SimpleInsertion &ins) {
+  auto val = resolve_rval_to_simple(ins.rvalue);
+  return string_for_val(val);
+}
+
 std::string Engine::resolve_tern(const TernaryInsertion &tern) {
   // STUB: Implement ternary resolution here
   return tern.dbg_desc();
 }
-void Engine::do_operation(Operation &op) {
+
+std::optional<Error> Engine::do_operation(Operation &op) {
   dbg_out("    x-x " << dbg_dsc_op(op));
+  std::optional<Error> ret = std::nullopt;
   std::visit(
       [&](auto &o) {
         using T = std::decay_t<decltype(o)>;
@@ -241,7 +269,32 @@ void Engine::do_operation(Operation &op) {
           dbg_out("   (alraedy called)");
           // This has already been done in the resolution phase; do nothing
         } else if constexpr (std::is_same_v<T, Mutation>) {
-          // STUB: Perform mutation here
+          auto val = o.rvalue ? resolve_rval_to_simple(*o.rvalue) : false;
+          switch (o.type) {
+          case Mutation::Type::EQUATE:
+            state[o.lvalue] = val;
+            break;
+          case Mutation::Type::ADD:
+            dbg_out(">>> TODO: Implement adding");
+            break;
+          case Mutation::Type::SUBTRACT:
+            dbg_out(">>> TODO: Implement subtraction");
+            break;
+          case Mutation::Type::SWITCH:
+            if (state.count(o.lvalue)) {
+              if (auto *bval = std::get_if<bool>(&val)) {
+                *bval = !*bval;
+              } else {
+                ret = Error(ERROR_TYPE_MISMATCH,
+                            "Tried to switch " + o.lvalue +
+                                ", which is not a boolean",
+                            o.line_number);
+              }
+            } else {
+              state[o.lvalue] = true;
+            }
+            break;
+          }
         } else if constexpr (std::is_same_v<T, GoModule>) {
           dbg_out("    --->> CHANGING MODULE");
           cursor.queued_go = &o;
@@ -251,6 +304,7 @@ void Engine::do_operation(Operation &op) {
         }
       },
       op);
+  return ret;
 }
 
 // SECTION: 1 - BEAT CONDITIONAL
@@ -403,7 +457,9 @@ Response Engine::next() {
     case ProcessPhase::Resolution: {
       // Do the operations that are connected to the beat itself
       for (auto &op : beat.operations) {
-        do_operation(op);
+        auto err = do_operation(op);
+        if (err)
+          return *err;
       }
       // Then present the text
       cursor.current_phase = ProcessPhase::Presentation;
@@ -436,7 +492,9 @@ Response Engine::next() {
       // Now that e have queried any method calls, do all the operations
       auto &choice = beat.choices[cursor.choice_selection];
       for (auto &op : choice.operations) {
-        do_operation(op);
+        auto err = do_operation(op);
+        if (err)
+          return *err;
       }
 
       // And proceed
@@ -532,8 +590,6 @@ Response Engine::start() {
   return enter(1, 0);
 }
 
-/** This zeroes the state and drops us in at this beat index, e.g. from an
- *  external entry point */
 Response Engine::enter(int block, int beat) {
   cursor.reset();
   cursor.current_block_index = 0;
@@ -587,9 +643,6 @@ void Engine::load(std::string path) {
 
     // Grab the finished module from the parse state
     current = std::make_unique<Module>(std::move(pstate.module));
-
-    // Builds initial gamestate
-    build_state(pstate.module);
 
   } catch (const pegtl::parse_error &e) {
     std::cout << "Parse error: " << e.what() << "\n";
