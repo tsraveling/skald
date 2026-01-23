@@ -1,25 +1,48 @@
-#intro
+-- 1: wiry 2: muscular 3: fighter
+~ build = 1
 
-First, let's play a chess game. If we win, we'll continue. Otherwise we'll move to the loss block.
+-- 1: linguistics 2: architecture 3: arcane engines
+~ specialty = 1
 
-opponent: Ready, bro?
+-- 1: gun 2: whip 3: shovel
+~ tool = 1
 
-How did it go? (the next beat is a logic beat with a method query)
+#char_creation
 
-* (? :did_win_chess())
-  -> win
+Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in.
 
-You lost! Such a shame.
+Today, you think you might just have found it.
 
-> Try again -> intro
-> I'm done.
+What's your physical build?
 
-opponent: Goodbye, compadre.
-  EXIT
+> Wiry and agile
+  ~ build = 1
+> Tall and muscular
+  ~ build = 2
+> Compact and dangerous
+  ~ build = 3
 
-#win
+What's your academic specialty?
 
-You won!
+> Linguistics
+  ~ specialty = 1
+> Architecture
+  ~ specialty = 2
+> Arcane Engines
+  ~ specialty = 3
 
-opponent: Good game, friendo.
+What tool do you have with you?
+
+> A revolver
+  ~ tool = 1
+> A whip
+  ~ tool = 2
+> A compact shovel
+  ~ tool = 3
+
+Excellent. You chose {build}, {specialty} and {tool}.
+
+You are {build ? [1:"wiry", 2:"muscular", 3:"compact"]}. You studied {specialty ? [1:"linguistics", 2:"architecture", 3:"arcane engines"]}. In your satchel is a {tool ? [1:"revolver", 2:"whip", 3:"spade"]}.
+
+That's it, for now.
   EXIT
