@@ -171,6 +171,7 @@ template <> struct action<ternary_tail> {
     auto true_val = state.rval_buffer_pop();
     state.text_content_queue.push_back(
         TernaryInsertion{.check = state.injectable_buffer_pop(),
+                         .check_truthy = true,
                          .options = {TernaryOption{true, true_val},
                                      TernaryOption{false, false_val}}});
     dbg_out(">>> ternary_tail committed.");

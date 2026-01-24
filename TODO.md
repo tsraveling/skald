@@ -1,46 +1,19 @@
 # Skald TODO
 
-## Immediate:
+## This Milestone
 
-- [x] Conditonal resolution not working -- actually need to implement cache and state! (A)
-- [ ] Implement ternary resolution
+- [x] Boolean ternaries with truthy values
+- [ ] Make sure logic beats
+- [ ] Test complex conditionals
+- [ ] Else logic beats
 
-## CHOICE STRUCTURE CHANGE
+## Soon
 
-To docs / [[Syntax]]:
-
-- [x] Choices are attached to the beat preceding them (the Anchor Beat)
-- [x] Blocks with tags no longer need to end in choices
-- [x] If no choices occur, the cursor will simply move to the first beat in the next block
-- [ ] Describe in detail the flow described below (maybe in the [[Engine]] doc)
-
-Refactor:
-
-- [ ] Rearrange choice groups to be optional attachments to beats rather than as ends of blocks
-- [ ] Redefine blocks as simply the series of beats until either EOF or the next block tag
-
-## CURRENT
-
-- [x] 1. Set cursor in `start` methods
-- [ ] 2. Pre-scan the beat for resolvers and add to the cursor stack
-    - [ ] Also scan its choices if it has any
-- [ ] 3. Advance cursor with next here
-- [ ] 4. Return response of either Content or Query (if stack is not empty)
-- [ ] 5. Implement the answer method and advance the cursor
-- [ ]   - Set up a simple cin answer in the test module
-- [ ] 6. Implement the answer cache
-- [ ] 7 . Finish the resolver
-
-### Work out:
-
-This is the way we should work through a beat:
-
-1. Resolve its conditional and the conditionals of its choices, if it has any
-2. If conditional is false, go to the next beat. Otherwise continue this list.
-3. Process the operations attached to the beat.
-4. Return the beat content itself, as well as any options attached to it (with `is_available` resolved)
-5. Process operations attached to the selected choice if there was one
-6. Return to 1 for the next beat.
+- [ ] Inline logic beats
+- [ ] Inline choices
+- [ ] Addition and subtraction mutations
+- [ ] Testbeds
+- [ ] Module transitions
 
 ## Future Features
 

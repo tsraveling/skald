@@ -1,5 +1,6 @@
 ## BACKLOG
 
+- Boolean ternary should use a conditional for the lefthand side, vs switch ternaries which should be value-based
 
 ## FIXES
 

@@ -570,7 +570,7 @@ Every story must end. Every narrative chain must end as well; otherwise, you'll 
 
 ```
 > I'm done!
-  END
+  EXIT
 ```
 
 This will inform the API that the interaction is concluded. You can use this for something like a short conversation with an NPC, or at the very end of a story in a piece of interactive fiction.
@@ -579,11 +579,11 @@ You can also send an **argument** to the conclusion, as with methods:
 
 ```
 > I'm done with a string value!
-  END "some string value"
+  EXIT "some string value"
 > I'm done with a bool!
-  END false
+  EXIT false
 > I'm done with a variable!
-  END some_variable
+  EXIT some_variable
 ```
 
 ### 4.1.4 Narrative Completion

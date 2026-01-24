@@ -252,8 +252,22 @@ std::string Engine::resolve_simple(const SimpleInsertion &ins) {
 }
 
 std::string Engine::resolve_tern(const TernaryInsertion &tern) {
-  // STUB: Implement ternary resolution here
-  return tern.dbg_desc();
+  auto check = resolve_rval_to_simple(tern.check);
+  if (tern.check_truthy) {
+    // This works because simple ternaries are encoded [true, false]
+    bool truthy = is_simple_rval_truthy(check);
+    auto val =
+        resolve_rval_to_simple(std::get<1>(tern.options[truthy ? 0 : 1]));
+    return string_for_val(val);
+  }
+  for (auto &option : tern.options) {
+    auto val = resolve_rval_to_simple(std::get<0>(option));
+    if (equals(check, val)) {
+      auto ret = resolve_rval_to_simple(std::get<1>(option));
+      return string_for_val(ret);
+    }
+  }
+  return "";
 }
 
 std::optional<Error> Engine::do_operation(Operation &op) {

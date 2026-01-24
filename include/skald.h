@@ -348,6 +348,7 @@ using TernaryOption = std::tuple<RValue, RValue>;
 
 struct TernaryInsertion {
   RValue check;
+  bool check_truthy = false;
   std::vector<TernaryOption> options;
   std::string dbg_desc() const {
     std::string ret = "{> " + rval_to_string(check) + "? ";
