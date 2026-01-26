@@ -565,6 +565,10 @@ struct Cursor {
    *  engine will proceed. */
   std::vector<Query> resolution_stack;
 
+  /** Tracks if the previous beat conditioned out or not. If it didn't, a
+   *  following else block will succeed. */
+  bool did_last_condition_pass = false;
+
   /** This will reset the cursor to a "new" state */
   void reset() {
     resolution_stack.clear();
@@ -574,6 +578,7 @@ struct Cursor {
     choice_selection = 0;
     current_block_index = 0;
     current_beat_index = 0;
+    did_last_condition_pass = true;
   }
 };
 

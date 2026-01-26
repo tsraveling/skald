@@ -459,10 +459,25 @@ Response Engine::next() {
     auto [block, beat] = getCurrentBlockAndBeat();
     switch (cursor.current_phase) {
     case ProcessPhase::Conditional: {
+      if (beat.is_else) {
+        if (cursor.did_last_condition_pass) {
+          // An else beat will always fail if the previos beat passed.
+          auto err = advance_cursor();
+          if (err)
+            return *err;
+        } else {
+          // An else beat will succeed if the last beat did not!
+          process_beat();
+          cursor.did_last_condition_pass = true;
+          break;
+        }
+      }
       if (resolve_condition(beat.condition)) {
         process_beat(); // This advances cursor as well
+        cursor.did_last_condition_pass = true;
       } else {
         auto err = advance_cursor();
+        cursor.did_last_condition_pass = false;
         if (err)
           return *err;
       }

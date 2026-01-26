@@ -36,6 +36,9 @@ What's your academic specialty?
 * (? specialty = 3 or specialty = 2)
   ~ money = 100 -- TODO: do this with an incrementer
 
+* (else)
+  ~ money = 500
+
 Your money is ${money}.
 
 What tool do you have with you?
