@@ -7,6 +7,8 @@
 -- 1: gun 2: whip 3: shovel
 ~ tool = 1
 
+~ money = 0
+
 #char_creation
 
 Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in.
@@ -30,6 +32,11 @@ What's your academic specialty?
   ~ specialty = 2
 > Arcane Engines
   ~ specialty = 3
+
+* (? specialty = 3 or specialty = 2)
+  ~ money = 100 -- TODO: do this with an incrementer
+
+Your money is ${money}.
 
 What tool do you have with you?
 

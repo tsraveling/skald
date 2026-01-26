@@ -3,8 +3,8 @@
 ## This Milestone
 
 - [x] Boolean ternaries with truthy values
-- [ ] Make sure logic beats
-- [ ] Test complex conditionals
+- [x] Make sure logic beats
+- [x] Test complex conditionals
 - [ ] Else logic beats
 
 ## Soon
