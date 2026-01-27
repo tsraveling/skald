@@ -1,8 +1,9 @@
+
 -- This is a comment!
 
 -- These are variable initializations
 ~ some_var = 3 -- This is a raw value
-~ some_other = :call_method() -- this initialized the variable with a call to an external method
+~ some_other = 1
 
 -- These are inherited variables, with local testing values
 < imported_var = 0
@@ -19,7 +20,7 @@
   some_var = 11.2
   foo = true
 @end
-
+--
 
 -- This is a block. A block starts with a tag:
 #test_block
@@ -29,6 +30,7 @@ First beat
 
 -- Some of which can inject values:
 Second beat with an {injection}.
+> This is an inline choice that does nothing!
 
 -- Including via the use of a ternary:
 This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
@@ -67,6 +69,7 @@ Third {-- with inline comment} test
 (? check_val and !falsy_check and (more_check > 10 or less_check<= 9)) This one is a combo clause
 (? !check_val) This one shows up if check val is not true
 (? val_a and val_b and val_c and val_d) This one checks a long and clause.
+> This follows a conditional.
 
 -- Some beats are attributed, with an identifier + `:` preceding the beat text
 some_tag: This one is attributed!

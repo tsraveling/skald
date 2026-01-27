@@ -1,0 +1,65 @@
+-- 1: wiry 2: muscular 3: fighter
+~ build = 1
+
+-- 1: linguistics 2: architecture 3: arcane engines
+~ specialty = 1
+
+-- 1: gun 2: whip 3: shovel
+~ tool = 1
+
+~ money = 0
+
+#char_creation
+
+Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in.
+
+Today, you think you might just have found it.
+
+What's your physical build?
+
+> Wiry and agile
+  ~ build = 1
+> Tall and muscular
+  ~ build = 2
+> Compact and dangerous
+  ~ build = 3
+
+What's your academic specialty?
+
+> Linguistics
+  ~ specialty = 1
+> Architecture
+  ~ specialty = 2
+> Arcane Engines
+  ~ specialty = 3
+
+* (? specialty = 3 or specialty = 2)
+  ~ money = 100 -- TODO: do this with an incrementer
+
+* (else)
+  ~ money = 500
+
+Your money is ${money}.
+
+What tool do you have with you?
+
+> A revolver
+  ~ tool = 1
+> A whip
+  ~ tool = 2
+> A compact shovel
+  ~ tool = 3
+
+Are you a tragic orphan?
+
+> Yes
+  ~ orphan = true
+> No
+  ~ orphan = false
+
+Excellent. You chose {build}, {specialty} and {tool}. Also, you {orphan ? "are" : "are not"} an orphan.
+
+You are {build ? [1:"wiry", 2:"muscular", 3:"compact"]}. You studied {specialty ? [1:"linguistics", 2:"architecture", 3:"arcane engines"]}. In your satchel is a {tool ? [1:"revolver", 2:"whip", 3:"spade"]}.
+
+That's it, for now.
+  EXIT

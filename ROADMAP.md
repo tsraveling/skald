@@ -1,0 +1,51 @@
+# Skald Roadmap
+
+## Syntax Implementation
+
+- [x]   1. Introduction
+- [x]     1.1 Basic Syntax
+- [x]       1.1.1 Identifiers
+- [x]       1.1.2 Whitespace and Indentation
+- [x]     1.2 Line Comments
+- [x]     1.3 Embedded Comments
+- [ ]   2. Blocks
+- [x]     2.1 Block Tags and Beats
+- [ ]       2.1.1 Block Entry
+- [ ]       2.1.2 Block Resolution
+- [x]     2.2 Choices
+- [x]       2.2.1 Choice Redirects
+- [x]       2.2.2 Choice Operations
+- [ ]     2.3 Insertions
+- [ ]       2.3.1 Direct Insertion
+- [ ]       2.3.2 Boolean Ternaries
+- [ ]       2.3.3 Switch Ternaries
+- [ ]       2.3.4 Chance Ternaries
+- [ ]     2.4 Logic Beats
+- [ ]       2.4.1 Conditional Logic Beats
+- [ ]       2.4.2. "Else" Logic Beats
+- [ ]       2.4.3 Inline Logic Beats
+- [ ]     2.5 Chance Blocks
+- [ ]   3. Logic
+- [ ]     3.1 Operations
+- [x]       3.1.1 Transitions
+- [x]       3.1.2 Methods
+- [x]       3.1.3 Variables
+- [ ]       3.1.4 Variables Across Modules
+- [x]       3.1.5 Variable Types
+- [x]       3.1.6 Variable Operators
+- [x]       3.1.7 Variables as Arguments
+- [ ]     3.2 Conditionals
+- [ ]       3.2.1 And / Or
+- [ ]       3.2.2 Value Checks
+- [ ]       3.2.3 Methods as Conditions
+- [ ]   4. Modules
+- [ ]     4.1 The Narrative Chain
+- [ ]       4.1.1 Module Transitions
+- [ ]       4.1.2 Module Entry Points
+- [ ]       4.1.3 Conclusions
+- [ ]       4.1.4 Narrative Completion
+- [ ]     4.2 File Structure
+- [ ]   5. Testing
+- [ ]     5.1 Test Values
+- [ ]     5.2 Testbeds
+- [ ]     5.3 Entrypoints
