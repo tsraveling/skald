@@ -75,19 +75,6 @@ struct ParseState {
   ConditionalAtom::Comparison current_comparison =
       ConditionalAtom::Comparison::TRUTHY;
 
-  // FIXME: Delete all these if we can
-
-  // /** The stack of conditional items we will use to assemble clauses and
-  // whole
-  //  * conditionals */
-  // std::vector<ConditionalItem> checkable_queue;
-
-  // /** True if the current checkable list is OR (vs AND by default) */
-  // bool is_current_list_or = false;
-
-  // /** Length of current checkable list we are working on */
-  // int checkable_list_length = 1;
-
   /** The conditional stack. `.back()` is always the one that's open. */
   std::vector<Conditional> conditional_stack;
   std::optional<Conditional> conditional_buffer;
