@@ -8,7 +8,9 @@ generate_mono_repository_package_tags = true
 branch_whitelist = []
 skip_ci = "[skip ci]"
 skip_untracked = false
-pre_bump_hooks = []
+pre_bump_hooks = [
+    "sed -i '' 's/project(skald VERSION [0-9]*\\.[0-9]*\\.[0-9]*/project(skald VERSION {{version}}/' CMakeLists.txt",
+]
 post_bump_hooks = []
 pre_package_bump_hooks = []
 post_package_bump_hooks = []

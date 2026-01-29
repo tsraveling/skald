@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(skald VERSION 0.1.0 LANGUAGES C CXX)
+project(skald VERSION 0.3.0 LANGUAGES C CXX)
+
+# Generate version header
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/skald_version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/include/skald_version.h
+    @ONLY
+)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,6 +35,7 @@ add_library(skald::static ALIAS skald_static)
 target_include_directories(skald_static
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(skald_static PUBLIC taocpp::pegtl)
@@ -58,6 +66,7 @@ if(SKALD_BUILD_SHARED)
     target_include_directories(skald_shared
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bindings/c>
             $<INSTALL_INTERFACE:include>
         PRIVATE
@@ -111,6 +120,9 @@ endif()
 
 # Optionally install the C++ header and static lib (for C++ consumers)
 install(FILES include/skald.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/skald_version.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(TARGETS skald_static
