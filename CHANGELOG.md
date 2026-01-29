@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.1 - 2026-01-29
+#### Bug Fixes
+- updated auto-versioning - (c87392b) - Tim Raveling
+- added C bindings - (9a1c6df) - Tim Raveling
+
+- - -
+
 ## 0.3.0 - 2026-01-27
 #### Features
 - First working version of engine and parser in C++ (#30) - (fea43c1) - Tim Raveling
