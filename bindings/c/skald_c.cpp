@@ -4,6 +4,7 @@
 
 #include "skald_c.h"
 #include "skald.h"
+#include "skald_version.h"
 #include <string>
 #include <vector>
 
@@ -324,5 +325,17 @@ int skald_exit_get_int(const SkaldResponse *response) {
   }
   return 0;
 }
+
+// -----------------------------------------------------------------------------
+// Version Info
+// -----------------------------------------------------------------------------
+
+const char *skald_version(void) { return SKALD_VERSION; }
+
+int skald_version_major(void) { return SKALD_VERSION_MAJOR; }
+
+int skald_version_minor(void) { return SKALD_VERSION_MINOR; }
+
+int skald_version_patch(void) { return SKALD_VERSION_PATCH; }
 
 } // extern "C"
