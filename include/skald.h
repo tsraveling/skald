@@ -10,6 +10,9 @@
 
 namespace Skald {
 
+enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE };
+inline static SkaldLogLevel log_level = SkaldLogLevel::NORMAL;
+
 struct LineEntity {
   size_t line_number = 0;
 };

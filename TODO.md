@@ -5,7 +5,7 @@
 - [x] Boolean ternaries with truthy values
 - [x] Make sure logic beats
 - [x] Test complex conditionals
-- [ ] Else logic beats
+- [x] Else logic beats
 
 ## Soon
 
