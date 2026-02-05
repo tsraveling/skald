@@ -17,6 +17,24 @@
 
 ## Future Features
 
+### Subsections
+
+```
+#some_tag
+#.child
+#.second_child
+
+* -> .child -- sibling
+* -> ..b -- child
+#..a
+#..b
+
+...
+
+*
+ ->some_tag.second_child.b
+```
+
 ### Chance Insertions
 
 We should hold off on these because it seems like their primary use will be PCG stuff, and it is decently likely there will be a better way to do that. If that decision is finalized we will need to update the syntax docs accordingly.

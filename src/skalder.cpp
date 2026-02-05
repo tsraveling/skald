@@ -1,10 +1,15 @@
 #include "debug.h"
 #include "skald.h"
+#include "skald_grammar.h"
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
 
+using namespace ftxui;
 using namespace Skald;
 
 class SkaldTester {
@@ -16,6 +21,82 @@ public:
       ret += chunk.text;
     }
     return ret;
+  }
+
+  // STUB: Add error log here
+
+  // Perform a "continue" (spacebar) action
+  Response do_continue(Response &response) {
+    return std::visit(
+        [&](const auto &value) -> Response {
+          using T = std::decay_t<decltype(value)>;
+          if constexpr (std::is_same_v<T, Content>) {
+            return engine.act(0);
+          } else if constexpr (std::is_same_v<T, Exit>) {
+            return End{};
+          } else if constexpr (std::is_same_v<T, Query>) {
+            return engine.answer(std::nullopt);
+          } else {
+            // TODO: Better error handling if this is a problem
+            return End{};
+          }
+        },
+        response);
+  }
+
+  // Perform a "choice selection" (num keys) action
+  Response do_choice(Response &response, int choice) {
+    return std::visit(
+        [&](const auto &value) -> Response {
+          using T = std::decay_t<decltype(value)>;
+          if constexpr (std::is_same_v<T, Content>) {
+            return engine.act(choice);
+          } else {
+            // TODO: Better error handling if this is a problem
+            return End{};
+          }
+        },
+        response);
+  }
+
+  // Perform a "query answer" (text entry) action
+  Response do_input(Response &response, std::string txt) {
+    return std::visit(
+        [&](const auto &value) -> Response {
+          using T = std::decay_t<decltype(value)>;
+          if constexpr (std::is_same_v<T, Query()>) {
+            if (value.expects_response) {
+              SimpleRValue parsed = false;
+              if (txt == "true") {
+                parsed = true;
+              } else if (txt == "false") {
+                parsed = false;
+              } else {
+                // Try int first (more restrictive than float)
+                char *end;
+                long lval = std::strtol(txt.c_str(), &end, 10);
+                if (*end == '\0' && end != txt.c_str()) {
+                  parsed = static_cast<int>(lval);
+                } else {
+                  // Try float
+                  float fval = std::strtof(txt.c_str(), &end);
+                  if (*end == '\0' && end != txt.c_str()) {
+                    parsed = fval;
+                  } else {
+                    parsed = txt;
+                  }
+                }
+              }
+              return engine.answer(QueryAnswer{parsed});
+            }
+            // TODO: better error handling if answer not expected
+            return End{};
+          } else {
+            // TODO: Better error handling if this is a problem
+            return End{};
+          }
+        },
+        response);
   }
 
   Response handle_query(const Query &query) {
@@ -93,26 +174,106 @@ public:
   Engine engine;
 
   // STUB: debug store
-  // STUB: PRocess and return choices
+  // STUB: Process and return choices
+};
+
+enum InputType { CONTINUE, CHOICES, TEXT };
+
+InputType input_type_for(Response &response) {
+
+  return std::visit(
+      [](const auto &value) -> InputType {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, Content>) {
+          return InputType::CONTINUE;
+        } else if constexpr (std::is_same_v<T, Query>) {
+          return InputType::CONTINUE;
+        } else if constexpr (std::is_same_v<T, Exit>) {
+          return InputType::CONTINUE;
+        } else if constexpr (std::is_same_v<T, GoModule>) {
+          return InputType::CONTINUE;
+        } else if constexpr (std::is_same_v<T, End>) {
+          return InputType::CONTINUE;
+        } else if constexpr (std::is_same_v<T, Error>) {
+          return InputType::CONTINUE;
+        }
+      },
+      response);
+}
+
+struct Log {
+  std::string attribution = "";
+  std::string content = "";
 };
 
 int main() {
   dbg_out_on = false;
 
-  std::cout << "Performing parser test on /test/test.ska:\n\n";
+  std::vector<Log> narrative;
+  std::vector<std::string> logs;
 
+  auto screen = ScreenInteractive::Fullscreen();
+
+  std::string path = "../test/test.ska";
   SkaldTester tester;
-
-  // skald.trace("../test/test.ska");
-  std::cout << "\n\nNow performing the actual parse:\n\n";
-
-  tester.engine.load("../test/test.ska");
-
-  std::cout << "Skald parse complete!\n";
-  std::cout << "\n#####################\n";
+  tester.engine.load(path);
+  narrative.push_back(Log{.content = "STARTING MODULE: " + path});
 
   Response response;
   response = tester.engine.start();
+
+  std::string input_content;
+  auto input = Input(&input_content, "placeholder...");
+
+  auto component = Renderer(input, [&] {
+    // Assemble the narrative log
+    Elements log_elements;
+    for (size_t i = 0; i < narrative.size(); i++) {
+      log_elements.push_back(text(""));
+      bool is_latest = (i == narrative.size() - 1);
+      auto content = text(narrative[i].content);
+      if (!is_latest) {
+        content = content | color(Color::GrayDark);
+      }
+      if (narrative[i].attribution != "") {
+        log_elements.push_back(
+            hbox(text(narrative[i].attribution) | color(Color::Cyan) | bold,
+                 text(": "), content));
+      } else {
+        log_elements.push_back(content);
+      }
+    }
+    auto log_box = vbox({
+                       filler(),
+                       vbox(log_elements),
+                   }) |
+                   flex | border;
+
+    // SECTION: Prompt
+    auto prompt_content = input->Render();
+
+    auto prompt_box =
+        prompt_content | borderStyled(ROUNDED, Color::MediumPurple2);
+
+    return vbox({
+               log_box,
+               prompt_box,
+           }) |
+           borderStyled(ROUNDED, Color::White);
+  });
+
+  component = CatchEvent(component, [&](Event event) {
+    if (event == Event::Escape) {
+      screen.Exit();
+      return true;
+    }
+    return false;
+  });
+
+  screen.Loop(component);
+
+  /*
+
 
   while (true) {
     if (std::holds_alternative<End>(response)) {
@@ -135,10 +296,8 @@ int main() {
             return End{};
           } else if constexpr (std::is_same_v<T, Error>) {
             std::cout << "<! ERROR code " << value.code << " on line "
-                      << value.line_number << ": " << value.message << " !>\n";
-            return End{};
-          } else { // Any unhandled cases just exit
-            return End{};
+                      << value.line_number << ": " << value.message << "
+  !>\n"; return End{}; } else { // Any unhandled cases just exit return End{};
           }
         },
         response);
@@ -148,6 +307,7 @@ int main() {
   }
 
   std::cout << "\n\nScript concluded!\n";
+  */
 
   return 0;
 }
