@@ -18,6 +18,11 @@ struct NarrativeItem {
   NarrativeItemType type = NarrativeItemType::NORMAL;
 };
 
+struct NarrativeOption {
+  std::string text;
+  bool is_available;
+};
+
 class SkaldTester {
 public:
   /** List of content; latest is current. */
@@ -28,7 +33,7 @@ public:
 
   enum InputType { CONTINUE, CHOICES, TEXT };
   std::string current_prompt = "";
-  std::vector<std::string> current_options;
+  std::vector<NarrativeOption> current_options;
   InputType expected_input = InputType::CONTINUE;
 
   // Process a response for consumption
@@ -46,7 +51,9 @@ public:
               expected_input = InputType::CHOICES;
               for (size_t i = 0; i < value.options.size(); i++) {
                 auto &opt = value.options[i];
-                // STUB: Add text for option here
+                current_options.push_back(
+                    NarrativeOption{.text = stitch(opt.text),
+                                    .is_available = opt.is_available});
               }
               current_prompt = "Select an option";
             } else {
@@ -301,10 +308,34 @@ int main() {
                    flex | border;
 
     // SECTION: Prompt
-    auto prompt_content = input->Render();
+    Element prompt_content;
+    switch (tester.expected_input) {
+    case SkaldTester::CONTINUE:
+      prompt_content = nullptr;
+      break;
+    case SkaldTester::CHOICES: {
+      Elements choices;
+      int i = 1;
+      for (auto &opt : tester.current_options) {
+        auto line = text(std::to_string(i) + ". " + opt.text);
+        if (!opt.is_available) {
+          line = line | strikethrough | color(Color::GrayDark);
+        }
+        choices.push_back(line);
+        i++;
+      }
+      prompt_content = vbox(choices);
+    } break;
+    case SkaldTester::TEXT:
+      prompt_content = input->Render();
+      break;
+    }
 
+    auto prompt_contents =
+        prompt_content ? vbox(text(tester.current_prompt), prompt_content)
+                       : text(tester.current_prompt);
     auto prompt_box =
-        prompt_content | borderStyled(ROUNDED, Color::MediumPurple2);
+        prompt_contents | borderStyled(ROUNDED, Color::MediumPurple2);
 
     return vbox({
                log_box,
@@ -317,6 +348,52 @@ int main() {
     if (event == Event::Escape) {
       screen.Exit();
       return true;
+    }
+    switch (tester.expected_input) {
+    case SkaldTester::CONTINUE: {
+      if (event == Event::Character(' ')) {
+        response = tester.do_continue(response);
+        tester.process(response);
+        input_content = "";
+        return true;
+      }
+    } break;
+    case SkaldTester::TEXT: {
+      if (event == Event::Return) {
+        response = tester.do_input(response, input_content);
+        tester.process(response);
+        input_content = "";
+        return true;
+      }
+    } break;
+    case SkaldTester::CHOICES: {
+      int selected = -1;
+
+      if (event == Event::Character('1'))
+        selected = 1;
+      if (event == Event::Character('2'))
+        selected = 2;
+      if (event == Event::Character('3'))
+        selected = 3;
+      if (event == Event::Character('4'))
+        selected = 4;
+      if (event == Event::Character('5'))
+        selected = 5;
+      if (event == Event::Character('6'))
+        selected = 6;
+      if (event == Event::Character('7'))
+        selected = 7;
+      if (event == Event::Character('8'))
+        selected = 8;
+      if (event == Event::Character('9'))
+        selected = 9;
+      if (selected > -1 && tester.current_options.size() >= selected) {
+        response = tester.do_choice(response, selected - 1);
+        tester.process(response);
+        input_content = "";
+        return true;
+      }
+    } break;
     }
     return false;
   });
