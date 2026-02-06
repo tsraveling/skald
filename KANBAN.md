@@ -1,9 +1,13 @@
 ## BACKLOG
 
 - Boolean ternary should use a conditional for the lefthand side, vs switch ternaries which should be value-based
+- Check for trailing ends, typos, etc.
 
 ## FIXES
 
+- In the treesitter, em dashes read as comments (haven't tested the engine yet)
+- and and or are reading as keywords even in text
+- Logic beats mess up the treesitter -- choices after that don't show up right.
 
 ## NEXT
 

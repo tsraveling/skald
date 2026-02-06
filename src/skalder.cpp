@@ -3,7 +3,6 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
-#include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -25,41 +24,16 @@ public:
   std::vector<NarrativeItem> narrative;
 
   /** The current response we are going to be responding to */
-  Response &current_response;
+  Response *current_response;
 
   enum InputType { CONTINUE, CHOICES, TEXT };
-  std::string current_prompt;
+  std::string current_prompt = "";
   std::vector<std::string> current_options;
-  InputType expected_input;
-
-  /** Gets the input type expected for a given response */
-  // STUB: Delete me, obsoleted below
-  InputType input_type_for(Response &response) {
-    return std::visit(
-        [](const auto &value) -> InputType {
-          using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, Content>) {
-            if (value.options.size() > 0)
-              return InputType::CHOICES;
-            return InputType::CONTINUE;
-          } else if constexpr (std::is_same_v<T, Query>) {
-            return InputType::TEXT;
-          } else if constexpr (std::is_same_v<T, Exit>) {
-            return InputType::CONTINUE;
-          } else if constexpr (std::is_same_v<T, GoModule>) {
-            return InputType::CONTINUE;
-          } else if constexpr (std::is_same_v<T, End>) {
-            return InputType::CONTINUE;
-          } else if constexpr (std::is_same_v<T, Error>) {
-            return InputType::CONTINUE;
-          }
-        },
-        response);
-  }
+  InputType expected_input = InputType::CONTINUE;
 
   // Process a response for consumption
   void process(Response &response) {
-    current_response = response;
+    current_response = &response;
     current_options.clear();
 
     std::visit(
@@ -74,19 +48,28 @@ public:
                 auto &opt = value.options[i];
                 // STUB: Add text for option here
               }
+              current_prompt = "Select an option";
             } else {
               expected_input = InputType::CONTINUE;
-              current_prompt = "...";
+              current_prompt = "Spacebar to continue ...";
             }
           } else if constexpr (std::is_same_v<T, Query>) {
-            // STUB: Ask for text
+            current_prompt = value.call.dbg_desc();
+            expected_input = InputType::TEXT;
           } else if constexpr (std::is_same_v<T, Exit>) {
-            // STUB: make a log and continue to exit
+            current_prompt = "Press spacebar to conclude script.";
+            expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, GoModule>) {
-            // STUB: make a log and continue to jump
+            current_prompt =
+                "Press spacebar to continue to " + value.module_path + "!";
+            expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, End>) {
-            // STUB: print out the error
+            current_prompt =
+                "This is an END response -- we shouldn't be here anymore!";
+            expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, Error>) {
+            current_prompt = value.message;
+            expected_input = InputType::CONTINUE;
           }
         },
         response);
@@ -99,6 +82,11 @@ public:
       ret += chunk.text;
     }
     return ret;
+  }
+
+  void note_system(std::string val) {
+    narrative.push_back(
+        NarrativeItem{.content = val, .type = NarrativeItemType::SYSTEM});
   }
 
   // STUB: Add error log here
@@ -256,53 +244,54 @@ public:
   // STUB: Process and return choices
 };
 
-struct Log {
-  std::string attribution = "";
-  std::string content = "";
-
-  static Log from_content(Content &content) {
-    return Log{
-        .attribution = content.attribution,
-        .content = SkaldTester::stitch(content.text),
-    };
-  }
-};
-
 int main() {
   dbg_out_on = false;
-
-  std::vector<Log> narrative;
-  std::vector<std::string> logs;
 
   auto screen = ScreenInteractive::Fullscreen();
 
   std::string path = "../test/test.ska";
-  SkaldTester tester;
+  SkaldTester tester{};
   tester.engine.load(path);
-  narrative.push_back(Log{.content = "STARTING MODULE: " + path});
+  tester.note_system("STARTING MODULE: " + path);
 
   Response response;
   response = tester.engine.start();
+  tester.process(response);
 
   std::string input_content;
-  auto input = Input(&input_content, "placeholder...");
+  auto input = Input(&input_content, "string, int, float, true, or false");
 
   auto component = Renderer(input, [&] {
     // Assemble the narrative log
     Elements log_elements;
-    for (size_t i = 0; i < narrative.size(); i++) {
+    for (size_t i = 0; i < tester.narrative.size(); i++) {
+      auto nar = tester.narrative[i];
+      bool is_latest = i == tester.narrative.size() - 1;
+
+      // Add a blank line between items
       log_elements.push_back(text(""));
-      bool is_latest = (i == narrative.size() - 1);
-      auto content = text(narrative[i].content);
-      if (!is_latest) {
-        content = content | color(Color::GrayDark);
-      }
-      if (narrative[i].attribution != "") {
-        log_elements.push_back(
-            hbox(text(narrative[i].attribution) | color(Color::Cyan) | bold,
-                 text(": "), content));
-      } else {
-        log_elements.push_back(content);
+      auto content = text(nar.content);
+
+      switch (nar.type) {
+      case NarrativeItemType::SYSTEM:
+        content = content | color(Color::DarkSlateGray1);
+        break;
+      case NarrativeItemType::ERROR:
+        content = content | color(Color::DarkRed);
+        break;
+      case NarrativeItemType::NORMAL:
+        auto col =
+            is_latest ? color(Color::White) : color(Color::LightSlateGrey);
+        auto par = paragraph(nar.content) | col;
+        if (nar.attribution != "") {
+          log_elements.push_back(
+              hbox(text(tester.narrative[i].attribution + ":") |
+                       color(Color::Cyan) | bold,
+                   par));
+        } else {
+          log_elements.push_back(par);
+        }
+        break;
       }
     }
     auto log_box = vbox({
