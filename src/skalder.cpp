@@ -272,7 +272,10 @@ int main(int argc, char *argv[]) {
                        filler(),
                        vbox(log_elements),
                    }) |
-                   flex | border;
+                   flex |
+                   focusPositionRelative(0.0, 1.0) |
+                   yframe |
+                   border;
 
     // SECTION: Prompt
     Element prompt_content;
