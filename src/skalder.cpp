@@ -110,7 +110,10 @@ public:
     narrative.push_back(
         NarrativeItem{.content = val, .type = NarrativeItemType::SYSTEM});
   }
-
+  void note_input(std::string val) {
+    narrative.push_back(
+        NarrativeItem{.content = val, .type = NarrativeItemType::INPUT});
+  }
   void note_error(std::string val) {
     narrative.push_back(
         NarrativeItem{.content = val, .type = NarrativeItemType::ERROR});
@@ -139,6 +142,13 @@ public:
 
   // Perform a "choice selection" (num keys) action
   Response do_choice(Response &response, int choice) {
+    if (choice < current_options.size()) {
+      auto chose = current_options[choice];
+      note_input(chose.text);
+    } else {
+      note_error("Chose " + std::to_string(choice) + ", but there are only " +
+                 std::to_string(current_options.size()) + " options!");
+    }
     return std::visit(
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
@@ -180,6 +190,7 @@ public:
                   }
                 }
               }
+              note_system(value.call.dbg_desc() + " <- " + txt);
               return engine.answer(QueryAnswer{parsed});
             }
             note_error("Failed to parse [" + txt +
