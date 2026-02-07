@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.2 - 2026-02-07
+#### Bug Fixes
+- long texts now show up correctly in narrative window - (5d4a954) - Tim Raveling
+
+- - -
+
 ## 0.4.1 - 2026-02-07
 #### Bug Fixes
 - Skalder method calls work, and choices now shown in log (#32) - (3a6e038) - Tim Raveling
