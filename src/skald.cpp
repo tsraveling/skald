@@ -632,40 +632,40 @@ Response Engine::enter(int block, int beat) {
 void Engine::load(std::string path) {
   try {
     pegtl::file_input in(path);
-    std::cout << "Loaded file: " << path << "\n";
+    dbg_out("Loaded file: " << path);
 
     ParseState pstate(path);
 
     if (pegtl::parse<grammar, action>(in, pstate)) {
-      std::cout << "Parse successful!\n";
+      dbg_out("Parse successful!");
     } else {
-      std::cout << "Parse failed!\n";
+      dbg_out("Parse failed!");
     }
 
-    std::cout << ">>> Parse results:\n\n";
+    dbg_out(">>> Parse results:\n");
 
-    std::cout << "DECLARATIONS:\n";
+    dbg_out("DECLARATIONS:");
     for (const auto &dec : pstate.module.declarations) {
-      std::cout << " - " << (dec.is_imported ? "<IMPORT>" : "<NEW>") << " "
-                << dec.var.name << " (" << rval_to_string(dec.initial_value)
-                << ")\n";
+      dbg_out(" - " << (dec.is_imported ? "<IMPORT>" : "<NEW>") << " "
+                    << dec.var.name << " (" << rval_to_string(dec.initial_value)
+                    << ")");
     }
 
-    std::cout << "TESTBEDS:\n";
+    dbg_out("TESTBEDS:");
     for (const auto &testbed : pstate.module.testbeds) {
-      std::cout << testbed.dbg_desc() << "\n";
+      dbg_out(testbed.dbg_desc());
     }
 
-    std::cout << "\nSTRUCTURE:\n";
+    dbg_out("\nSTRUCTURE:");
     // Print details about each block
     for (const auto &block : pstate.module.blocks) {
-      std::cout << "\n- Block '" << block.tag << "': " << block.beats.size()
-                << " beats" << std::endl;
+      dbg_out("\n- Block '" << block.tag << "': " << block.beats.size()
+                            << " beats");
       for (const auto &beat : block.beats) {
-        std::cout << "  - Beat: " << beat.dbg_desc() << "\n";
+        dbg_out("  - Beat: " << beat.dbg_desc());
         for (const auto &choice : beat.choices) {
-          std::cout << "    > Choice: " << choice.dbg_desc() << "\n";
-          std::cout << dbg_desc_ops(choice.operations);
+          dbg_out("    > Choice: " << choice.dbg_desc());
+          dbg_out(dbg_desc_ops(choice.operations));
         }
       }
     }
@@ -674,15 +674,15 @@ void Engine::load(std::string path) {
     current = std::make_unique<Module>(std::move(pstate.module));
 
   } catch (const pegtl::parse_error &e) {
-    std::cout << "Parse error: " << e.what() << "\n";
+    dbg_out("Parse error: " << e.what());
   } catch (const std::exception &e) {
-    std::cout << "Error: " << e.what() << "\n";
+    dbg_out("Error: " << e.what());
   }
 }
 
 void Engine::trace(std::string path) {
   pegtl::file_input in(path);
-  std::cout << "Loaded file: " << path << "\n";
+  dbg_out("Loaded file: " << path << "\n");
 
   pegtl::standard_trace<grammar>(in);
 }

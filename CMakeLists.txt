@@ -14,7 +14,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Options
-option(SKALD_BUILD_TEST_EXECUTABLE "Build test executable" ON)
+option(SKALD_BUILD_TEST_EXECUTABLE "Build test executable" OFF)
+option(SKALD_BUILD_SKALDER "Build skalder TUI tool" ON)
 option(SKALD_BUILD_SHARED "Build shared library with C bindings" ON)
 
 # Include PEGTL
@@ -88,6 +89,19 @@ endif()
 if(SKALD_BUILD_TEST_EXECUTABLE)
     add_executable(skald_test src/test_main.cpp)
     target_link_libraries(skald_test PRIVATE skald_static)
+endif()
+
+if(SKALD_BUILD_SKALDER)
+  include(FetchContent)
+
+    FetchContent_Declare(ftxui
+        GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
+        GIT_TAG v6.1.9
+    )
+    FetchContent_MakeAvailable(ftxui)
+
+    add_executable(skalder src/skalder.cpp)
+    target_link_libraries(skalder PRIVATE skald_static ftxui::screen ftxui::dom ftxui::component)
 endif()
 
 option(SKALD_BUILD_C_TEST "Build C API test" OFF)

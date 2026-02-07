@@ -1,18 +1,23 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include "skald.h"
 #include <iostream>
 #include <sstream>
 
 class Log {
 public:
   template <typename... Args> static void out(Args &&...args) {
+    if (Skald::log_level == Skald::SkaldLogLevel::SPARSE)
+      return;
     std::ostringstream stream;
     print_with_spaces(stream, std::forward<Args>(args)...);
     std::cout << stream.str();
   }
 
   template <typename... Args> static void verbose(Args &&...args) {
+    if (Skald::log_level != Skald::SkaldLogLevel::VERBOSE)
+      return;
     std::ostringstream stream;
     print_with_spaces(stream, std::forward<Args>(args)...);
     std::cout << stream.str();

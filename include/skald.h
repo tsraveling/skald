@@ -10,6 +10,9 @@
 
 namespace Skald {
 
+enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE };
+inline static SkaldLogLevel log_level = SkaldLogLevel::NORMAL;
+
 struct LineEntity {
   size_t line_number = 0;
 };
@@ -516,6 +519,39 @@ struct End {};
 
 /** Will contain either a Content struct or a Query */
 using Response = std::variant<Content, Query, Exit, GoModule, End, Error>;
+
+enum class ResponseType {
+  CONTENT,
+  QUERY,
+  EXIT,
+  GO_MODULE,
+  END,
+  ERROR,
+  UNKNOWN
+};
+
+/** Returns the type of response we're dealing with */
+inline ResponseType get_response_type(Response &response) {
+  return std::visit(
+      [](auto &&arg) -> ResponseType {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, Content>)
+          return ResponseType::CONTENT;
+        else if constexpr (std::is_same_v<T, Query>)
+          return ResponseType::QUERY;
+        else if constexpr (std::is_same_v<T, Exit>)
+          return ResponseType::EXIT;
+        else if constexpr (std::is_same_v<T, GoModule>)
+          return ResponseType::GO_MODULE;
+        else if constexpr (std::is_same_v<T, End>)
+          return ResponseType::END;
+        else if constexpr (std::is_same_v<T, Error>)
+          return ResponseType::ERROR;
+        else
+          return ResponseType::UNKNOWN;
+      },
+      response);
+}
 
 /** Will be sent back by the client following a response, to indicate the
  * next action */

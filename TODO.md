@@ -5,7 +5,7 @@
 - [x] Boolean ternaries with truthy values
 - [x] Make sure logic beats
 - [x] Test complex conditionals
-- [ ] Else logic beats
+- [x] Else logic beats
 
 ## Soon
 
@@ -16,6 +16,24 @@
 - [ ] Module transitions
 
 ## Future Features
+
+### Subsections
+
+```
+#some_tag
+#.child
+#.second_child
+
+* -> .child -- sibling
+* -> ..b -- child
+#..a
+#..b
+
+...
+
+*
+ ->some_tag.second_child.b
+```
 
 ### Chance Insertions
 
