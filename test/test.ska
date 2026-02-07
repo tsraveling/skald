@@ -12,8 +12,11 @@
 #char_creation
 
 Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in.
+  :basic_call()
 
 Today, you think you might just have found it.
+
+(? :check_minigame()) This will only show if you put a truthy value in the query just now!
 
 What's your physical build?
 
