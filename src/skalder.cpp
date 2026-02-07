@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
     Elements log_elements;
     for (size_t i = 0; i < tester.narrative.size(); i++) {
       auto nar = tester.narrative[i];
-      bool is_latest = i == tester.narrative.size() - 1;
+      // bool is_latest = i == tester.narrative.size() - 1;
 
       // Add a blank line between items
       log_elements.push_back(text(""));
@@ -254,8 +254,8 @@ int main(int argc, char *argv[]) {
         log_elements.push_back(content);
         break;
       case NarrativeItemType::NORMAL:
-        auto col =
-            is_latest ? color(Color::White) : color(Color::LightSlateGrey);
+        auto col = color(Color::White);
+        // is_latest ? color(Color::White) : color(Color::LightSlateGrey);
         auto par = content | col;
         if (nar.attribution != "") {
           log_elements.push_back(
@@ -272,10 +272,7 @@ int main(int argc, char *argv[]) {
                        filler(),
                        vbox(log_elements),
                    }) |
-                   flex |
-                   focusPositionRelative(0.0, 1.0) |
-                   yframe |
-                   border;
+                   flex | focusPositionRelative(0.0, 1.0) | yframe | border;
 
     // SECTION: Prompt
     Element prompt_content;
