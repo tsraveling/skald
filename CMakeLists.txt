@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(skald VERSION 0.4.0 LANGUAGES C CXX)
+project(skald VERSION 0.4.1 LANGUAGES C CXX)
 
 # Generate version header
 configure_file(
