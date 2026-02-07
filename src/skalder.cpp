@@ -38,7 +38,22 @@ public:
 
   // Process a response for consumption
   void process(Response &response) {
-    current_response = &response;
+
+    Response &resp = response;
+
+    // First eliminate autos
+    for (;;) {
+      if (auto *q = std::get_if<Query>(&resp)) {
+        if (!q->expects_response) {
+          note_system(q->call.dbg_desc());
+          resp = engine.answer(std::nullopt);
+          continue;
+        }
+      }
+      break;
+    }
+
+    current_response = &resp;
     current_options.clear();
 
     std::visit(
@@ -79,7 +94,7 @@ public:
             expected_input = InputType::CONTINUE;
           }
         },
-        response);
+        resp);
   }
 
   /** This will stitch a vector of Skald chunks together into one string */
@@ -94,6 +109,11 @@ public:
   void note_system(std::string val) {
     narrative.push_back(
         NarrativeItem{.content = val, .type = NarrativeItemType::SYSTEM});
+  }
+
+  void note_error(std::string val) {
+    narrative.push_back(
+        NarrativeItem{.content = val, .type = NarrativeItemType::ERROR});
   }
 
   // STUB: Add error log here
@@ -137,7 +157,7 @@ public:
     return std::visit(
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, Query()>) {
+          if constexpr (std::is_same_v<T, Query>) {
             if (value.expects_response) {
               SimpleRValue parsed = false;
               if (txt == "true") {
@@ -162,11 +182,15 @@ public:
               }
               return engine.answer(QueryAnswer{parsed});
             }
-            // TODO: better error handling if answer not expected
-            return End{};
+            note_error("Failed to parse [" + txt +
+                       "] into a valid Skald value");
+            return Error(
+                ERROR_UNKNOWN,
+                "Failed to parse [" + txt + "] into a valid Skald value", 0);
           } else {
-            // TODO: Better error handling if this is a problem
-            return End{};
+            note_error("We got an input, but this isn't a query!");
+            return Error(ERROR_UNKNOWN,
+                         "We got an input, but this isn't a query!", 0);
           }
         },
         response);
@@ -203,22 +227,25 @@ int main(int argc, char *argv[]) {
 
       // Add a blank line between items
       log_elements.push_back(text(""));
-      auto content = text(nar.content);
+      auto content = paragraph(nar.content);
 
       switch (nar.type) {
       case NarrativeItemType::SYSTEM:
         content = content | color(Color::DarkSlateGray1);
+        log_elements.push_back(content);
         break;
       case NarrativeItemType::ERROR:
         content = content | color(Color::DarkRed);
+        log_elements.push_back(content);
         break;
       case NarrativeItemType::INPUT:
         content = content | color(Color::DarkGreen);
+        log_elements.push_back(content);
         break;
       case NarrativeItemType::NORMAL:
         auto col =
             is_latest ? color(Color::White) : color(Color::LightSlateGrey);
-        auto par = paragraph(nar.content) | col;
+        auto par = content | col;
         if (nar.attribution != "") {
           log_elements.push_back(
               hbox(text(tester.narrative[i].attribution + ":") |

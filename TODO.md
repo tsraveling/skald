@@ -1,11 +1,12 @@
 # Skald TODO
 
-## This Milestone
+## Skalder Fixes:
 
-- [x] Boolean ternaries with truthy values
-- [x] Make sure logic beats
-- [x] Test complex conditionals
-- [x] Else logic beats
+- [ ] Add choices to output log
+- [ ] For queries that do not need responses, add a new NarrativeItem type and do that instead
+    - [ ] By doing a standardized `setup_response(Response &r)` method that handles those and returns anything that's not that.
+- [ ] Add error handling using new NarrativeItem struct on TODOs
+- [ ] Fix query inputs
 
 ## Soon
 
