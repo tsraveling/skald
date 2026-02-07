@@ -10,7 +10,7 @@
 using namespace ftxui;
 using namespace Skald;
 
-enum class NarrativeItemType { NORMAL, SYSTEM, ERROR };
+enum class NarrativeItemType { NORMAL, SYSTEM, ERROR, INPUT };
 
 struct NarrativeItem {
   std::string attribution;
@@ -172,91 +172,17 @@ public:
         response);
   }
 
-  // Response handle_query(const Query &query) {
-  //   if (query.expects_response) {
-  //     std::cout << "\nQUERY: " << query.call.method << " > ";
-  //   } else {
-  //     std::cout << "\nCALL: " << query.call.method << " (input anything) > ";
-  //   }
-  //   std::string val;
-  //   std::cin >> val;
-
-  //   std::optional<QueryAnswer> ret = std::nullopt;
-  //   if (query.expects_response) {
-  //     SimpleRValue parsed = false;
-  //     if (val == "true") {
-  //       parsed = true;
-  //     } else if (val == "false") {
-  //       parsed = false;
-  //     } else {
-  //       // Try int first (more restrictive than float)
-  //       char *end;
-  //       long lval = std::strtol(val.c_str(), &end, 10);
-  //       if (*end == '\0' && end != val.c_str()) {
-  //         parsed = static_cast<int>(lval);
-  //       } else {
-  //         // Try float
-  //         float fval = std::strtof(val.c_str(), &end);
-  //         if (*end == '\0' && end != val.c_str()) {
-  //           parsed = fval;
-  //         } else {
-  //           parsed = val;
-  //         }
-  //       }
-  //     }
-  //     ret = QueryAnswer{parsed};
-  //   }
-  //   return engine.answer(ret);
-  // }
-
-  // Response handle_content(const Content &content) {
-  //   std::cout << stitch(content.text) << "\n";
-  //   int selected_choice = 0;
-  //   if (content.options.size() > 0) {
-  //     std::cout << "\n";
-  //     for (size_t i = 0; i < content.options.size(); i++) {
-  //       auto opt = content.options[i];
-  //       std::cout << (i + 1) << ". " << (opt.is_available ? "" : "<X>")
-  //                 << stitch(opt.text) << "\n";
-  //     }
-
-  //     while (true) {
-  //       std::cout << "\n> ";
-  //       std::cin >> selected_choice;
-  //       selected_choice--;
-  //       if (selected_choice < 0 || selected_choice >= content.options.size())
-  //       {
-  //         std::cout << "Choice out of bounds! Try again.\n";
-  //         continue;
-  //       }
-  //       if (!content.options[selected_choice].is_available) {
-  //         std::cout << "Choice unavailable! Try again.\n";
-  //         continue;
-  //       }
-  //       break;
-  //     }
-
-  //     return engine.act(selected_choice);
-  //   } else {
-  //     int discard;
-  //     std::cout << "\n (continue) > ";
-  //     std::cin >> discard;
-  //     return engine.act(0);
-  //   }
-  // }
-
   Engine engine;
-
-  // STUB: debug store
-  // STUB: Process and return choices
 };
 
-int main() {
+int main(int argc, char *argv[]) {
   dbg_out_on = false;
 
   auto screen = ScreenInteractive::Fullscreen();
 
-  std::string path = "../test/test.ska";
+  // FIXME: Eventually remove this debug option (or flag it out)
+  std::string path = (argc < 2) ? "../test/test.ska" : argv[1];
+
   SkaldTester tester{};
   tester.engine.load(path);
   tester.note_system("STARTING MODULE: " + path);
@@ -285,6 +211,9 @@ int main() {
         break;
       case NarrativeItemType::ERROR:
         content = content | color(Color::DarkRed);
+        break;
+      case NarrativeItemType::INPUT:
+        content = content | color(Color::DarkGreen);
         break;
       case NarrativeItemType::NORMAL:
         auto col =
@@ -344,6 +273,16 @@ int main() {
            borderStyled(ROUNDED, Color::White);
   });
 
+  // This will advance to the next point and exit if we reach an END type.
+  auto do_next = [&] {
+    if (std::holds_alternative<End>(response)) {
+      screen.Exit();
+      return;
+    }
+    tester.process(response);
+    input_content = "";
+  };
+
   component = CatchEvent(component, [&](Event event) {
     if (event == Event::Escape) {
       screen.Exit();
@@ -353,16 +292,14 @@ int main() {
     case SkaldTester::CONTINUE: {
       if (event == Event::Character(' ')) {
         response = tester.do_continue(response);
-        tester.process(response);
-        input_content = "";
+        do_next();
         return true;
       }
     } break;
     case SkaldTester::TEXT: {
       if (event == Event::Return) {
         response = tester.do_input(response, input_content);
-        tester.process(response);
-        input_content = "";
+        do_next();
         return true;
       }
     } break;
@@ -389,8 +326,7 @@ int main() {
         selected = 9;
       if (selected > -1 && tester.current_options.size() >= selected) {
         response = tester.do_choice(response, selected - 1);
-        tester.process(response);
-        input_content = "";
+        do_next();
         return true;
       }
     } break;
@@ -400,42 +336,6 @@ int main() {
 
   screen.Loop(component);
 
-  /*
-
-
-  while (true) {
-    if (std::holds_alternative<End>(response)) {
-      break;
-    }
-    response = std::visit(
-        [&tester](const auto &value) -> Response {
-          using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, Content>) {
-            return tester.handle_content(value);
-          } else if constexpr (std::is_same_v<T, Query>) {
-            return tester.handle_query(value);
-          } else if constexpr (std::is_same_v<T, Exit>) {
-            // TODO: Output args
-            std::cout << "EXIT!";
-            return End{};
-          } else if constexpr (std::is_same_v<T, GoModule>) {
-            // TODO: Output specifics
-            std::cout << "GOMOD!";
-            return End{};
-          } else if constexpr (std::is_same_v<T, Error>) {
-            std::cout << "<! ERROR code " << value.code << " on line "
-                      << value.line_number << ": " << value.message << "
-  !>\n"; return End{}; } else { // Any unhandled cases just exit return End{};
-          }
-        },
-        response);
-
-    std::cout << "\n----Q CACHE----\n"
-              << tester.engine.dbg_print_cache() << "-----\n";
-  }
-
-  std::cout << "\n\nScript concluded!\n";
-  */
-
+  std::cout << "\n\nGoodbye!" << std::endl;
   return 0;
 }
