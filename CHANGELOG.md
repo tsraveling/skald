@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.3 - 2026-02-07
+#### Bug Fixes
+- fixes some odd color issues in narrative output - (9ecea41) - Tim Raveling
+#### Miscellaneous Chores
+- added deploy script - (7f87e8a) - Tim Raveling
+
+- - -
+
 ## 0.4.2 - 2026-02-07
 #### Bug Fixes
 - long texts now show up correctly in narrative window - (5d4a954) - Tim Raveling
