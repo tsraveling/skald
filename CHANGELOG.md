@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.4 - 2026-02-08
+#### Bug Fixes
+- fixes layout issues and tweaks colors - (b23e3d3) - Tim Raveling
+
+- - -
+
 ## 0.4.3 - 2026-02-07
 #### Bug Fixes
 - fixes some odd color issues in narrative output - (9ecea41) - Tim Raveling
