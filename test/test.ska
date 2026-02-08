@@ -11,7 +11,7 @@
 
 #char_creation
 
-Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in.
+narrator: Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in. This message is a bit longer than it was before.
   :basic_call()
 
 Today, you think you might just have found it.

@@ -216,6 +216,7 @@ struct ParseState {
     beat.operations = std::move(operation_queue);
     beat.choices = std::move(choice_stack);
     beat.attribution = current_tag;
+    current_tag = "";
     current_block->beats.push_back(beat);
     return &current_block->beats.back();
   }

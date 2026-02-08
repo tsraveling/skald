@@ -254,25 +254,27 @@ int main(int argc, char *argv[]) {
         log_elements.push_back(content);
         break;
       case NarrativeItemType::NORMAL:
-        auto col = color(Color::White);
+        // auto col = color(Color::White);
         // is_latest ? color(Color::White) : color(Color::LightSlateGrey);
-        auto par = content | col;
+        auto par = content; // | col;
         if (nar.attribution != "") {
-          log_elements.push_back(
-              hbox(text(tester.narrative[i].attribution + ":") |
-                       color(Color::Cyan) | bold,
-                   par));
+          log_elements.push_back(vbox(text(nar.attribution + ":") |
+                                          color(Color::MediumOrchid1) | bold,
+                                      hbox(text("  "), par)));
         } else {
           log_elements.push_back(par);
         }
         break;
       }
     }
-    auto log_box = vbox({
-                       filler(),
-                       vbox(log_elements),
-                   }) |
-                   flex | focusPositionRelative(0.0, 1.0) | yframe | border;
+
+    // After building log_elements, mark the last one as focused:
+    if (!log_elements.empty()) {
+      log_elements.back() = log_elements.back() | focus;
+    }
+
+    auto log_box = vbox(log_elements) | yframe | flex;
+    auto padded_logs = hbox(text("  "), log_box, text("  ")) | flex;
 
     // SECTION: Prompt
     Element prompt_content;
@@ -305,7 +307,7 @@ int main(int argc, char *argv[]) {
         prompt_contents | borderStyled(ROUNDED, Color::MediumPurple2);
 
     return vbox({
-               log_box,
+               padded_logs,
                prompt_box,
            }) |
            borderStyled(ROUNDED, Color::White);

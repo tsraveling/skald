@@ -509,6 +509,7 @@ Response Engine::next() {
       // until user input occurs.
       auto content = Content{};
       content.text = resolve_text(beat.content);
+      content.attribution = beat.attribution;
       for (auto &choice : beat.choices) {
         auto opt = Option{};
         opt.text = resolve_text(choice.content);
