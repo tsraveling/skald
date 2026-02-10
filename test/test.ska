@@ -14,7 +14,9 @@
 narrator: Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in. This message is a bit longer than it was before.
   :basic_call()
 
-Today, you think you might just have found it.
+Today -- today, you think you might just have found it.
+
+attr: test -- test.
 
 (? :check_minigame()) This will only show if you put a truthy value in the query just now!
 

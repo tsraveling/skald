@@ -2,11 +2,12 @@
 
 ## Skalder Fixes:
 
-- [ ] Add choices to output log
-- [ ] For queries that do not need responses, add a new NarrativeItem type and do that instead
-    - [ ] By doing a standardized `setup_response(Response &r)` method that handles those and returns anything that's not that.
-- [ ] Add error handling using new NarrativeItem struct on TODOs
-- [ ] Fix query inputs
+- [x] Add choices to output log
+- [x] For queries that do not need responses, add a new NarrativeItem type and do that instead
+    - [x] By doing a standardized `setup_response(Response &r)` method that handles those and returns anything that's not that.
+- [x] Add error handling using new NarrativeItem struct on TODOs
+- [x] Fix query inputs
+- [ ] Redirect not found (specifically from the "olympics joke" choice) causes a hard crash
 
 ## Soon
 
