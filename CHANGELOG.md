@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.5.0 - 2026-02-11
+#### Features
+- adds language server (#33) - (6742ff3) - Tim Raveling
+#### Documentation
+- updated todos - (dc555ae) - Tim Raveling
+
+- - -
+
 ## 0.4.4 - 2026-02-08
 #### Bug Fixes
 - fixes layout issues and tweaks colors - (b23e3d3) - Tim Raveling
