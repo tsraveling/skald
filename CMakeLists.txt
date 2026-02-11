@@ -91,9 +91,9 @@ if(SKALD_BUILD_TEST_EXECUTABLE)
     target_link_libraries(skald_test PRIVATE skald_static)
 endif()
 
-if(SKALD_BUILD_SKALDER)
-  include(FetchContent)
+include(FetchContent)
 
+if(SKALD_BUILD_SKALDER)
     FetchContent_Declare(ftxui
         GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
         GIT_TAG v6.1.9
@@ -102,6 +102,30 @@ if(SKALD_BUILD_SKALDER)
 
     add_executable(skalder src/skalder.cpp)
     target_link_libraries(skalder PRIVATE skald_static ftxui::screen ftxui::dom ftxui::component)
+endif()
+
+option(SKALD_BUILD_LSP "Build the Skald LSP server" ON)
+
+if(SKALD_BUILD_LSP)
+    FetchContent_Declare(json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+    )
+    FetchContent_MakeAvailable(json)
+
+    add_executable(skald_lsp
+        lsp/src/main.cpp
+        lsp/src/transport.cpp
+        lsp/src/server.cpp
+        lsp/src/analyzer.cpp
+        lsp/src/document.cpp
+        lsp/src/workspace.cpp
+    )
+    target_link_libraries(skald_lsp PRIVATE skald_static nlohmann_json::nlohmann_json)
+    target_include_directories(skald_lsp PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/lsp/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
 endif()
 
 option(SKALD_BUILD_C_TEST "Build C API test" OFF)
