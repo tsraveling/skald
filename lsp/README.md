@@ -11,7 +11,7 @@ cmake -B build -DSKALD_BUILD_LSP=ON
 cmake --build build --target skald_lsp
 ```
 
-The binary lands at `build/skald_lsp`. The first build will fetch `nlohmann/json` via CMake FetchContent (cached after that).
+Builds binary at `build/skald_lsp`. The first build will fetch `nlohmann/json` via CMake FetchContent (cached after that).
 
 If you only want the LSP and don't need skalder or the shared library:
 
@@ -22,19 +22,19 @@ cmake --build build --target skald_lsp
 
 ## Neovim Setup
 
-No extension required. Add this to your Neovim config (e.g. `~/.config/nvim/after/ftplugin/skald.lua` or in your `init.lua`):
+Add this to your Neovim config somewhere. I have it in my `after/plugins/lsp.lua` file but you can put it wherever you like.
+
+Note that this location is my local LSP build artifact, generated above; post-alpha we'll have a better way of doing this!
 
 ```lua
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "skald",
-  callback = function()
-    vim.lsp.start({
-      name = "skald",
-      cmd = { "/absolute/path/to/build/skald_lsp" },
-      root_dir = vim.fs.root(0, { ".git" }),
-    })
-  end,
+-- Skald LSP
+vim.lsp.config("skald_lsp", {
+  cmd = { vim.fn.expand("~/repos/skald/build/skald_lsp") },
+  filetypes = { "skald" },
+  root_markers = { ".git" },
 })
+vim.lsp.enable("skald_lsp")
+
 ```
 
 If Neovim doesn't recognize `.ska` as filetype `skald`, add:
@@ -49,7 +49,7 @@ vim.filetype.add({
 
 ### Updating After Local Changes
 
-The LSP binary is self-contained -- Neovim launches it as a subprocess each time you open a `.ska` file. After rebuilding with `cmake --build build --target skald_lsp`, simply close and reopen any `.ska` buffer (or restart Neovim) to pick up the new binary. No installation or copying step is needed as long as your config points at the build directory.
+The LSP binary is self-contained -- Neovim launches it as a subprocess each time you open a `.ska` file. After rebuilding with `cmake --build build --target skald_lsp`, just restart Neovim to get the fresh LSP.
 
 ## Manual Testing
 
@@ -67,7 +67,7 @@ Content-Length: <byte count of JSON body>\r\n
 <JSON body>
 ```
 
-To send multiple messages in sequence (e.g. initialize then open a file), concatenate them:
+To send multiple messages in sequence, concatenate them:
 
 ```bash
 INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}'
@@ -78,9 +78,9 @@ OPEN='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":
 } | ./build/skald_lsp
 ```
 
-Common gotcha: piping raw JSON (e.g. `echo '{"jsonrpc":...}' | ./build/skald_lsp`) will produce no output because the transport layer expects `Content-Length` headers first.
+NOTE: Don't send raw JSON, because the transport layer expects `Content-Length` headers first!
 
-## What It Does
+## Capabilities
 
 | Feature | Trigger |
 |---|---|
