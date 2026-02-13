@@ -82,7 +82,6 @@ NOTE: Don't send raw JSON, because the transport layer expects `Content-Length` 
 
 ## Capabilities
 
-| Feature | Trigger |
 - **Diagnostics**: Syntax errors, undefined block tags (`-> missing`), unused variables.
 - **Go to Definition**: Jumps from `-> tag` to `#tag`, from variable references to `~ var = ...` declarations, from `GO file.ska` to that file. 
 - **Find References**: Shows all occurrences of a block tag, variable, or method.
