@@ -212,4 +212,24 @@ std::vector<std::string> Document::method_names() const {
     return methods;
 }
 
+std::vector<std::string> Document::undefined_block_refs() const {
+    std::set<std::string> defined;
+    for (auto &sym : symbols_) {
+        if (sym.kind == SymbolKind::BlockTag && sym.is_definition) {
+            defined.insert(sym.name);
+        }
+    }
+
+    std::vector<std::string> undefined;
+    std::set<std::string> seen;
+    for (auto &sym : symbols_) {
+        if (sym.kind == SymbolKind::BlockTag && !sym.is_definition &&
+            defined.find(sym.name) == defined.end() &&
+            seen.insert(sym.name).second) {
+            undefined.push_back(sym.name);
+        }
+    }
+    return undefined;
+}
+
 } // namespace SkaldLsp

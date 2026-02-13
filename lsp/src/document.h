@@ -47,6 +47,9 @@ public:
     // Get all method names used in this document
     std::vector<std::string> method_names() const;
 
+    // Get block tag names referenced by -> but not yet defined with #
+    std::vector<std::string> undefined_block_refs() const;
+
 private:
     void parse();
     void run_semantic_checks();

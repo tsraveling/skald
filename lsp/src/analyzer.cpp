@@ -16,6 +16,20 @@ CompletionContext detect_completion_context(const std::string &line_text,
     if (end != std::string::npos)
         trimmed = trimmed.substr(0, end + 1);
 
+    // After "#" at start of line: block definition completion
+    if (!before.empty() && before[0] == '#') {
+        auto after_hash = before.substr(1);
+        bool all_id = true;
+        for (char c : after_hash) {
+            if (!std::isalnum(c) && c != '_' && c != '-') {
+                all_id = false;
+                break;
+            }
+        }
+        if (all_id)
+            return CompletionContext::BlockDefinition;
+    }
+
     // After "-> ": block tag completion
     if (trimmed.size() >= 2 && trimmed.substr(trimmed.size() - 2) == "->") {
         return CompletionContext::MoveTarget;
@@ -140,6 +154,13 @@ get_completions(const Document &doc, int line, int character,
         for (auto &file : workspace_files) {
             items.push_back(
                 {file, LspTypes::CompletionItemKind::File, "Skald file"});
+        }
+        break;
+    }
+    case CompletionContext::BlockDefinition: {
+        for (auto &tag : doc.undefined_block_refs()) {
+            items.push_back({tag, LspTypes::CompletionItemKind::Reference,
+                             "Undefined block (referenced by ->)"});
         }
         break;
     }
