@@ -4,6 +4,60 @@
 
 namespace SkaldLsp {
 
+// Extract comment documentation for a symbol defined at the given line.
+// Checks for a `--` comment on the same line and contiguous `--` comment
+// lines immediately preceding it.
+static std::string extract_comment(const Document &doc, int def_line) {
+    std::string same_line_comment;
+    std::string line_text = doc.get_line(def_line);
+    auto pos = line_text.find("--");
+    if (pos != std::string::npos) {
+        auto comment = line_text.substr(pos + 2);
+        // trim leading whitespace
+        auto start = comment.find_first_not_of(" \t");
+        if (start != std::string::npos)
+            same_line_comment = comment.substr(start);
+    }
+
+    // Walk upward collecting contiguous -- comment lines,
+    // skipping blank lines between the definition and the comment block
+    std::vector<std::string> preceding;
+    bool found_comment = false;
+    for (int i = def_line - 1; i >= 0; --i) {
+        std::string prev = doc.get_line(i);
+        // trim leading whitespace
+        auto start = prev.find_first_not_of(" \t");
+        if (start == std::string::npos) {
+            // blank line: skip if we haven't found a comment yet, stop if we have
+            if (found_comment) break;
+            continue;
+        }
+        auto trimmed = prev.substr(start);
+        if (trimmed.size() >= 2 && trimmed[0] == '-' && trimmed[1] == '-') {
+            found_comment = true;
+            auto content = trimmed.substr(2);
+            auto cs = content.find_first_not_of(" \t");
+            preceding.push_back(cs != std::string::npos ? content.substr(cs) : "");
+        } else {
+            break;
+        }
+    }
+
+    // Reverse preceding to get top-to-bottom order
+    std::reverse(preceding.begin(), preceding.end());
+
+    std::string result;
+    for (auto &line : preceding) {
+        if (!result.empty()) result += "\n";
+        result += line;
+    }
+    if (!same_line_comment.empty()) {
+        if (!result.empty()) result += "\n";
+        result += same_line_comment;
+    }
+    return result;
+}
+
 CompletionContext detect_completion_context(const std::string &line_text,
                                             int character) {
     // Get text up to cursor
@@ -235,8 +289,12 @@ std::optional<std::string> get_hover(const Document &doc, int line,
             if (def) {
                 for (auto &block : doc.module().blocks) {
                     if (block.tag == sym->name) {
-                        return "Block `#" + sym->name + "` — " +
+                        std::string hover = "Block `#" + sym->name + "` — " +
                                std::to_string(block.beats.size()) + " beat(s)";
+                        auto comment = extract_comment(doc, def->range.line);
+                        if (!comment.empty())
+                            hover += "\n\n---\n\n" + comment;
+                        return hover;
                     }
                 }
             }
@@ -244,8 +302,12 @@ std::optional<std::string> get_hover(const Document &doc, int line,
         }
         for (auto &block : doc.module().blocks) {
             if (block.tag == sym->name) {
-                return "Block `#" + sym->name + "` — " +
+                std::string hover = "Block `#" + sym->name + "` — " +
                        std::to_string(block.beats.size()) + " beat(s)";
+                auto comment = extract_comment(doc, sym->range.line);
+                if (!comment.empty())
+                    hover += "\n\n---\n\n" + comment;
+                return hover;
             }
         }
         return "Block `#" + sym->name + "`";
@@ -256,8 +318,15 @@ std::optional<std::string> get_hover(const Document &doc, int line,
                 std::string type_str =
                     decl.is_imported ? "imported" : "local";
                 std::string val_str = Skald::rval_to_string(decl.initial_value);
-                return "Variable `" + sym->name + "` (" + type_str +
-                       ") = " + val_str;
+                std::string hover = "Variable `" + sym->name + "` (" +
+                       type_str + ") = " + val_str;
+                auto def = doc.find_definition(sym->name, SymbolKind::Variable);
+                if (def) {
+                    auto comment = extract_comment(doc, def->range.line);
+                    if (!comment.empty())
+                        hover += "\n\n---\n\n" + comment;
+                }
+                return hover;
             }
         }
         return "Variable `" + sym->name + "`";

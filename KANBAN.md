@@ -2,7 +2,6 @@
 
 - Boolean ternary should use a conditional for the lefthand side, vs switch ternaries which should be value-based
 - Check for trailing ends, typos, etc.
-- LSP: Would be nice if # triggers autocomplete for unattached blocks
 - Would be nice to have a conditional "set" where you could if and endif a set of beats on a single conditional.
 - Switch it so mutations, calls etc can be just called inline in a block, and can be directly preceeded by a conditional
 
@@ -46,3 +45,4 @@
 - LSP: Adding a new block doesn't immediately make it available to autocomplete.
     > This seems to be related to whether the block has content. It's possible the parser itself is missing any case where you have a block *not* followed by beats.
 - LSP: ~ doesn't trigger autocomplete
+- LSP: Would be nice if # triggers autocomplete for unattached blocks
