@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.5.1 - 2026-02-13
+#### Bug Fixes
+- adds preceding and same-line comments to hover output in LSP - (f9d8426) - Tim Raveling
+- adds autocompletion for block names that have been referenced but not set up yet - (8208478) - Tim Raveling
+- LSP fixes (#34) - (bf1d4e2) - Tim Raveling
+#### Miscellaneous Chores
+- updated deploy script - (3321cbd) - Tim Raveling
+
+- - -
+
 ## 0.5.0 - 2026-02-11
 #### Features
 - adds language server (#33) - (6742ff3) - Tim Raveling
