@@ -9,9 +9,6 @@
 ## FIXES
 
 - Test logic blocks thoroughly -- something there doesn't feel right.
-- LSP: Adding a new block doesn't immediately make it available to autocomplete.
-    > This seems to be related to whether the block has content. It's possible the parser itself is missing any case where you have a block *not* followed by beats.
-- LSP: ~ doesn't trigger autocomplete
 
 ## IMPROVEMENTS
 
@@ -46,3 +43,6 @@
     * [ ] Add
     * [ ] Subtract
     * [x] Flip
+- LSP: Adding a new block doesn't immediately make it available to autocomplete.
+    > This seems to be related to whether the block has content. It's possible the parser itself is missing any case where you have a block *not* followed by beats.
+- LSP: ~ doesn't trigger autocomplete

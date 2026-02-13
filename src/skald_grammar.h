@@ -209,7 +209,7 @@ struct choice_block : plus<choice_clause> {};
 // SECTION: BEATS
 //
 struct block_tag_name : identifier {};
-struct block_tag_line : seq<one<'#'>, block_tag_name, eol> {};
+struct block_tag_line : seq<one<'#'>, block_tag_name, ws, opt<end_line_comment>, eol> {};
 
 struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
 struct logic_beat_conditional : sor<conditional, logic_beat_else> {};
@@ -235,8 +235,12 @@ struct beat_clause
 
 // SECTION: BLOCKS
 
+// Error recovery: skip any line that doesn't match known block content.
+// This prevents a single bad line from killing the parse for the rest of the file.
+struct skip_line : seq<not_at<block_tag_line>, not_at<seq<ws, eol>>, until<eol>> {};
+
 struct block : seq<block_tag_line, star<sor<ignored, logic_beat_single,
-                                            logic_beat_clause, beat_clause>>> {
+                                            logic_beat_clause, beat_clause, skip_line>>> {
 };
 
 // SECTION: FULL GRAMMAR

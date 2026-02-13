@@ -102,11 +102,12 @@ template <> struct lsp_action<Skald::r_variable> {
     }
 };
 
-// op_mutate_start: save the mutation target identifier range before rvalue
-// parsing can overwrite last_identifier_range
+// op_mutate_start: save the mutation target identifier name and range before
+// rvalue parsing can overwrite last_identifier/last_identifier_range
 template <> struct lsp_action<Skald::op_mutate_start> {
     template <typename ActionInput>
     static void apply(const ActionInput &input, LspParseState &state) {
+        state.mutate_target_name = state.last_identifier;
         state.mutate_target_range = state.last_identifier_range;
     }
 };
@@ -115,7 +116,7 @@ template <> struct lsp_action<Skald::op_mutate_start> {
 template <> struct lsp_action<Skald::op_mutate_equate> {
     template <typename ActionInput>
     static void apply(const ActionInput &input, LspParseState &state) {
-        auto name = state.last_identifier;
+        auto name = state.mutate_target_name;
         state.record_symbol(name, SymbolKind::Variable, false,
                             state.mutate_target_range);
         Skald::action<Skald::op_mutate_equate>::apply(input, state);
@@ -126,7 +127,7 @@ template <> struct lsp_action<Skald::op_mutate_equate> {
 template <> struct lsp_action<Skald::op_mutate_switch> {
     template <typename ActionInput>
     static void apply(const ActionInput &input, LspParseState &state) {
-        auto name = state.last_identifier;
+        auto name = state.mutate_target_name;
         state.record_symbol(name, SymbolKind::Variable, false,
                             state.mutate_target_range);
         Skald::action<Skald::op_mutate_switch>::apply(input, state);
@@ -137,7 +138,7 @@ template <> struct lsp_action<Skald::op_mutate_switch> {
 template <> struct lsp_action<Skald::op_mutate_add> {
     template <typename ActionInput>
     static void apply(const ActionInput &input, LspParseState &state) {
-        auto name = state.last_identifier;
+        auto name = state.mutate_target_name;
         state.record_symbol(name, SymbolKind::Variable, false,
                             state.mutate_target_range);
         Skald::action<Skald::op_mutate_add>::apply(input, state);
@@ -148,7 +149,7 @@ template <> struct lsp_action<Skald::op_mutate_add> {
 template <> struct lsp_action<Skald::op_mutate_subtract> {
     template <typename ActionInput>
     static void apply(const ActionInput &input, LspParseState &state) {
-        auto name = state.last_identifier;
+        auto name = state.mutate_target_name;
         state.record_symbol(name, SymbolKind::Variable, false,
                             state.mutate_target_range);
         Skald::action<Skald::op_mutate_subtract>::apply(input, state);
@@ -194,6 +195,15 @@ template <> struct lsp_action<Skald::module_path> {
                               static_cast<int>(name.size())};
         state.record_symbol(name, SymbolKind::FileRef, false, range);
         Skald::action<Skald::module_path>::apply(input, state);
+    }
+};
+
+// skip_line: error recovery — record skipped lines for diagnostics
+template <> struct lsp_action<Skald::skip_line> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, LspParseState &state) {
+        auto range = range_from_input(input);
+        state.skipped_lines.push_back(range);
     }
 };
 

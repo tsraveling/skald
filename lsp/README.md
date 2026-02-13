@@ -83,13 +83,17 @@ NOTE: Don't send raw JSON, because the transport layer expects `Content-Length` 
 ## Capabilities
 
 | Feature | Trigger |
-|---|---|
-| **Diagnostics** | Automatic on open/edit. Syntax errors, undefined block tags (`-> missing`), unused variables. |
-| **Go to Definition** | `gd` or equivalent. Jumps from `-> tag` to `#tag`, from variable references to `~ var = ...` declarations, from `GO file.ska` to that file. |
-| **Find References** | Shows all occurrences of a block tag, variable, or method. |
-| **Completion** | After `-> `: block tags. After `:`: methods. Inside `{...}` or `(? ...)`: variables. After `GO `: `.ska` file paths from the workspace. |
-| **Hover** | Variable type and initial value, block beat count, method/file ref info. |
-| **Document Symbols** | Outline view showing declared variables and block tags. |
+- **Diagnostics**: Syntax errors, undefined block tags (`-> missing`), unused variables.
+- **Go to Definition**: Jumps from `-> tag` to `#tag`, from variable references to `~ var = ...` declarations, from `GO file.ska` to that file. 
+- **Find References**: Shows all occurrences of a block tag, variable, or method.
+- **Completion**:
+  - After `-> `: block tags.
+  - After `:`: methods.
+  - Inside `{...}` or `(? ...)`: variables.
+  - After `GO `: `.ska` file paths from the workspace. 
+  - After `~`: variables.
+- **Hover**: Variable type and initial value, block beat count, method/file ref info. 
+- **Document Symbols**: Outline view showing declared variables and block tags. 
 
 ## Architecture
 
@@ -102,48 +106,6 @@ NOTE: Don't send raw JSON, because the transport layer expects `Content-Length` 
 The LSP reuses the Skald engine's PEGTL grammar (`skald_grammar.h`), parse actions (`skald_actions.h`), parse state (`parse_state.h`), and AST types (`skald.h`) by linking against `skald_static`. The key extension point is `lsp_action<Rule>`, which inherits from the base `action<Rule>` so all AST-building logic runs unchanged, then layers symbol-position tracking on top.
 
 Parsing uses `pegtl::memory_input` (string buffers from the editor) instead of `pegtl::file_input`. The full file is re-parsed on every keystroke -- Skald files are small and PEGTL is fast.
-
-### File Responsibilities
-
-```
-lsp/src/
-  main.cpp              Entry point. Stdin/stdout JSON-RPC loop.
-  transport.h/cpp       Content-Length framed message reading/writing.
-  lsp_types.h           LSP protocol structs (Position, Range, Diagnostic,
-                        CompletionItem, DocumentSymbol, etc.) with
-                        nlohmann/json serialization.
-  server.h/cpp          Method dispatch. Routes initialize, didOpen, didChange,
-                        definition, references, completion, hover,
-                        documentSymbol, shutdown, exit. Owns the document map
-                        and workspace.
-  document.h/cpp        Per-document state. Holds the text buffer, parses it
-                        into a Module + symbol list, and runs semantic checks
-                        (undefined tags, unused variables). This is the core
-                        unit -- most new diagnostics or analyses go here.
-  analyzer.h/cpp        Stateless helpers. Completion context detection,
-                        document symbol building, hover text generation.
-  workspace.h/cpp       Workspace-level state. Discovers .ska files under the
-                        root for GO-path completion. Handles URI/path conversion.
-  lsp_parse_state.h     LspParseState, extending Skald::ParseState with a
-                        vector of SymbolOccurrence (name, kind, position,
-                        is_definition) and scratch ranges for the action layer.
-  lsp_actions.h         lsp_action<Rule> template specializations. Each override
-                        records symbol positions before/after calling the base
-                        Skald::action. This is where you add tracking for new
-                        grammar rules.
-```
-
-### How Symbols Are Tracked
-
-`lsp_action<Rule>` overrides fire during PEGTL parsing. Each override:
-
-1. Captures the identifier name and source range from the PEGTL input
-2. Records a `SymbolOccurrence` (name, kind, is_definition, range) into `LspParseState::symbols`
-3. Calls the base `Skald::action<Rule>` to run the normal AST-building logic
-
-The key subtlety: PEGTL does *not* fire `action<identifier>` when matching through an inheriting rule like `block_tag_name : identifier` or `r_variable : variable_name : identifier`. So each alias rule that needs position tracking gets its own `lsp_action` specialization that computes the range directly from `input.position()` and `input.size()`.
-
-For mutation operations (`~ var += ...`), the lvalue identifier's range is saved by `lsp_action<op_mutate_start>` before the rvalue is parsed, since rvalue parsing can overwrite `last_identifier_range`.
 
 ### Adding Support for New Grammar Rules
 

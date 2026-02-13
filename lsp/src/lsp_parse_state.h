@@ -25,6 +25,8 @@ struct LspParseState : public Skald::ParseState {
     std::vector<SymbolOccurrence> symbols;
     SourceRange last_identifier_range;
     SourceRange mutate_target_range;  // Saved by op_mutate_start for mutation actions
+    std::string mutate_target_name;   // Saved by op_mutate_start to avoid rvalue corruption
+    std::vector<SourceRange> skipped_lines;  // Lines skipped during error recovery
 
     LspParseState(const std::string &filename) : ParseState(filename) {}
 

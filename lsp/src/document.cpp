@@ -60,6 +60,18 @@ void Document::parse() {
         module_ = std::move(state.module);
     }
 
+    // Report skipped lines as warnings
+    for (auto &skip : state.skipped_lines) {
+        LspTypes::Diagnostic diag;
+        diag.range.start.line = skip.line;
+        diag.range.start.character = skip.col;
+        diag.range.end.line = skip.line;
+        diag.range.end.character = skip.end_col;
+        diag.severity = LspTypes::DiagnosticSeverity::Warning;
+        diag.message = "Line could not be parsed and was skipped";
+        diagnostics_.push_back(diag);
+    }
+
     run_semantic_checks();
 }
 

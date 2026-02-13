@@ -76,9 +76,18 @@ CompletionContext detect_completion_context(const std::string &line_text,
             return CompletionContext::Method;
     }
 
-    // After "~ " or in conditional/injection context: variable completion
-    if (before.size() >= 2 && before.substr(0, 2) == "~ ") {
-        return CompletionContext::Variable;
+    // After "~ ": variable completion (both declarations and mutations)
+    {
+        auto tilde_pos = trimmed.rfind("~ ");
+        if (tilde_pos != std::string::npos) {
+            auto after_tilde = trimmed.substr(tilde_pos + 2);
+            // Only if we're typing the variable name (all identifier chars so far)
+            bool all_id = true;
+            for (char c : after_tilde) {
+                if (!std::isalnum(c) && c != '_') { all_id = false; break; }
+            }
+            if (all_id) return CompletionContext::Variable;
+        }
     }
     // Inside (? ...) conditional
     if (before.find("(? ") != std::string::npos ||
