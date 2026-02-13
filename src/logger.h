@@ -8,7 +8,8 @@
 class Log {
 public:
   template <typename... Args> static void out(Args &&...args) {
-    if (Skald::log_level == Skald::SkaldLogLevel::SPARSE)
+    if (Skald::log_level == Skald::SkaldLogLevel::SPARSE ||
+        Skald::log_level == Skald::SkaldLogLevel::OFF)
       return;
     std::ostringstream stream;
     print_with_spaces(stream, std::forward<Args>(args)...);
@@ -24,6 +25,8 @@ public:
   }
 
   template <typename... Args> static void err(Args &&...args) {
+    if (Skald::log_level == Skald::SkaldLogLevel::OFF)
+      return;
     std::ostringstream stream;
     print_with_spaces(stream, std::forward<Args>(args)...);
     std::cerr << stream.str();
