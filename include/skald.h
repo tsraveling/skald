@@ -10,7 +10,7 @@
 
 namespace Skald {
 
-enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE };
+enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE, OFF };
 inline static SkaldLogLevel log_level = SkaldLogLevel::NORMAL;
 
 struct LineEntity {

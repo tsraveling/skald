@@ -93,6 +93,12 @@ NOTE: Don't send raw JSON, because the transport layer expects `Content-Length` 
 
 ## Architecture
 
+- Everything comes into `main.cpp` ...
+- ... which starts up a Server (`server.h/cpp`).
+- The key processing area is `lsp_actions.h`.
+- This parses into `LspParseState` (`lsp_parse_state.h`) which tracks symbols and their locations.
+- The analyzer in `analyzer.h/cpp` sets up autocompletion etc.
+
 The LSP reuses the Skald engine's PEGTL grammar (`skald_grammar.h`), parse actions (`skald_actions.h`), parse state (`parse_state.h`), and AST types (`skald.h`) by linking against `skald_static`. The key extension point is `lsp_action<Rule>`, which inherits from the base `action<Rule>` so all AST-building logic runs unchanged, then layers symbol-position tracking on top.
 
 Parsing uses `pegtl::memory_input` (string buffers from the editor) instead of `pegtl::file_input`. The full file is re-parsed on every keystroke -- Skald files are small and PEGTL is fast.
