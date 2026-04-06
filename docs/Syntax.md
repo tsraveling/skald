@@ -10,18 +10,19 @@ Identifiers must start with `a-z`, `A-Z`, or `_`. After the first character, the
 
 ### 1.1.2 Whitespace and Indentation
 
-For the most part, Skald is whitespace agnostic. You don't need to include blank newlines between beats (2.1) for instance. However, you should indent operations under a beat or logic beat.
+For the most part, Skald is whitespace agnostic. You don't need to include blank newlines between beats (2.1), for instance. However, you should indent operations under choices (2.2).
 
 ## 1.2 Line Comments
 
-You can put a comment on any blank line, or the end of any logic (ie, non-beat) line, with `--` (like in Lua):
+You can put a comment on any blank line, or the end of any logic (ie, non-beat) line, with three hypens: `---`
 
 ```
--- This is a comment on its own line
+--- This is a comment on its own line
 
-*
-  ~ some_var = 10  -- This comment works too
+~ some_var = 10  --- This comment works too
 ```
+
+Note: we use three hyphens instead of two (like in Lua) to keep from conflicting with em dashes and to better distinguish the comment from normal beat text.
 
 ## 1.3 Embedded Comments
 
@@ -31,7 +32,7 @@ You can put embedded comments in beats by using square brackets:
 This is a beat [but this text will not appear in it] -- cool, huh?
 ```
 
-This only works in beats though, don't try it anywhere else.
+This only works in beats though, don't try it anywhere else!
 
 # 2. Blocks
 
@@ -40,7 +41,7 @@ This only works in beats though, don't try it anywhere else.
 Core dialogue is composed of **Blocks**, which in turn is composed of **Beats**. A block is defined with a tag (see Identifiers, 1.1.1) like this:
 
 ```
-#some-block
+#some_block
 
 This is a beat
 
@@ -53,7 +54,7 @@ Skald will feed you a block's content sequentially as beats (you have control ov
 
 A beat that is just a line or paragraph of text is a **narration beat**, ie, without attribution.
 
-A beat that begins with a tag (again, kebab-case preferred) and a colon, like `tutorial:` or `second-bandit:` is **attributed**. You will receive the attribution tag (`tutorial` or `second-bandit`) via the [[Skald API]] and can interpret it however you like.
+A beat that begins with a tag (same rules as block tags in 1.1.1) and a colon, like `tutorial:` or `second_bandit:` is **attributed**. You will receive the attribution tag (`tutorial` or `second_bandit`) via the [[Skald API]] and can interpret it however you like.
 
 ### 2.1.1 Block Entry
 
@@ -81,15 +82,7 @@ An undecorated choice like this one will simply pass the player to the next bloc
 
 ### 2.2.1 Anchor Beats
 
-The beat a set of choices are attached to is called their **anchor beat**. If an anchor beat is conditional and does not display, the choices will not be triggered either. So with:
-
-```
-(? should_show) This is an anchor beat
-> These are
-> anchor choices
-```
-
-Then if `should_show` is true, you will see the anchor beat text, and get the choices. If false, the beat text will not show, and the player will never be presented with those choices at all.
+TODO: Clear this out
 
 ### 2.2.2 Choice Redirects
 
@@ -99,7 +92,7 @@ You can do a one-line choice **redirect** using arrow notation:
 > This is another choice -> target-block
 ```
 
-This will immediately move the player to the beginning of `target-block`.
+This will immediately move the player to the beginning of `target_block` if the player selects that choice.
 
 ### 2.2.3 Choice Operations
 
@@ -113,12 +106,26 @@ You can invoke a number of **operations** (see 3.1 below) by indenting on the li
 
 Other effect syntax is discussed in 3.1 below.
 
-Finally, you can have a conditional choice, that only appears if a given condition is met:
+Finally, you use an inline conditional, that only appears if a given condition is met:
 
 ```
 > (? some_condition) This is a conditional choice
   -> another-target-block
 ```
+
+Or a conditional block, for a group of choices:
+
+```
+@if some_condition
+> First conditional choice
+    -> some move
+> Second conditional choice
+    :some_method_call()
+@end
+> Nevermind.
+```
+
+In this scenario, if `some_condition` is false, the player will only get the `Nevermind.` choice.
 
 See 3.2 **conditionals**, below, for conditional-specific syntax.
 
@@ -128,7 +135,7 @@ If the player selects a choice without a redirect, the cursor will move to the n
 
 If the cursor reaches the end of the file without an explicit `END` (4.1.3), an error will be thrown.
 
-If the cursor reaches a beat with choices, but none of those choices are available due to conditions, the cursor will accept any question index input and move on to the next beat as if no choices were present at all. The normal `Skald.continue()` approach works in this case as well (but will throw an error if any choices is available to the player).
+If the cursor reaches a beat with choices, but none of those choices are available due to conditions, the cursor will accept any question index input and move on to the next beat as if no choices were present at all.
 
 ## 2.3 Insertions
 
@@ -168,156 +175,21 @@ The switch value must match the type of the check value:
 {str_val ? ["one": 1, "two": 2, "three": 3]}
 ```
 
-### 2.3.4 Chance Ternaries
-
-You can use a **chance ternary** to inject an option at random:
-
-```
-I prefer {% ? "dark" : "light"} roast coffee.
-```
-
-You can also make a **chance switch ternary**:
-
-```
-Her pet is a {% ? ["dog", "cat", "donkey"]} -- these choices are evenly weighted
-```
-
-You can weight options like this:
-
-```
-Her pet is a {% ? ["dog", 3:"cat", 5:"donkey"]} -- This pet has a 5/9 chance of being a donkey
-```
-
-Finally, you can mark some options as conditional with paren syntax:
-
-```
-Her pet is a {% ? ["dog", (?is_cat_person):"cat", 3(?is_pirate): "parrot"]}.
-```
-
-In this example, if `is_pirate` is not set but `is_cat_person` is, it's a coin-flip between dog and cat. If she is a pirate, however, the pet has a 3/5 chance of being a parrot. If neither flag is set, it will always be "dog".
-
-## 2.4 Logic Beats
-
-Sometimes in a narrative flow, you may want to perform logic that is not directly attached to a text beat. To do that, you can use a **logic beat:**
-
-```
-*                 -- this is a logic beat
-  :call_method
-  ~ some_var = 3
-```
-
-### 2.4.1 Conditional Logic Beats
-
-A logic beat can also be conditional:
-
-```
-* (? some_condition)
-  -> first_block
-```
-
-This will only execute the attached operations / transition if the condition is met.
-
-### 2.4.2. "Else" Logic Beats
-
-If you immediately follow a conditional logic block with `* (else)`, that will do something if the previous condition is *not* met:
-
-```
-* (? brave)
-  -> road_less_traveled
-* (else)
-  -> road_more_traveled
-```
-
-This works for regular beats as well:
-
-```
-(? did_win) And they lived happily every after!
-(else) They unfortunately did not live happily ever after.
-```
-
-This can be useful for places where the narrative branches due to choices made previous to the current block.
-
-### 2.4.3 Inline Logic Beats
-
-If a logic beat has only one operation, it can be written inline:
-
-```
-* ~ money -= 5
-* (? brave) -> road_less_traveled
-* (else) -> road_more_traveled
-```
-
-This matters in terms of execution order. For instance, if you have this:
-
-```
-The shopkeeper takes your money.
-    ~ money -= 20
-
-* shopkeeping += 1
-```
-
-The signal for the money mutation would be sent as that text appears; the shopkeeping +1 mutation would be sent after the player "continues" the conversation.
-
-## 2.5 Chance Blocks
-
-If successive blocks are prefixed with (%), the engine will pick one to present at random:
-
-```
-(%) Hi there!
-(%) Why hello.
-(%) Sup?
-```
-
-You can mark some chances as conditional. Conditionals will only be included in the "draw pile" if the conditional is met:
-
-```
-(%) Hello, stranger.
-(%) Greetings!
-(%? has_met) Nice to see you again.
-```
-
-Chance blocks can be weighted with an integer prefix:
-
-```
-(2%) Ahoy!      -- This has a 2/3 chance of printing
-(%) Hoy!        -- This has a 1/3 chance of printing
-```
-
-As with any other kind of block, logic can be added:
-
-```
-You roll the dice.
-
-(5%) You miss, and pay up.
-    ~ money -= 100
-(%) You hit six!
-    ~ money += 300
-```
-
-This also works with logic blocks (`*`):
-
-```
-(%) * -> find_way
-(3%) * -> get_lost
-```
-
 # 3. Logic
 
 ## 3.1 Operations
 
-**Operations** are called by choices (1.2), inline on blocks (XX), or directly from **logic blocks** (XX).
-
-A single operation can be called inline:
+**Operations** either occur between beats in a block, or are indented under a choice.
 
 ```
-#block-tag
+This is a beat
 
-This is a beat. :with_a_method
+~ some_variable = 5
 
-> This is a choice -> with-a-transition
+Another beat
 ```
 
-Multiple operations are indented under the calling element, forming an **operation group**:
+Triggered by selecting a choice:
 
 ```
 > This is a choice with an operation group
@@ -330,31 +202,42 @@ Multiple operations are indented under the calling element, forming an **operati
 
 A **transition** will finish the other operations in its group, then immediately send the player to the indicated block. If that block doesn't exist, an error will be thrown.
 
+```
+-> some_block
+```
+
 ### 3.1.2 Methods
 
 A **method** communicates via the api to call a method on the game side:
 
 ```
-> Do something
-  :some_method()
+:some_method()
 ```
 
-This will inform the game that `some_method` needs to be processed. A method may optionally return a boolean value for use in a conditional (see 3.2.3):
+Methods interfaces are registered in the **codex** (see TBD). Trying to use a non-registered method will throw a warning.
+
+A method may optionally return a boolean value for use in a conditional (see 3.2.3):
 
 ```
-> (? :check_method) Optional choice
+> (? :check_method()) Optional choice
+
+@if :check_method()
+
+This beat will fire after check_method processes through, if the result is true.
+
+And then this one will follow normally, also if true.
+
+@end
+
+And this one will follow regardless.
 ```
 
-Note that `check_method` must return either `true` or `false` on the API side.
-
-For now, methods cannot be used for anything other than booleans, or used in any other operations (e.g. you can't add a method response to a variable).
-
-Finally, methods can include simple **arguments** of the three types (string, int, or bool):
+Finally, methods can include simple **arguments** of the three types (string, int, or bool). These types will be defined in the codex, and trying to use the wrong type will throw an error:
 
 ```
-:some_method(1)             -- Calls `some_method` with (int)1
-:some_method(1, "hello")    -- Calls with two args, 1 and "hello"
-:some_method(false)         -- Calls with bool false
+:a_method(1)             -- Calls `some_method` with (int)1
+:b_method(1, "hello")    -- Calls with two args, 1 and "hello"
+:c_method(false)         -- Calls with bool false
 ```
 
 Or a variable:
@@ -363,45 +246,57 @@ Or a variable:
 :some_method(is_traveling)  -- Calls with the contents of the "is_traveling" variable
 ```
 
-Methods are not strongly typed, and arguments are not counted. From the Skald side, you can currently send any number of any of the three types of arguments to any method -- so script with care!
+If that variable is global or module-scoped, and is the wrong type, you will see a warning up front. If it is an ad hoc variable and of the wrong type, you will encounter a runtime rror. See the next section (3.1.3) for more details.
 
 ### 3.1.3 Variables
 
-A **variable** is simply a key in game state. So e.g. `(? health < 50)` will query (via the API) the game state to check if the `health` value is less than 50.
+A **variable** is a key in game state that holds either an int, a float, a boolean, or a string.
 
-Game state exists in a layer between the Skald module and the game; both can query and mutate narrative state directly.
+There are three **scopes** of variable:
 
-All variables used inline must be initialized at the top of a file, before any testbeds (XX) or blocks:
+**Global** variables are defined in the codex. They are intended to be owned by the game side, and can optionally be marked as read-only. Trying to write to a read only variable will throw an error. Examples would be player name, current level, and so on. They are strongly typed.
+
+**Module** variables are defined at the top of a .ska file. They are strongly typed, and will be **pushed** to any modules navigated to via `GO` (4.1.1).
+
+**Ad Hoc** variables are defined inline, off-the-cuff, and are not strongtly typed. They are also not pushed through to following modules; they are intended for immediate conversational state:
 
 ```
--- ModuleOne.ska
+--- Ad hoc variables
 
-~ num_var = 2
-~ str_var = "Hello, World!"
+(? temp_check) This will resolve to false, because it hasn't been set yet.
+
+~ temp_check = true
+
+(? temp_check) This beat will show up now.
+```
+
+Global variables are defined in the .codex file. Module variables are defined at the top of a .ska file, before any testbeds (5.2) or blocks:
+
+```
+--- ModuleOne.ska
+
+~ num_var  = 2
+~ str_var  = "Hello, World!"
 ~ bool_var = true
+~ int_var int --- if no default is provided, provide type!
 
-#first-block
+#start
 
 The game is afoot ...
 ```
 
-### 3.1.4 Variables Across Modules
+### 3.1.4 Variable Types
 
-Variables are scoped within a narrative chain: so if a variable is defined in `ModuleOne.ska`, which transitions to `ModuleTwo.ska`, that variable will still be available. However, you must declare it as inherited like this:
+Variables can either be **boolean**, **integer**, **float** or **string**:
 
 ```
-< inherited_num = 2
-< inherited_string = "Something"
-< bool_from_last_module = false
+~ health int
+~ speed  float
+~ alive  bool
+~ name   string_
 ```
 
-This syntax informs the compiler to expect a variable from the previous module; it will throw a runtime error if that variable is not found. The initialization value is **only used for testing** (see XX below).
-
-Likewise, if you declare a module-specific variable that is already scoped, the API will throw a runtime error that you are overwriting something.
-
-### 3.1.5 Variable Types
-
-Variables can either be **boolean**, **integer**, or **string**.
+TODO: add details on conditionals between ad hoc vars.
 
 ### 3.1.6 Variable Operators
 
@@ -429,7 +324,7 @@ More advanced operators, like multiplication, division, or string concatenation,
 
 ### 3.1.7 Variables as Arguments
 
-You can pass any variable to any method as an argument:
+You can pass a variable to a method as an argument, if it is the right type:
 
 ```
 :call_method(str_var) -- Send str_var to the `call_method` method via the API
@@ -437,19 +332,64 @@ You can pass any variable to any method as an argument:
 (? check_method(num_var, bool_var)) This beat will fire if `check_method`, with the two given arguments, returns true.
 ```
 
+For ad hoc variables, you are responsible for sending the right type!
+
+```
+--- where: do_damage(amount int) action
+
+These are ad hoc operations:
+~ a = 10
+~ b = "cow"
+:do_damage(a) --- does 10 damage
+:do_damage(b) --- throws an error!
+```
+
 ## 3.2 Conditionals
 
-**Conditionals** can determine if a choice will appear, if a beat will be included, or if a logic beat (XX) will be executed.
+**Conditionals** can determine if a choice will appear, if a beat will be included, or if an operation will be executed. There are two types of conditionals, **inline conditionals** and **conditional clauses**.
+
+**Inline conditionals** live at the start of a beat, before an operation, or right after the `>` carat on a choice:
 
 ```
 (? bool_var) This beat will only appear (and attached operations will only be run) if bool_var is true.
 
-* (? bool_var)
-  :call_method() -- Operations on this logic beat will only occur if
-                 -- bool_var is true.
+(? bool_var) :call_method() -- only called if bool_var is true
 
 > (? bool_var) This choice will only be enabled if bool_var is true.
 ```
+
+**Conditional blocks** wrap any of these:
+
+```
+@if condition
+
+Condition is true!
+
+@elseif sky="red"
+
+Seems apocalyptic
+> Continue
+> Flee
+
+@else
+
+Everything seems fine!
+
+@end
+
+(? check) this is still a one-liner.
+```
+
+- `@if` starts the clause, and is followed by a condition statement (see the following sections).
+- `@elseif` will perform an additional conditional check only if the preceding one evaluates to false.
+- `@else` will fire if all preceding conditional sections are false.
+- `@end` closes a conditional clause; everything after this is back to normal.
+
+**Rules**:
+
+1. Conditional clauses must end by the end of the block; a dangling open conditional clause will throw an error.
+2. Conditional clauses cannot be nested (use `@elseif` instead).
+3. Conditional clauses can wrap anything inside a block (beats, operations, choices) but cannot wrap a block tag or any top-of-file matter.
 
 ### 3.2.1 And / Or
 
