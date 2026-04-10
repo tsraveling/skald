@@ -38,10 +38,10 @@ This only works in beats though, don't try it anywhere else!
 
 ## 2.1 Block Tags and Beats
 
-Core dialogue is composed of **Blocks**, which in turn is composed of **Beats**. A block is defined with a tag (see Identifiers, 1.1.1) like this:
+Core dialogue is composed of **Blocks**, which in turn is composed of **Beats**. A block is defined with `# ` followed by a tag (see Identifiers, 1.1.1) like this:
 
 ```
-#some_block
+# some_block
 
 This is a beat
 
@@ -55,6 +55,35 @@ Skald will feed you a block's content sequentially as beats (you have control ov
 A beat that is just a line or paragraph of text is a **narration beat**, ie, without attribution.
 
 A beat that begins with a tag (same rules as block tags in 1.1.1) and a colon, like `tutorial:` or `second_bandit:` is **attributed**. You will receive the attribution tag (`tutorial` or `second_bandit`) via the [[Skald API]] and can interpret it however you like.
+
+### 2.1.1 Child Blocks
+
+You can define a child block using `##`, and a grandchild with `###`, like this:
+
+```
+# parent
+
+This is the parent block.
+
+## child
+
+This is the child block.
+
+### grandchild
+
+This is the grandchild block
+```
+
+Top level / parent tags have to be unique per file. Child tags have to be unique within that parent, and so on
+
+This allows you to e.g.:
+
+```
+-> parent.child.grandchild
+-> parent2.child.grandchild --- a diffent child and grandchild of a different parent.
+```
+
+For more, and for relative transitions, see 
 
 ### 2.1.1 Block Entry
 
@@ -204,6 +233,93 @@ A **transition** will finish the other operations in its group, then immediately
 
 ```
 -> some_block
+```
+
+#### 3.1.1.1 Relative Transitions
+
+Suppose a structure like this:
+
+```
+# main
+## first
+### a
+## second
+### b
+
+# other_main
+## first
+### a
+## second
+```
+
+You can navigate to a child of the current block like this:
+
+```
+# main
+-> .first --- navs to `## first` block.
+
+## first
+-> .a --- navs from child `first` into grandchild `a`.
+```
+
+You can navigate to a sibling like this:
+
+```
+# main
+## first
+## second
+-> -first -- navs to main.first
+```
+
+You can navigate to this block's parent like this:
+
+```
+# main
+## first
+-> ^ --- navs back to main
+```
+
+You can combine these as well. For instance, to an aunt:
+
+```
+# main
+## first
+## second
+### a
+### b
+-> ^-first --- navs back to parent's sibling, `first`.
+```
+
+Or to a cousin:
+
+```
+# main
+## first
+### a
+## second
+### a
+-> ^-first.a --- navs to cousin main.first.a
+```
+
+Or a grandchild:
+
+```
+# main
+-> .first.a --- navs to main.first.a
+## first
+## a
+```
+
+And of course you can navigate absolutely:
+
+```
+# main
+## first
+### a
+## second
+### a
+# other
+-> main.first.a
 ```
 
 ### 3.1.2 Methods
@@ -457,16 +573,25 @@ You can also pass arguments to conditional methods:
 (? :check_method(some_variable)) -- This will pass `some_variable` to `check_method`, where it can be used in determining the calculation
 ```
 
-
-# 4. Modules
+# 4. Modules and Codices
 
 A Skald **module** is a Skald file. The API opens with a file reference to a .ska file. It will load and parse the file, then continue through. As stated in 3.1.3 above, **variables** must be declared at the top of a module, unless those variables are already "in-scope", ie, declared in an a module earlier in the **narrative chain**.
 
-There are two **module-level operations**: `GO` (4.1.1) and `END` (XX). Module operations can be identified in .ska files by that all-caps syntax.
+A Skald **codex** is a whole Skald project (or subproject in a larger game), and contains your **game interface definition**. See 4.2 for more details on this.
+
+But first, let's stick to the module level. There are two **module-level operations**: `GO` (4.1.1) and `EXIT` (XX).
+
+```
+> Continue on
+    GO next_module.ska
+> Finish it
+    EXIT
+```
+
 
 ## 4.1 The Narrative Chain
 
-The narrative chain is composed of a series of modules loaded linearly. For instance, lets say you start in `YellowWood.ska`. Let's say that in that module, there's a branching choice that can transition to two different modules: `RoadLessTraveled.ska` and `RoadMoreTraveled.ska`. If you transition to the former, the narrative chain will then be `YellowWood.ska -> RoadLessTraveled.ska`. Any variables defined in `YellowWood` will be available in `RoadLessTraveled`.
+The narrative chain is composed of a series of modules loaded linearly. For instance, lets say you start in `yellow_wood.ska`. Let's say that in that module, there's a branching choice that can transition to two different modules: `road_less_traveled.ska` and `RoadMoreTraveled.ska`. If you transition to the former, the narrative chain will then be `yellow_wood.ska -> road_less_traveled.ska`. Any modules-scoped variables (3.1.3) defined in `yellow_wood` will be available in `road_less_traveled`.
 
 ### 4.1.1 Module Transitions
 
@@ -475,36 +600,34 @@ You can transition to a new module (.ska file) with the `GO` command. This can b
 ```
 > Take the road less traveled
   ~robert_frost=true
-  GO RoadLessTraveled.ska
+  GO road_less_traveled.ska
 ```
 
 This will cause the API to load that new file and enter it at the top, unless you define an **entry point** (4.1.2).
 
-### 4.1.2 Module Entry Points
-
-By default, a module will enter at its first block. However, the API will allow you to specify any entry point you like, which allows the game developer to programmatically inject the player anywhere in the story they like.
-
-In addition, a module transition can define an entry point like this:
+Module paths are relative to the **mother codex** (4.2). So if your file structure looks something like this:
 
 ```
-> Take the road less traveled
-  ~robert_frost=true
-  GO RoadLessTraveled.ska -> still_in_the_woods
+/game
+  /skald
+    main.codex
+    /chapter1
+       a.ska
+    /chapter2
+       b.ska
 ```
 
-This will drop the player into the `RoadLessTraveled` module, starting at the `#still-in-the-woods` block.
-
-As with in-module transitions, all other operations in the group will be executed before the transition occurs.
-
-**Note:** Conflicting transitions will throw an error:
+And you wanted to move from `a` to `b`, you would do:
 
 ```
-> This is a badly formed operation group:
-  -> in-module-block
-  GO AnotherModule.ska             -- This will throw an error
+> Continue!
+    GO chapter2/b.ska
 ```
 
-### 4.1.3 Conclusions
+In other words, relative to main.codex.
+
+
+### 4.1.2 Conclusions
 
 Every story must end. Every narrative chain must end as well; otherwise, you'll get an error. You can **conclude** a narrative chain with the `END` operation, like this:
 
@@ -526,24 +649,104 @@ You can also send an **argument** to the conclusion, as with methods:
   EXIT some_variable
 ```
 
-### 4.1.4 Narrative Completion
+You can send any of the normal values to an EXIT statement: ints, floats, strings, booleans, or variables.
 
-Every module must either transition to another module, or exit. 
+### 4.1.3 Narrative Completion
 
-## 4.2 File Structure
+Every module must either transition to another module, or exit. If the engine reaches the end of the file without hitting an EXIT or GO, it will throw an "Unexpected end of of file (EOF)" error.
 
-The **Skald root** will be determined by the code invoking the Skald API. You can use **folders** within this, like this:
+## 4.2 Codices
+
+Every Skald file belongs to a **codex**. A codex is any file that ends in `.codex`, e.g. `main.codex` or `dialogue.codex`. All .ska files that are in the same folder as the codex, or subfolders of the codex, are considered "children" of it, and it is the **mother codex** of those files.
+
+On the code side (see TBD), a Skald engine instance will start by loading up a specific codex. Each engine instance is independent; this is useful if e.g. you want to control character dialogue in one set of data, and a tutorial walkthrough in another.
+
+A **codex file** looks like this:
 
 ```
-> Let's go to a subfolder!
-  GO some_folder/SubfolderModule.ska
+--- main.saga
+--- Contains the main game stories.
+
+@methods
+  --- Will get added to hover text
+  --- a: describe a param
+  call_something(a string) int
+
+  do_something() action -- action types do not return a value.
+@end
+
+@globals
+  --- hover text here too
+  @readonly player_name string = "Test"
+
+  --- will be zero default if not defaulted
+  player_level int
+@end
 ```
 
-Paths are always relative to the Skald root, so if you are in `some_folder/SubfolderModule.ska` above, you would still transition to a sibling module like this:
+You will notice that there are two sections: one for **method definitions**, and one for **global definitions**. See 4.2.1 and 4.2.2 respectively for further details on each.
+
+However, if your game is fairly simple and you don't intend to use either feature, it is actually sufficient to simply include an empty file (or one with only comments); this still serves as the mother to its skald files and as a reference point for the project to load modules from.
+
+### 4.2.1 Method Definitions
+
+The method section is wrapped like this:
 
 ```
-> Go to a sibling
-  GO some_folder/SiblingModule.ska  -- Even though we are in the same folder
+@methods
+@end
+```
+
+Each method is composed of the method name, optional arguments, and a **type**.
+
+Arguments must be typed: `int`, `float`, `string`, `bool`.
+
+Methods have an additional type: `action`. An action method type means no return value is expected.
+
+Finally, any comments you add immediately above a method definition, without any spaces between, will be available in the hover text for that method in VSCode or Neovim.
+
+Putting it all together:
+
+```
+--- Hover text!
+hesome_method(some_argument int) action
+```
+
+This method takes a single int argument, and does not return a value, and will show "Hover text!" when you hover the method name in a Skald file.
+```
+:some_method(1) --- this works!
+:some_method("one") --- this doesn't, because the argument is a string
+(? :some_method(1)) -> somewhere --- this doesn't work, because action types don't return anything, and so can't be used in conditionals.
+```
+
+### 4.2.2 Global Variable Definitions
+
+The globals section is wrapped like this:
+
+```
+@globals
+@end
+```
+
+Globals are typed, with the usual four types:
+
+```
+health int
+speed  float
+name   string
+alive  bool
+```
+
+Globals can be marked as read only (engine will throw an error if you try to mutate them from a Skald module):
+
+```
+@readonly name string --- I can't be changed from Skald
+```
+
+They can also be given defaults, which will be used e.g. in Skalder when testing:
+
+```
+health int = 100
 ```
 
 # 5. Testing

@@ -222,6 +222,31 @@ This also works with logic blocks (`*`):
 ```
 
 
+
+--- ### 4.1.2 Module Entry Points
+
+By default, a module will enter at its first block. However, the API will allow you to specify any entry point you like, which allows the game developer to programmatically inject the player anywhere in the story they like.
+
+In addition, a module transition can define an entry point like this:
+
+```
+> Take the road less traveled
+  ~robert_frost=true
+  GO RoadLessTraveled.ska -> still_in_the_woods
+```
+
+This will drop the player into the `RoadLessTraveled` module, starting at the `#still-in-the-woods` block.
+
+As with in-module transitions, all other operations in the group will be executed before the transition occurs.
+
+**Note:** Conflicting transitions will throw an error:
+
+```
+> This is a badly formed operation group:
+  -> in-module-block
+  GO another_module.ska             -- This will throw an error
+```
+
 ## Next Steps
     
 Writing code:
