@@ -1,5 +1,9 @@
 # Skald TODO
 
+- A: Block def
+
+# Notes
+
 ## New conditional syntax
 
 ```

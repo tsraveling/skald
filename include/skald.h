@@ -13,6 +13,7 @@ namespace Skald {
 enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE, OFF };
 inline static SkaldLogLevel log_level = SkaldLogLevel::NORMAL;
 
+// Tracks its original line number; otherwise not special.
 struct LineEntity {
   size_t line_number = 0;
 };
@@ -410,40 +411,68 @@ struct TextContent {
   }
 };
 
-struct Choice : LineEntity {
+// STUB: Build AttachedCondition
+// This is an optional condition. If one is not present, it will pass; otherwise
+// the conditional will be resolved.
+struct AttachedCondition {
   std::optional<Conditional> condition;
+  std::string dbg_desc() const {
+    return (condition ? condition->dbg_desc() + " " : "");
+  }
+};
+
+struct Choice : LineEntity {
+  AttachedCondition condition;
   TextContent content;
   std::vector<Operation> operations;
 
   std::string dbg_desc() const {
-    return (condition ? condition->dbg_desc() + " " : "") + content.dbg_desc() +
-           " (" + std::to_string(operations.size()) + " ops)";
+    return condition.dbg_desc() + content.dbg_desc() + " (" +
+           std::to_string(operations.size()) + " ops)";
   }
+};
+
+// STUB: Build ChoiceGroup
+// This contains one or more choices, exists at any place in a block,
+// and blocks proceeding until a choice is selected. If no individual
+// choice is available, the group will be ignored.
+struct ChoiceGroup {
+  std::vector<Choice> choices;
+};
+
+// STUB: Build LineOp
+// This is an operation that exists inline on a block.
+struct LineOp {
+  AttachedCondition condition;
+  Operation op;
+  std::string dbg_desc() const { return condition.dbg_desc() + dbg_dsc_op(op); }
 };
 
 struct Beat : LineEntity {
-  std::optional<Conditional> condition;
+
+  AttachedCondition condition;
   std::string attribution;
-  std::vector<Operation> operations;
   TextContent content;
-  bool is_logic_block = false;
-  bool is_else = false;
-  std::vector<Choice> choices;
 
   std::string dbg_desc() const {
-    return (condition ? condition->dbg_desc() + " " : "") +
-           (attribution.length() > 0 ? attribution + ": " : "") +
-           (is_logic_block ? (is_else ? "<ELSE>" : "<LOGIC>")
-                           : content.dbg_desc()) +
-           (operations.size() > 0 ? dbg_desc_ops(operations) : "");
+    return condition.dbg_desc() +
+           (attribution.length() > 0 ? attribution + ": " : "");
   }
 };
+
+using BlockMember = std::variant<Beat, LineOp, ChoiceGroup>;
+
+// STUB: Build ConditionalBlock
+struct ConditionalBlock {};
+
+// STUB: Build ConditionalChain
+struct ConditionalChain {};
 
 // TODO: Support the "auto-continue" block
 // (that is untagged and follows an inline choice block)
 struct Block : LineEntity {
   std::string tag;
-  std::vector<Beat> beats{};
+  std::vector<BlockMember> members{};
 };
 
 class Module {
