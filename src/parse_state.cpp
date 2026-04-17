@@ -5,31 +5,94 @@
 
 namespace Skald {
 
-RValue ParseState::rval_buffer_pop() {
-  dbg_out(">>> rval_buffer_pop: " << rval_buffer.size() << " -1 ");
-  auto back = rval_buffer.back();
-  rval_buffer.pop_back();
-  return back;
+ParseState::ParseState(const std::string &filename) {
+  module.filename = filename;
 }
 
-SimpleRValue ParseState::simple_rval_buffer_pop() {
-  dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
-  auto back = rval_buffer.back();
-  rval_buffer.pop_back();
+// SECTION: MODULE LEVEL
 
-  return std::visit(
-      [](auto &&val) -> SimpleRValue {
-        using T = std::decay_t<decltype(val)>;
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, bool> || std::is_same_v<T, int> ||
-                      std::is_same_v<T, float>) {
-          return val;
-        } else {
-          throw std::runtime_error("Expected simple RValue, got complex type");
-        }
-      },
-      back);
+// SECTION: TOP MATTER
+
+// SECTION: BLOCKS
+
+void ParseState::start_block(const std::string &tag) {
+  Log::verbose("Starting new block:", tag);
+
+  Block new_block;
+  // STUB: Use stored tag level
+  new_block.tag = tag;
+  module.blocks.push_back(new_block);
+  dbg_out(">>> [] block_lookup[" << tag << "] = " << module.blocks.size() - 1);
+  module.block_lookup[tag] = module.blocks.size() - 1;
+
+  current_block = &module.blocks.back();
 }
+
+// SECTION: BEATS
+
+void ParseState::store_beat_text() {
+  beat_content_queue = std::move(text_content_queue);
+}
+
+Beat *ParseState::add_beat() {
+  dbg_out(">>> add_beat()");
+  if (!current_block) {
+    Log::err("Found beat but there is no current block!");
+  }
+  Log::verbose(" - Adding beat.");
+
+  Beat beat;
+  beat.condition = conditional_buffer_pop();
+  beat.content.parts = std::move(beat_content_queue);
+  beat.attribution = current_tag;
+  current_tag = "";
+  current_block->beats.push_back(beat);
+  return &current_block->beats.back();
+}
+
+// SECTION: CHOICES
+
+Choice *ParseState::add_choice() {
+  if (!current_block) {
+    Log::err("Found choice but there is no current block!");
+    return nullptr;
+  }
+  Log::verbose(" - Adding choice.");
+  Choice choice;
+  choice.content.parts = std::move(text_content_queue);
+  choice.operations = std::move(operation_queue);
+  choice.condition = conditional_buffer_pop();
+  choice_stack.push_back(choice);
+  return &choice_stack.back();
+}
+
+// SECTION: OPERATIONS
+
+// SECTION: TEXT
+
+void ParseState::add_text_string(std::string str) {
+  Log::verbose("Beat queue +=", str);
+  if (text_content_queue.empty() ||
+      !std::holds_alternative<std::string>(text_content_queue.back())) {
+    text_content_queue.push_back(str);
+  } else {
+    std::string &last_str = std::get<std::string>(text_content_queue.back());
+    // Eliminate double spaces for comment joins
+    last_str +=
+        (last_str.back() == ' ' && str.front() == ' ') ? str.substr(1) : str;
+  }
+}
+
+void ParseState::conclude_text() {
+  dbg_out(">>> conclude_text()");
+  add_beat();
+}
+
+RValue ParseState::injectable_buffer_pop() {
+  return *std::exchange(injectable_buffer, std::nullopt);
+}
+
+// SECTION: CONDITIONALS
 
 void ParseState::conditional_step_in() {
   conditional_stack.push_back(Conditional{});
@@ -68,9 +131,39 @@ void ParseState::add_conditional_atom(const ConditionalAtom &atom) {
   current.items.push_back(atom);
 }
 
-ParseState::ParseState(const std::string &filename) {
-  module.filename = filename;
+// SECTION: METHODS
+
+// SECTION: GO
+
+// SECTION: RVALUES
+
+RValue ParseState::rval_buffer_pop() {
+  dbg_out(">>> rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+  auto back = rval_buffer.back();
+  rval_buffer.pop_back();
+  return back;
 }
+
+SimpleRValue ParseState::simple_rval_buffer_pop() {
+  dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+  auto back = rval_buffer.back();
+  rval_buffer.pop_back();
+
+  return std::visit(
+      [](auto &&val) -> SimpleRValue {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::string> ||
+                      std::is_same_v<T, bool> || std::is_same_v<T, int> ||
+                      std::is_same_v<T, float>) {
+          return val;
+        } else {
+          throw std::runtime_error("Expected simple RValue, got complex type");
+        }
+      },
+      back);
+}
+
+// SECTION: ATOMS
 
 std::optional<std::string> ParseState::pop_id_cond() {
   if (last_identifier.length() < 1) {
@@ -83,89 +176,6 @@ std::string ParseState::pop_id() {
   auto r = last_identifier;
   last_identifier = "";
   return r;
-}
-
-RValue ParseState::injectable_buffer_pop() {
-  return *std::exchange(injectable_buffer, std::nullopt);
-}
-
-void ParseState::add_text_string(std::string str) {
-  Log::verbose("Beat queue +=", str);
-  if (text_content_queue.empty() ||
-      !std::holds_alternative<std::string>(text_content_queue.back())) {
-    text_content_queue.push_back(str);
-  } else {
-    std::string &last_str = std::get<std::string>(text_content_queue.back());
-    // Eliminate double spaces for comment joins
-    last_str +=
-        (last_str.back() == ' ' && str.front() == ' ') ? str.substr(1) : str;
-  }
-}
-
-void ParseState::start_block(const std::string &tag) {
-  Log::verbose("Starting new block:", tag);
-
-  Block new_block;
-  // STUB: Use stored tag level
-  new_block.tag = tag;
-  module.blocks.push_back(new_block);
-  dbg_out(">>> [] block_lookup[" << tag << "] = " << module.blocks.size() - 1);
-  module.block_lookup[tag] = module.blocks.size() - 1;
-
-  current_block = &module.blocks.back();
-}
-
-void ParseState::conclude_text() {
-  dbg_out(">>> conclude_text()");
-  add_beat();
-}
-
-void ParseState::store_beat_text() {
-  beat_content_queue = std::move(text_content_queue);
-}
-
-Beat *ParseState::add_beat() {
-  dbg_out(">>> add_beat()");
-  if (!current_block) {
-    Log::err("Found beat but there is no current block!");
-  }
-  Log::verbose(" - Adding beat.");
-
-  Beat beat;
-  beat.condition = conditional_buffer_pop();
-  beat.content.parts = std::move(beat_content_queue);
-  beat.attribution = current_tag;
-  current_tag = "";
-  current_block->beats.push_back(beat);
-  return &current_block->beats.back();
-}
-
-Beat *ParseState::add_logic_beat() {
-  dbg_out(">>> add_logic_beat()");
-  if (!current_block) {
-    Log::err("Found a logic beat but there is no current block!");
-  }
-  Log::verbose(" - Adding a logic beat.");
-
-  Beat beat;
-  beat.condition = conditional_buffer_pop();
-  current_block->beats.push_back(beat);
-  store_is_else = false;
-  return &current_block->beats.back();
-}
-
-Choice *ParseState::add_choice() {
-  if (!current_block) {
-    Log::err("Found choice but there is no current block!");
-    return nullptr;
-  }
-  Log::verbose(" - Adding choice.");
-  Choice choice;
-  choice.content.parts = std::move(text_content_queue);
-  choice.operations = std::move(operation_queue);
-  choice.condition = conditional_buffer_pop();
-  choice_stack.push_back(choice);
-  return &choice_stack.back();
 }
 
 } // namespace Skald

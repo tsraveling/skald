@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tao/pegtl/rules.hpp"
 #include <tao/pegtl.hpp>
 
 using namespace tao::pegtl;
@@ -12,7 +13,8 @@ struct end_line_comment
     : seq<string<'-', '-', '-'>, star<not_one<'\r', '\n'>>> {};
 
 /** Whitespace means 0-n whitespace characters */
-struct ws : star<blank> {};
+using ws = star<blank>;
+using sp = plus<blank>;
 struct blank_line : seq<ws, eol> {};
 struct ignored : sor<line_comment, blank_line> {};
 
@@ -80,20 +82,53 @@ struct operator_less_equal : string<'<', '='> {};
 struct mut_operator : sor<operator_plus_equals, operator_minus_equals,
                           operator_equals_switch, operator_equals> {};
 
-// SECTION: TESTBEDS
+/** Defines a module path, relative to codex. Ends at EOL, move marker, or
+ * comment. */
+struct module_path
+    : plus<
+          seq<not_at<move_marker>, not_at<line_comment>, not_one<'\r', '\n'>>> {
+};
 
-struct rvalue_testbed : sor<val_bool, val_string, val_float, val_int> {};
-struct testbed_open : seq<keyword<'@', 't', 'e', 's', 't', 'b', 'e', 'd'>,
-                          plus<blank>, identifier, functional_eol> {};
+using block1_prefix = string<'#'>;
+using block2_prefix = string<'#', '#'>;
+using block3_prefix = string<'#', '#', '#'>;
+using block_prefix = sor<block1_prefix, block2_prefix, block3_prefix>;
+
+// SECTION: KEYWORDS
+
+struct keyword_testbed : keyword<'@', 't', 'e', 's', 't', 'b', 'e', 'd'> {};
+struct keyword_let : keyword<'@', 'l', 'e', 't'> {};
 struct keyword_end : keyword<'@', 'e', 'n', 'd'> {};
 struct keyword_if : keyword<'@', 'e', 'n', 'd'> {};
 struct keyword_elseif : keyword<'@', 'e', 'l', 's', 'e', 'i', 'f'> {};
 struct keyword_else : keyword<'@', 'e', 'l', 's', 'e'> {};
+struct keyword_receive : keyword<'@', 'r', 'e', 'c', 'e', 'i', 'v', 'e'> {};
+
+// SECTION: TOP MATTER
+
+/** Declarations for @testbed and @let */
+struct declaration
+    : seq<indent, identifier, sp, one<'='>, ws, rvalue_simple, functional_eol> {
+};
+
+// Testbeds
+struct testbed_open
+    : seq<keyword_testbed, plus<blank>, identifier, functional_eol> {};
 struct testbed_closed : seq<keyword_end, functional_eol> {};
-struct testbed_declaration
-    : seq<ws, identifier, ws, one<'='>, ws, rvalue_testbed, functional_eol> {};
-struct testbed : seq<testbed_open, star<sor<ignored, testbed_declaration>>,
-                     testbed_closed> {};
+struct testbed
+    : seq<testbed_open, star<sor<ignored, declaration>>, testbed_closed> {};
+
+// Let clause
+struct let_open : seq<keyword_let, functional_eol> {};
+struct let_close : seq<keyword_end, functional_eol> {};
+struct let : seq<let_open, star<sor<ignored, declaration>>, let_close> {};
+
+// Receive
+struct receive : seq<keyword_receive, ws, module_path, functional_eol> {};
+
+/** The whole top matter section */
+struct top_matter
+    : star<sor<testbed, let, receive, ignored, not_at<block_prefix>>> {};
 
 // SECTION: CONDITIONALS
 
@@ -180,7 +215,6 @@ struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
 
 /** You can use basically any string for your module path; we'll check validity
  * later in the LSP */
-struct module_path : plus<seq<not_at<move_marker>, not_one<'\r', '\n'>>> {};
 struct keyword_go : keyword<'G', 'O'> {};
 struct keyword_exit : keyword<'E', 'X', 'I', 'T'> {};
 struct op_exit : seq<keyword_exit, opt<seq<plus<blank>, rvalue>>> {};
@@ -223,10 +257,6 @@ struct choice_clause : seq<choice_line, star<op_line>> {};
 struct choice_block : plus<choice_clause> {};
 
 // SECTION: BEATS
-
-using block1_prefix = string<'#'>;
-using block2_prefix = string<'#', '#'>;
-using block3_prefix = string<'#', '#', '#'>;
 
 /** The tag part of a block tag */
 struct block_tag_name : identifier {};
