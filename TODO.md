@@ -1,6 +1,48 @@
 # Skald TODO
 
-- A: Block def
+## Parser Changes
+- [ ] @let clause
+- [ ] Operations
+    - [ ] Switch to inline in parser
+    - [ ] Switch to inline in data
+- [ ] Choices
+    - [ ] Move choices from attached to beats into ChoiceBlock
+- [ ] Child Blocks and Syntax Changes
+    - [ ] Add space `# `
+    - [ ] ## Children
+    - [ ] ### Grandchildren
+    - [ ] Reflect in data
+- [ ] Transitions
+- [ ] Inline operations
+- [ ] Conditional Blocks
+- [ ] Codices
+- [ ] Method definitions
+- [ ] Global definitions
+- [ ] Conditional Statements and Ternaries
+
+## LSP
+
+- [ ] Count a_b as one word, not two
+
+## Engine
+
+- [ ] New conditional approach
+- [ ] Handle inline operations
+- [ ] Set up infrastructure for global state
+- [ ] Set up infrastructure for centralized project system
+
+## Skalder
+
+- [ ] Update local engine and parser binaries so we are up to date, if needed
+- [ ] Implement local/thread/global state system
+- [ ] Add an arg such that we can jump in at any block we want to
+- [ ] Add an arg such that it will output a "report" qflist style of daed ends, undefined points, etc.
+- [ ] Add testbed support
+
+## Treesitter
+
+- [ ] Re-run treesitter and refine until it works with new schema
+
 
 # Notes
 

@@ -26,7 +26,7 @@ Note: we use three hyphens instead of two (like in Lua) to keep from conflicting
 
 ## 1.3 Embedded Comments
 
-You can put embedded comments in beats by using square brackets:
+You can put embedded comments in beats by using curly brackets and comment syntax:
 
 ```
 This is a beat [but this text will not appear in it] -- cool, huh?
@@ -374,6 +374,31 @@ There are three **scopes** of variable:
 
 **Module** variables are defined at the top of a .ska file. They are strongly typed, and will be **pushed** to any modules navigated to via `GO` (4.1.1).
 
+```
+--- Items in the following section will be "pushed" through GO operations.
+--- It should come before any narrative blocks.
+@let 
+  num_var  = 2
+  str_var  = "Hello, World!"
+  bool_var bool = true --- you can provide a type with a default, but it's optional.
+  int_var int --- if no default is provided, provide type!
+@end
+
+#start
+
+The game is afoot ...
+```
+
+If you are using Neovim or VSCode to write Skald, the LSP will detect when a module is pushed to by another, and include its module-scoped variables in autocomplete. If you expect to receive a push from a module that hasn't been fully written yet, you can mark it for the LSP like this:
+
+```
+@receive subfolder/scene.ska
+```
+
+This can go before or after `@let` or `@testbed` blocks, but must come before narrative blocks.
+
+See Module Transitions 4.1.1 for more details on how module-scoped variables are passed through `GO` statements.
+
 **Ad Hoc** variables are defined inline, off-the-cuff, and are not strongtly typed. They are also not pushed through to following modules; they are intended for immediate conversational state:
 
 ```
@@ -386,30 +411,18 @@ There are three **scopes** of variable:
 (? temp_check) This beat will show up now.
 ```
 
-Global variables are defined in the .codex file. Module variables are defined at the top of a .ska file, before any testbeds (5.2) or blocks:
-
-```
---- ModuleOne.ska
-
-~ num_var  = 2
-~ str_var  = "Hello, World!"
-~ bool_var = true
-~ int_var int --- if no default is provided, provide type!
-
-#start
-
-The game is afoot ...
-```
-
+Global variables are defined in the .codex file (4.2). 
 ### 3.1.4 Variable Types
 
 Variables can either be **boolean**, **integer**, **float** or **string**:
 
 ```
-~ health int
-~ speed  float
-~ alive  bool
-~ name   string_
+@let
+  health int
+  speed  float
+  alive  bool
+  name   string_
+@end
 ```
 
 TODO: add details on conditionals between ad hoc vars.
@@ -625,6 +638,40 @@ And you wanted to move from `a` to `b`, you would do:
 ```
 
 In other words, relative to main.codex.
+
+**Module-scoped variables** (3.1.3) are pushed through `GO` statements. So if you have a module `A.ska` that defines these:
+
+```
+--- A.ska
+@let
+  a_one = 1
+  a_two = 2
+@end
+```
+
+And then that module at some point does `GO B.ska`, then `B.ska` will be able to read and mutate the a_one variable.
+
+Here's a subtle rule: if a module is pushed into this one, this one will push it on. But if we come in from a different origin that *doesn't* define that variable, it will be treated as a local ad-hoc variable.
+
+So let's say we have `A.ska` above which pushes to `B.ska`, but we *also* have `A2.ska` which pushes to B. In the case where we start at `A2` and `GO` -> `B`, `a_one` and `a_two` will still be module-defined (pushed onward on `GO`), but will be defined as the zero value (0, 0.0, false, "") unless locally set in `@let` (see next section, 4.1.1.1).
+
+A series of modules that are connected with `GO` or `@receive` are called **threads**. 
+
+#### 4.1.1.1 Thread Variable Definitions
+
+There are a few rules that govern how you can define thread variables, if you are trying to do so in more than one place.
+
+1. Within a thread, you cannot define the same variable with two different types. If `A.ska` above defines `a_one = 1`, then `a_one` is an `int`; trying to define it in `A2.ska` as `string` will throw an error.
+2. You can, however, redefine it locally with the same type, e.g. we could do `a_one = 10` in B's `@let` clause. If the player enters a thread at this module, or we come to this module from one where the variable was not defined, it will be initialized to this value.
+3. If a previous module sets or mutates a module-scoped variable, though, that variable will override local definitions. So in the above cases:
+    - As `A.ska` defines `a_one` as `1`, then a definition of B will be overwritten by 1.
+    - But if we come in from `A2.ska`, which doesn't define `a_one`, then `a_one` will be initialized to `10`.
+
+Finally, if we set a variable *before* any module defines it at module scope, it will be treated as an ad-hoc variable and discarded. So in the example above, if at some point in `A2` we do `~ a_one = 100`, that value will be useable within A2, but will be discarded when transitioning to B, which will then redefine a_one as a module variable initialized with 10.
+
+**TL;DR**: modules **push module-scoped variables** forward through `GO` statements; they are not transmitted in any other way.
+
+If this sounds like it will cause you issues, because your modules have multiple entry points and you want shared states, that's probably a good time to use **global variables** (4.2.2).
 
 
 ### 4.1.2 Conclusions

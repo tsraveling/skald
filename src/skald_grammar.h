@@ -7,8 +7,11 @@ using namespace tao::pegtl;
 namespace Skald {
 
 // Line comment using the same comment marker style
-struct line_comment : seq<string<'-', '-'>, until<eol>> {};
-struct end_line_comment : seq<string<'-', '-'>, star<not_one<'\r', '\n'>>> {};
+struct line_comment : seq<string<'-', '-', '-'>, until<eol>> {};
+struct end_line_comment
+    : seq<string<'-', '-', '-'>, star<not_one<'\r', '\n'>>> {};
+
+/** Whitespace means 0-n whitespace characters */
 struct ws : star<blank> {};
 struct blank_line : seq<ws, eol> {};
 struct ignored : sor<line_comment, blank_line> {};
@@ -83,6 +86,9 @@ struct rvalue_testbed : sor<val_bool, val_string, val_float, val_int> {};
 struct testbed_open : seq<keyword<'@', 't', 'e', 's', 't', 'b', 'e', 'd'>,
                           plus<blank>, identifier, functional_eol> {};
 struct keyword_end : keyword<'@', 'e', 'n', 'd'> {};
+struct keyword_if : keyword<'@', 'e', 'n', 'd'> {};
+struct keyword_elseif : keyword<'@', 'e', 'l', 's', 'e', 'i', 'f'> {};
+struct keyword_else : keyword<'@', 'e', 'l', 's', 'e'> {};
 struct testbed_closed : seq<keyword_end, functional_eol> {};
 struct testbed_declaration
     : seq<ws, identifier, ws, one<'='>, ws, rvalue_testbed, functional_eol> {};
@@ -144,7 +150,7 @@ struct text_injection : seq<one<'{'>, ws, injectable, ws, one<'}'>> {};
 // SECTION: TEXT
 
 /** Matches {-- some comment} */
-struct inline_comment : seq<string<'{', '-', '-'>, until<string<'}'>>> {};
+struct inline_comment : seq<string<'{', '-', '-', '-'>, until<string<'}'>>> {};
 
 /** Matches anything up to { or EOL */
 struct inline_text_segment
@@ -202,46 +208,65 @@ struct inline_choice_move : op_move {};
 struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
                          opt<inline_choice_move>, eol> {};
 
-/** The choice line with optional indented operation lines */
+/** The choice line with optional indented operation lines
+ *
+ *  - > Go left
+ *  -   :do_operation()
+ */
 struct choice_clause : seq<choice_line, star<op_line>> {};
+
+/** A group of choices, corresponding to ChoiceGroup
+ *
+ *  - > First choice
+ *  - > Second choice
+ */
 struct choice_block : plus<choice_clause> {};
 
 // SECTION: BEATS
-//
+
+using block1_prefix = string<'#'>;
+using block2_prefix = string<'#', '#'>;
+using block3_prefix = string<'#', '#', '#'>;
+
+/** The tag part of a block tag */
 struct block_tag_name : identifier {};
-struct block_tag_line : seq<one<'#'>, block_tag_name, ws, opt<end_line_comment>, eol> {};
 
-struct logic_beat_else : paren<keyword<'e', 'l', 's', 'e'>> {};
-struct logic_beat_conditional : sor<conditional, logic_beat_else> {};
-struct logic_beat_clause
-    : seq<ws, one<'*'>, ws, opt<logic_beat_conditional>, ws,
-          opt<end_line_comment>, ws, eol, plus<op_line>> {};
-struct logic_beat_single
-    : seq<ws, one<'*'>, ws, opt<logic_beat_conditional>, ws, operation, ws,
-          opt<end_line_comment>, ws, eol> {};
+/** Block tags, e.g.:
+ *
+ *  - # top_level
+ *  - ## child_tag
+ *  - ### grandchild_tag
+ */
+struct block_tag_line
+    : seq<sor<block1_prefix, block2_prefix, block3_prefix>, one<' '>,
+          block_tag_name, ws, opt<end_line_comment>, eol> {};
 
-/** The `some_tag: ...` part of a beat */
+/** The `some_tag: ...` part of a beat. */
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
 
-/** A line with an optional attribution that is not indented or blank */
-struct beat_line
-    : seq<not_at<seq<ws, eol>>, not_at<choice_prefix>, not_at<block_tag_line>,
-          opt<conditional>, ws, opt<beat_attribution>, text_content, eol> {};
-
-/** A text beat, optionally followed by some operations. */
-struct beat_clause
-    : seq<beat_line, star<op_line>, opt<seq<star<blank_line>, choice_block>>> {
-};
+/** A line with an optional attribution that is not indented or blank
+ *
+ *  - alice: Hey there!
+ */
+struct beat : seq<not_at<seq<ws, eol>>,   // Not at end of line or whitespace
+                  not_at<choice_prefix>,  // Not a choice
+                  not_at<block_tag_line>, // Not at a new block
+                  opt<conditional>, // Potentially starts with a conditional
+                  ws,               // 0-n characters
+                  opt<beat_attribution>, // Optionally
+                  text_content, eol> {}; // The text content
 
 // SECTION: BLOCKS
 
 // Error recovery: skip any line that doesn't match known block content.
-// This prevents a single bad line from killing the parse for the rest of the file.
-struct skip_line : seq<not_at<block_tag_line>, not_at<seq<ws, eol>>, until<eol>> {};
+// This prevents a single bad line from killing the parse for the rest of the
+// file.
+struct skip_line
+    : seq<not_at<block_tag_line>, not_at<seq<ws, eol>>, until<eol>> {};
 
-struct block : seq<block_tag_line, star<sor<ignored, logic_beat_single,
-                                            logic_beat_clause, beat_clause, skip_line>>> {
-};
+struct block : seq<block_tag_line,
+                   star<sor<ignored, logic_beat_single, logic_beat_clause,
+                            beat_clause, skip_line>>> {};
 
 // SECTION: FULL GRAMMAR
 

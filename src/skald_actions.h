@@ -13,6 +13,13 @@ namespace Skald {
 
 template <typename Rule> struct action {};
 
+// SECTION: BLOCK TAGS
+
+// STUB: Store tag level here
+template <> struct action<block1_prefix> {
+  static void apply0(ParseState &state) { dbg_out(">>> #"); }
+};
+
 template <> struct action<block_tag_name> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
@@ -428,6 +435,7 @@ template <> struct action<choice_clause> {
 template <> struct action<choice_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
+    // STUB: Build ChoiceGroup here
     dbg_out(">>> choice block: " << input.string());
     // state.add_beat();
   }

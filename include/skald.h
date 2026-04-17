@@ -468,8 +468,7 @@ struct ConditionalBlock {};
 // STUB: Build ConditionalChain
 struct ConditionalChain {};
 
-// TODO: Support the "auto-continue" block
-// (that is untagged and follows an inline choice block)
+// STUB: Implement Block levels and parents
 struct Block : LineEntity {
   std::string tag;
   std::vector<BlockMember> members{};
