@@ -1,10 +1,18 @@
 #pragma once
 #include "skald.h"
+#include "tao/pegtl/position.hpp"
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace Skald {
+
+/** Exception class for Skald parse errors */
+struct ParseError {
+  tao::pegtl::position pos;
+  std::string msg;
+  enum Severity { WARNING, ERROR, FATAL } severity = ERROR;
+};
 
 struct ParseState {
 
@@ -15,6 +23,13 @@ struct ParseState {
 
   /** The module attached to the parsed file */
   Module module;
+
+  // SECTION: ERROR HANDLING
+
+  std::vector<ParseError> errors;
+  void err(const tao::pegtl::position pos, std::string msg);
+  void warn(const tao::pegtl::position pos, std::string msg);
+  void fail(const tao::pegtl::position pos, std::string msg);
 
   // SECTION: TOP MATTER
 

@@ -11,6 +11,21 @@ ParseState::ParseState(const std::string &filename) {
 
 // SECTION: MODULE LEVEL
 
+// SECTION: ERROR HANDLING
+
+void ParseState::err(const tao::pegtl::position pos, std::string msg) {
+  errors.push_back(ParseError{
+      .pos = pos, .msg = msg, .severity = ParseError::Severity::ERROR});
+}
+void ParseState::warn(const tao::pegtl::position pos, std::string msg) {
+  errors.push_back(ParseError{
+      .pos = pos, .msg = msg, .severity = ParseError::Severity::WARNING});
+}
+void ParseState::fail(const tao::pegtl::position pos, std::string msg) {
+  errors.push_back(ParseError{
+      .pos = pos, .msg = msg, .severity = ParseError::Severity::FATAL});
+}
+
 // SECTION: TOP MATTER
 
 // SECTION: BLOCKS

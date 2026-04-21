@@ -64,18 +64,30 @@ template <> struct action<string_content> {
 
 // @testbed id <-- grabs id as testbed name
 template <> struct action<testbed_open> {
-  static void apply0(ParseState &state) {
-    dbg_out("<<< testbed_open");
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    if (state.top_matter_section != ParseState::TopMatterSection::NONE) {
+      state.err(input.pos, "Tried to open a testbed but another top matter "
+                           "section already was.");
+    }
     state.module.testbeds.push_back(Testbed{.name = state.pop_id()});
     state.top_matter_section = ParseState::TopMatterSection::TESTBED;
   }
 };
 
 template <> struct action<testbed_closed> {
-  static void apply0(ParseState &state) {
-    // STUB: State action
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    if (state.top_matter_section != ParseState::TopMatterSection::TESTBED) {
+      state.err(input.pos, "Got a testbed end, but no testbed was open!");
+    }
+    state.top_matter_section = ParseState::TopMatterSection::NONE;
   }
 };
+
+// STUB: Clone the above for lets
+
+// STUB: Add declarations depending on which top matter is open
 
 template <> struct action<testbed_declaration> {
   static void apply0(ParseState &state) {
