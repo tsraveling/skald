@@ -18,8 +18,12 @@ struct LineEntity {
   size_t line_number = 0;
 };
 
+/** Used for strong typing declarations and methods */
+enum ValueType { STRING, BOOL, INT, FLOAT };
+
 struct Variable {
   std::string name;
+  ValueType type;
 };
 
 // Forward declarations
@@ -95,15 +99,15 @@ inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
       rval);
 }
 
-struct Declaration : LineEntity {
+struct ModuleVar : LineEntity {
   Variable var;
   SimpleRValue initial_value;
-  bool is_imported = false;
 };
 
 struct MethodCall : LineEntity {
   std::string method;
   std::vector<RValue> args;
+  std::optional<ValueType> return_type;
   std::string dbg_desc() const; // Declare only for circular dep reasons
 };
 
@@ -477,7 +481,7 @@ struct Block : LineEntity {
 class Module {
 public:
   std::string filename;
-  std::vector<Declaration> declarations;
+  std::vector<ModuleVar> module_vars;
   std::vector<Testbed> testbeds;
   std::vector<Block> blocks;
   std::unordered_map<std::string, size_t> block_lookup;

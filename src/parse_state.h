@@ -18,6 +18,9 @@ struct ParseState {
 
   // SECTION: TOP MATTER
 
+  enum TopMatterSection { NONE, TESTBED, LET };
+  TopMatterSection top_matter_section = TopMatterSection::NONE;
+
   // SECTION: BLOCKS
 
   /** The block currently under construction */

@@ -399,7 +399,13 @@ This can go before or after `@let` or `@testbed` blocks, but must come before na
 
 See Module Transitions 4.1.1 for more details on how module-scoped variables are passed through `GO` statements.
 
-**Ad Hoc** variables are defined inline, off-the-cuff, and are not strongtly typed. They are also not pushed through to following modules; they are intended for immediate conversational state:
+**Ad Hoc** variables are defined inline, off-the-cuff, and are not syntactically typed (aka you don't have to do e.g. `~ ad_hoc_var int = 10`. However they are typed to their initial value at creation, so you can't do this:
+
+```
+~ ad_hoc = 10 --- first time variable is used creates ad_hoc int
+~ ad_hoc = "no-op" --- this will throw an error because you can't change types
+
+They are also not pushed through to following modules; they are intended for immediate conversational state:
 
 ```
 --- Ad hoc variables

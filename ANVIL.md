@@ -13,8 +13,6 @@
 
 ## TO DO
 
-- @let clause
-- Structural refactor
 - Move operations inline
 - Move choices into choice groups
 - Handle child blocks
@@ -41,6 +39,11 @@
 - Support custom engine insertion
 
 ## DOING
+
+- @let clause
+- Structural refactor
+
+## TESTING
 
 
 ## DONE

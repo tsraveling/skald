@@ -647,8 +647,7 @@ void Engine::load(std::string path) {
 
     dbg_out("DECLARATIONS:");
     for (const auto &dec : pstate.module.declarations) {
-      dbg_out(" - " << (dec.is_imported ? "<IMPORT>" : "<NEW>") << " "
-                    << dec.var.name << " (" << rval_to_string(dec.initial_value)
+      dbg_out(" - " << dec.var.name << " (" << rval_to_string(dec.initial_value)
                     << ")");
     }
 

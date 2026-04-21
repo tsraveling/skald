@@ -58,14 +58,25 @@ template <> struct action<string_content> {
   }
 };
 
-// SECTION: TESTBEDS
+// SECTION: TOP MATTER
 
+/// Testbeds ///
+
+// @testbed id <-- grabs id as testbed name
 template <> struct action<testbed_open> {
   static void apply0(ParseState &state) {
     dbg_out("<<< testbed_open");
     state.module.testbeds.push_back(Testbed{.name = state.pop_id()});
+    state.top_matter_section = ParseState::TopMatterSection::TESTBED;
   }
 };
+
+template <> struct action<testbed_closed> {
+  static void apply0(ParseState &state) {
+    // STUB: State action
+  }
+};
+
 template <> struct action<testbed_declaration> {
   static void apply0(ParseState &state) {
     dbg_out("<<< testbed_dec");
@@ -86,6 +97,16 @@ template <> struct action<testbed_closed> {
 template <> struct action<testbed> {
   static void apply0(ParseState &state) { dbg_out("<<< testbed"); }
 };
+
+template <> struct action<let> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    // Do something here
+  }
+};
+
+/// Declarations ///
 
 // SECTION: RVALUES AND ARGS
 
@@ -359,152 +380,152 @@ template <> struct action<declaration_import> {
 template <> struct action<declaration_line> {
   static void apply0(ParseState &state) {
     state.module.declarations.push_back(
-        Declaration{.var = {state.pop_id()},
-                    .initial_value = state.simple_rval_buffer_pop(),
-                    .is_imported = state.last_declaration_was_import});
+        ModuleVar{.var = {state.pop_id()},
+                    .initial_value = state.simple_rval_buffer_pop());
   }
 };
 
-/// SECTION: MUTATIONS ///
+  /// SECTION: MUTATIONS ///
 
-template <> struct action<op_mutate_subtract> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> op_mutate_subtract: " << input.string());
-    state.operation_queue.push_back(Mutation{input.position().line,
-                                             state.pop_id(), Mutation::SUBTRACT,
-                                             state.rval_buffer_pop()});
-  }
-};
-template <> struct action<op_mutate_add> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> op_mutate_add: " << input.string());
-    state.operation_queue.push_back(Mutation{input.position().line,
-                                             state.pop_id(), Mutation::ADD,
-                                             state.rval_buffer_pop()});
-  }
-};
-template <> struct action<op_mutate_equate> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> op_mutate_equate: " << input.string());
-    state.operation_queue.push_back(Mutation{input.position().line,
-                                             state.pop_id(), Mutation::EQUATE,
-                                             state.rval_buffer_pop()});
-  }
-};
-template <> struct action<op_mutate_switch> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    state.operation_queue.push_back(
-        Mutation{input.position().line, state.pop_id(), Mutation::SWITCH, {}});
-  }
-};
+  template <> struct action<op_mutate_subtract> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      dbg_out(">>> op_mutate_subtract: " << input.string());
+      state.operation_queue.push_back(
+          Mutation{input.position().line, state.pop_id(), Mutation::SUBTRACT,
+                   state.rval_buffer_pop()});
+    }
+  };
+  template <> struct action<op_mutate_add> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      dbg_out(">>> op_mutate_add: " << input.string());
+      state.operation_queue.push_back(Mutation{input.position().line,
+                                               state.pop_id(), Mutation::ADD,
+                                               state.rval_buffer_pop()});
+    }
+  };
+  template <> struct action<op_mutate_equate> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      dbg_out(">>> op_mutate_equate: " << input.string());
+      state.operation_queue.push_back(Mutation{input.position().line,
+                                               state.pop_id(), Mutation::EQUATE,
+                                               state.rval_buffer_pop()});
+    }
+  };
+  template <> struct action<op_mutate_switch> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      state.operation_queue.push_back(Mutation{
+          input.position().line, state.pop_id(), Mutation::SWITCH, {}});
+    }
+  };
 
-/// OPERATION CORE ///
+  /// OPERATION CORE ///
 
-template <> struct action<op_line> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out(">>> op_line: " << text);
-  }
-};
+  template <> struct action<op_line> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      auto text = input.string();
+      dbg_out(">>> op_line: " << text);
+    }
+  };
 
-// SECTION: CHOICES
+  // SECTION: CHOICES
 
-template <> struct action<inline_choice_move> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    state.operation_queue.push_back(
-        Move{input.position().line, state.pop_id()});
-    dbg_out(">>> inline_choice_move: " << text);
-  }
-};
+  template <> struct action<inline_choice_move> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      auto text = input.string();
+      state.operation_queue.push_back(
+          Move{input.position().line, state.pop_id()});
+      dbg_out(">>> inline_choice_move: " << text);
+    }
+  };
 
-template <> struct action<choice_clause> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> choice_clause: " << input.string());
-    state.add_choice();
-  }
-};
+  template <> struct action<choice_clause> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      dbg_out(">>> choice_clause: " << input.string());
+      state.add_choice();
+    }
+  };
 
-template <> struct action<choice_block> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    // STUB: Build ChoiceGroup here
-    dbg_out(">>> choice block: " << input.string());
-    // state.add_beat();
-  }
-};
+  template <> struct action<choice_block> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      // STUB: Build ChoiceGroup here
+      dbg_out(">>> choice block: " << input.string());
+      // state.add_beat();
+    }
+  };
 
-// SECTION: BEATS
+  // SECTION: BEATS
 
-template <> struct action<logic_beat_single> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> logic_beat_single: " << input.string());
-    auto *beat = state.add_logic_beat();
-    beat->line_number = input.position().line;
-  }
-};
+  template <> struct action<logic_beat_single> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      dbg_out(">>> logic_beat_single: " << input.string());
+      auto *beat = state.add_logic_beat();
+      beat->line_number = input.position().line;
+    }
+  };
 
-// template <> struct action<logic_beat_conditional> {
-//   static void apply0(ParseState &state) {
-//     dbg_out(">>> logic_beat_conditional");
-//   }
-// };
+  // template <> struct action<logic_beat_conditional> {
+  //   static void apply0(ParseState &state) {
+  //     dbg_out(">>> logic_beat_conditional");
+  //   }
+  // };
 
-template <> struct action<logic_beat_else> {
-  static void apply0(ParseState &state) {
-    dbg_out(">>> logic_beat_else");
-    state.store_is_else = true;
-  }
-};
+  template <> struct action<logic_beat_else> {
+    static void apply0(ParseState &state) {
+      dbg_out(">>> logic_beat_else");
+      state.store_is_else = true;
+    }
+  };
 
-template <> struct action<logic_beat_clause> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> logic_beat_clause:\n" << input.string());
-    auto *beat = state.add_logic_beat();
-    beat->line_number = input.position().line;
-  }
-};
+  template <> struct action<logic_beat_clause> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      dbg_out(">>> logic_beat_clause:\n" << input.string());
+      auto *beat = state.add_logic_beat();
+      beat->line_number = input.position().line;
+    }
+  };
 
-template <> struct action<beat_attribution> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
+  template <> struct action<beat_attribution> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      auto text = input.string();
 
-    // Grab everything before the colon
-    std::string tag = text.substr(0, text.find(':'));
+      // Grab everything before the colon
+      std::string tag = text.substr(0, text.find(':'));
 
-    // Trim leading whitespace
-    auto start = tag.find_first_not_of(" \t");
-    state.current_tag = (start != std::string::npos) ? tag.substr(start) : tag;
-  }
-};
+      // Trim leading whitespace
+      auto start = tag.find_first_not_of(" \t");
+      state.current_tag =
+          (start != std::string::npos) ? tag.substr(start) : tag;
+    }
+  };
 
-template <> struct action<beat_line> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    const position p = input.position();
-    dbg_out("--> " << p << ": beat line:\n > " << input.string());
-    state.store_beat_text();
-  }
-};
+  template <> struct action<beat_line> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      const position p = input.position();
+      dbg_out("--> " << p << ": beat line:\n > " << input.string());
+      state.store_beat_text();
+    }
+  };
 
-template <> struct action<beat_clause> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    const position p = input.position();
-    dbg_out("+++ " << p << ": BEAT CLAUSE END:\n" << input.string());
-    auto *beat = state.add_beat();
-    beat->line_number = input.position().line;
-  }
-};
+  template <> struct action<beat_clause> {
+    template <typename ActionInput>
+    static void apply(const ActionInput &input, ParseState &state) {
+      const position p = input.position();
+      dbg_out("+++ " << p << ": BEAT CLAUSE END:\n" << input.string());
+      auto *beat = state.add_beat();
+      beat->line_number = input.position().line;
+    }
+  };
 
 } // namespace Skald
