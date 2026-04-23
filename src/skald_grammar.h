@@ -104,19 +104,32 @@ struct keyword_elseif : keyword<'@', 'e', 'l', 's', 'e', 'i', 'f'> {};
 struct keyword_else : keyword<'@', 'e', 'l', 's', 'e'> {};
 struct keyword_receive : keyword<'@', 'r', 'e', 'c', 'e', 'i', 'v', 'e'> {};
 
+struct keyword_int : keyword<'i', 'n', 't'> {};
+struct keyword_float : keyword<'f', 'l', 'o', 'a', 't'> {};
+struct keyword_string : keyword<'s', 't', 'r', 'i', 'n', 'g'> {};
+struct keyword_bool : keyword<'b', 'o', 'o', 'l'> {};
+
 // SECTION: TOP MATTER
 
-/** Declarations for @testbed and @let */
-struct declaration
+/** Simple `value = 3` kind of set for testbeds. */
+struct testbed_set
     : seq<indent, identifier, sp, one<'='>, ws, rvalue_simple, functional_eol> {
 };
+
+/** Used to define a value type for methods or variables */
+using value_type =
+    sor<keyword_int, keyword_float, keyword_string, keyword_bool>;
+
+/** Declarations, used for module sets and globals in codex files. */
+struct declaration : seq<indent, identifier, sp, opt<seq<value_type, sp>>,
+                         one<'='>, ws, opt<rvalue_simple>, functional_eol> {};
 
 // Testbeds
 struct testbed_open
     : seq<keyword_testbed, plus<blank>, identifier, functional_eol> {};
 struct testbed_closed : seq<keyword_end, functional_eol> {};
 struct testbed
-    : seq<testbed_open, star<sor<ignored, declaration>>, testbed_closed> {};
+    : seq<testbed_open, star<sor<ignored, testbed_set>>, testbed_closed> {};
 
 // Let clause
 struct let_open : seq<keyword_let, functional_eol> {};

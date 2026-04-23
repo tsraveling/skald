@@ -242,7 +242,7 @@ inline std::string dbg_desc_conditional_item(const ConditionalItem &item) {
       item);
 }
 
-struct TestbedDeclaration : LineEntity {
+struct TestbedSet : LineEntity {
   std::string variable;
   SimpleRValue test_value;
   std::string dbg_desc() const {
@@ -252,7 +252,7 @@ struct TestbedDeclaration : LineEntity {
 
 struct Testbed : LineEntity {
   std::string name;
-  std::vector<TestbedDeclaration> declarations;
+  std::vector<TestbedSet> declarations;
   std::string dbg_desc() const {
     std::string ret = "@" + name + ":";
     for (auto &dec : declarations) {

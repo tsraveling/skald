@@ -68,7 +68,7 @@ template <> struct action<testbed_open> {
   static void apply(const ActionInput &input, ParseState &state) {
     if (state.top_matter_section != ParseState::TopMatterSection::NONE) {
       state.err(input.pos, "Tried to open a testbed but another top matter "
-                           "section already was.");
+                           "section was already open.");
     }
     state.module.testbeds.push_back(Testbed{.name = state.pop_id()});
     state.top_matter_section = ParseState::TopMatterSection::TESTBED;
@@ -85,40 +85,53 @@ template <> struct action<testbed_closed> {
   }
 };
 
-// STUB: Clone the above for lets
-
-// STUB: Add declarations depending on which top matter is open
-
-template <> struct action<testbed_declaration> {
-  static void apply0(ParseState &state) {
-    dbg_out("<<< testbed_dec");
-    // This code assumes that a testbed has been opened, and that only simple
-    // rvalues will come through; this is grammar-enforced which is fortunate,
-    // because otherwise this would crash quite badly!
+template <> struct action<testbed_set> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    if (state.top_matter_section != ParseState::TopMatterSection::TESTBED) {
+      state.err(input.pos, "Got a testbed set, but no testbed was open!");
+      return;
+    }
     auto val = *cast_rval_to_simple(state.rval_buffer_pop());
     state.module.testbeds.back().declarations.push_back(
-        TestbedDeclaration{.variable = state.pop_id(), .test_value = val});
+        TestbedSet{.variable = state.pop_id(), .test_value = val});
   }
 };
-template <> struct action<rvalue_testbed> {
-  static void apply0(ParseState &state) { dbg_out("<<< testbed_rval"); }
-};
-template <> struct action<testbed_closed> {
-  static void apply0(ParseState &state) { dbg_out("<<< testbed_closed"); }
-};
+
 template <> struct action<testbed> {
   static void apply0(ParseState &state) { dbg_out("<<< testbed"); }
 };
 
-template <> struct action<let> {
+/// Let Clauses ///
+
+template <> struct action<let_open> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    // Do something here
+    if (state.top_matter_section != ParseState::TopMatterSection::NONE) {
+      state.err(input.pos, "Tried to open a let clause but another top matter "
+                           "section was already open.");
+    }
+    state.top_matter_section = ParseState::TopMatterSection::LET;
   }
 };
 
+template <> struct action<let_close> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    if (state.top_matter_section != ParseState::TopMatterSection::LET) {
+      state.err(input.pos, "Got a let end, but no let clause was open!");
+    }
+    state.top_matter_section = ParseState::TopMatterSection::NONE;
+  }
+};
+
+template <> struct action<let> {
+  static void apply0(ParseState &state) { dbg_out("<<< let clause"); }
+};
+
 /// Declarations ///
+
+// STUB: Add declarations stack and then use it to populate the let clause above
 
 // SECTION: RVALUES AND ARGS
 
