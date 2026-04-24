@@ -104,10 +104,10 @@ struct keyword_elseif : keyword<'@', 'e', 'l', 's', 'e', 'i', 'f'> {};
 struct keyword_else : keyword<'@', 'e', 'l', 's', 'e'> {};
 struct keyword_receive : keyword<'@', 'r', 'e', 'c', 'e', 'i', 'v', 'e'> {};
 
-struct keyword_int : keyword<'i', 'n', 't'> {};
-struct keyword_float : keyword<'f', 'l', 'o', 'a', 't'> {};
-struct keyword_string : keyword<'s', 't', 'r', 'i', 'n', 'g'> {};
-struct keyword_bool : keyword<'b', 'o', 'o', 'l'> {};
+struct type_int : keyword<'i', 'n', 't'> {};
+struct type_float : keyword<'f', 'l', 'o', 'a', 't'> {};
+struct type_string : keyword<'s', 't', 'r', 'i', 'n', 'g'> {};
+struct type_bool : keyword<'b', 'o', 'o', 'l'> {};
 
 // SECTION: TOP MATTER
 
@@ -117,12 +117,14 @@ struct testbed_set
 };
 
 /** Used to define a value type for methods or variables */
-using value_type =
-    sor<keyword_int, keyword_float, keyword_string, keyword_bool>;
+using value_type = sor<type_int, type_float, type_string, type_bool>;
 
-/** Declarations, used for module sets and globals in codex files. */
-struct declaration : seq<indent, identifier, sp, opt<seq<value_type, sp>>,
-                         one<'='>, ws, opt<rvalue_simple>, functional_eol> {};
+/// Declarations, used for module sets and globals in codex files. ///
+/// bob string = "bob" ///
+struct declaration_type : seq<sp, value_type> {};
+struct declaration_default : seq<ws, one<'='>, ws, rvalue_simple> {};
+struct declaration : seq<indent, identifier, opt<declaration_type>,
+                         opt<declaration_default>, functional_eol> {};
 
 // Testbeds
 struct testbed_open

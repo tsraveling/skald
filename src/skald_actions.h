@@ -58,6 +58,21 @@ template <> struct action<string_content> {
   }
 };
 
+// SECTION: TYPES
+
+template <> struct action<type_int> {
+  static void apply0(ParseState &state) { state.last_type = ValueType::INT; }
+};
+template <> struct action<type_float> {
+  static void apply0(ParseState &state) { state.last_type = ValueType::FLOAT; }
+};
+template <> struct action<type_bool> {
+  static void apply0(ParseState &state) { state.last_type = ValueType::BOOL; }
+};
+template <> struct action<type_string> {
+  static void apply0(ParseState &state) { state.last_type = ValueType::STRING; }
+};
+
 // SECTION: TOP MATTER
 
 /// Testbeds ///

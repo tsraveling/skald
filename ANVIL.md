@@ -26,6 +26,7 @@
     * [ ] Set up parsing for nested systems
     * [ ] Handle in parser
     * [ ] Handle in engine
+- Choice sub-beats
 - Strong typing
 - Module variables vs ad hoc variables
 - Codices

@@ -1,5 +1,9 @@
 # Skald TODO
 
+## Notes
+
+- Character state
+
 ## Parser Changes
 - [ ] @let clause
 - [ ] Operations
