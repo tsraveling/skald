@@ -93,6 +93,43 @@ endif()
 
 include(FetchContent)
 
+# =============================================================================
+# Automated tests (doctest)
+# =============================================================================
+option(SKALD_BUILD_TESTS "Build automated grammar/engine tests" OFF)
+
+if(SKALD_BUILD_TESTS)
+    FetchContent_Declare(doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG v2.5.2
+    )
+    FetchContent_MakeAvailable(doctest)
+
+    add_executable(skald_grammar_tests
+        test/grammar/test_grammar.cpp
+        src/parse_state.cpp
+    )
+    target_include_directories(skald_grammar_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/include
+    )
+    target_link_libraries(skald_grammar_tests PRIVATE
+        taocpp::pegtl
+        doctest::doctest
+    )
+
+    add_executable(skald_e2e_tests test/e2e/test_e2e.cpp)
+    target_link_libraries(skald_e2e_tests PRIVATE skald_static doctest::doctest)
+    target_compile_definitions(skald_e2e_tests PRIVATE
+        SKALD_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test"
+    )
+
+    enable_testing()
+    add_test(NAME grammar COMMAND skald_grammar_tests)
+    add_test(NAME e2e COMMAND skald_e2e_tests)
+endif()
+
 if(SKALD_BUILD_SKALDER)
     FetchContent_Declare(ftxui
         GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git

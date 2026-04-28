@@ -1,70 +1,50 @@
--- 1: wiry 2: muscular 3: fighter
-~ build = 1
+@let
+  age int = 30
+  name string
+  gender = "f"
+  alive = true
+  progress float
+@end
 
--- 1: linguistics 2: architecture 3: arcane engines
-~ specialty = 1
+@testbed alpha
+  age = 50
+  name = "Bob"
+  gender = "m"
+@end
 
--- 1: gun 2: whip 3: shovel
-~ tool = 1
+--- this is how comments look now
 
-~ money = 0
+# start
 
-#char_creation
+This is the first beat.
 
-narrator: Welcome to the Lost Temple. You are Jake Corrano, an explorer and archaeologist searching for a lost temple no one else believes in. This message is a bit longer than it was before.
-  :basic_call()
+~ age += 1  --- inline mutation
+:call_method()
 
-Today -- today, you think you might just have found it.
+(? gender = "m") ~ age += 2 --- conditional operation
 
-attr: test -- test.
+tester: This is an attributed beat.
 
-(? :check_minigame()) This will only show if you put a truthy value in the query just now!
+> This choice will continue
+> Goes to grandchild
+  -> .child1.grandchild1
+> Goes to child2
+  -> .child2
 
-What's your physical build?
+This is the continuation beat.
 
-> Wiry and agile
-  ~ build = 1
-> Tall and muscular
-  ~ build = 2
-> Compact and dangerous
-  ~ build = 3
+## child1
 
-What's your academic specialty?
-hou
-> Linguistics
-  ~ specialty = 1
-> Architecture
-  ~ specialty = 2
-> Arcane Engines
-  ~ specialty = 3
+This is child1.
 
-* (? specialty = 3 or specialty = 2)
-  ~ money = 100 -- TODO: do this with an incrementer
+### grandchild1
 
-* (else)
-  ~ money = 500
+This is grandchild1.
 
-Your money is ${money}.
+## child2
 
-What tool do you have with you?
+This is child2.
 
-> A revolver
-  ~ tool = 1
-> A whip
-  ~ tool = 2
-> A compact shovel
-  ~ tool = 3
+# a
 
-Are you a tragic orphan?
-
-> Yes
-  ~ orphan = true
-> No
-  ~ orphan = false
-
-Excellent. You chose {build}, {specialty} and {tool}. Also, you {orphan ? "are" : "are not"} an orphan.
-
-You are {build ? [1:"wiry", 2:"muscular", 3:"compact"]}. You studied {specialty ? [1:"linguistics", 2:"architecture", 3:"arcane engines"]}. In your satchel is a {tool ? [1:"revolver", 2:"whip", 3:"spade"]}.
-
-That's it, for now.
-  EXIT
+# b

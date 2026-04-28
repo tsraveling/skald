@@ -31,10 +31,12 @@ struct ParseState {
   void warn(const tao::pegtl::position pos, std::string msg);
   void fail(const tao::pegtl::position pos, std::string msg);
 
-  // SECTION: Module Vars
+  // SECTION: DECLARATIONS AND MODULE VARS
 
   ValueType last_type;
-  std::vector<ModuleVar> module_vars;
+  bool declaration_was_typed;
+  bool declaration_was_valued;
+  std::vector<ModuleVar> module_vars_stack;
 
   // SECTION: TOP MATTER
 

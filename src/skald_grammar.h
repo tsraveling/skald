@@ -210,21 +210,21 @@ struct inline_text_segment
 struct text_content_part
     : sor<inline_comment, text_injection, inline_text_segment> {};
 
-/** A piece of text conent (an array of parts) */
+/** A piece of text content (an array of parts) */
 struct text_content : plus<text_content_part> {};
 
 // SECTION: OPERATIONS
 
-struct op_mutate_start : seq<ws, one<'~'>, ws, identifier, ws> {};
-struct op_mutate_equate
-    : seq<op_mutate_start, ws, operator_equals, ws, rvalue> {};
-struct op_mutate_switch : seq<op_mutate_start, ws, operator_equals_switch> {};
+struct op_mutate_start : seq<one<'~'>, ws, identifier, ws> {};
+struct op_mutate_equate : seq<op_mutate_start, operator_equals, ws, rvalue> {};
+struct op_mutate_switch : seq<op_mutate_start, operator_equals_switch> {};
 struct math_rvalue : sor<r_variable, val_int, val_float, r_method> {};
 struct op_mutate_add
-    : seq<op_mutate_start, ws, operator_plus_equals, ws, math_rvalue> {};
+    : seq<op_mutate_start, operator_plus_equals, ws, math_rvalue> {};
 struct op_mutate_subtract
-    : seq<op_mutate_start, ws, operator_minus_equals, ws, math_rvalue> {};
+    : seq<op_mutate_start, operator_minus_equals, ws, math_rvalue> {};
 
+/** A variable mutation of any kind, including equates */
 struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
                          op_mutate_subtract> {};
 
@@ -232,22 +232,17 @@ struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
  * later in the LSP */
 struct keyword_go : keyword<'G', 'O'> {};
 struct keyword_exit : keyword<'E', 'X', 'I', 'T'> {};
-struct op_exit : seq<keyword_exit, opt<seq<plus<blank>, rvalue>>> {};
-struct op_go_start_tag : seq<plus<blank>, move_marker, ws, identifier, ws> {};
+struct op_exit : seq<keyword_exit, opt<sp, rvalue>> {};
+struct op_go_start_tag : seq<sp, move_marker, ws, identifier, ws> {};
 struct op_go : seq<keyword_go, plus<space>, module_path, opt<op_go_start_tag>> {
 };
 struct op_move : seq<move_marker, ws, identifier, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
-struct op_line : seq<indent, operation, ws, opt<end_line_comment>, eol> {};
 
-// SECTION: VARIABLE DECLARATION
-
-struct declaration_initial : one<'~'> {};
-struct declaration_import : one<'<'> {};
-struct declaration_line
-    : seq<ws, sor<declaration_initial, declaration_import>, ws, identifier, ws,
-          one<'='>, ws, rvalue_simple, ws, opt<end_line_comment>, eol> {};
+/** Inline operations; part of blocks. */
+struct op_line : seq<opt<conditional>, operation, functional_eol> {};
+struct op_choice : seq<indent, operation, functional_eol> {};
 
 // SECTION: CHOICES
 
@@ -257,12 +252,14 @@ struct inline_choice_move : op_move {};
 struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
                          opt<inline_choice_move>, eol> {};
 
+// STUB: Support child beats here
+
 /** The choice line with optional indented operation lines
  *
  *  - > Go left
  *  -   :do_operation()
  */
-struct choice_clause : seq<choice_line, star<op_line>> {};
+struct choice_clause : seq<choice_line, star<op_choice>> {};
 
 /** A group of choices, corresponding to ChoiceGroup
  *
@@ -293,36 +290,26 @@ struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
  *
  *  - alice: Hey there!
  */
-struct beat : seq<not_at<seq<ws, eol>>,   // Not at end of line or whitespace
-                  not_at<choice_prefix>,  // Not a choice
-                  not_at<block_tag_line>, // Not at a new block
-                  opt<conditional>, // Potentially starts with a conditional
-                  ws,               // 0-n characters
-                  opt<beat_attribution>, // Optionally
-                  text_content, eol> {}; // The text content
+struct beat : seq<not_at<seq<ws, eol>>,      // Not at end of line or whitespace
+                  not_at<choice_prefix>,     // Not a choice
+                  not_at<block_tag_line>,    // Not at a new block
+                  opt<seq<conditional, ws>>, // Optional conditional
+                  opt<beat_attribution>,     // Optional attribution
+                  text_content, eol> {};     // The text content
 
 // SECTION: BLOCKS
 
-// Error recovery: skip any line that doesn't match known block content.
-// This prevents a single bad line from killing the parse for the rest of the
-// file.
-struct skip_line
-    : seq<not_at<block_tag_line>, not_at<seq<ws, eol>>, until<eol>> {};
-
-struct block : seq<block_tag_line,
-                   star<sor<ignored, logic_beat_single, logic_beat_clause,
-                            beat_clause, skip_line>>> {};
+/** A `block` starts with a tag line, then has beats, comments/blank,
+ * operations, choice blocks until the next block starts. */
+struct block
+    : seq<block_tag_line, star<sor<ignored, op_line, choice_block, beat>>> {};
 
 // SECTION: FULL GRAMMAR
 
-struct grammar
-    : seq<star<ignored>,                        // Skip initial comments/blanks
-          star<sor<ignored, declaration_line>>, // Variable declarations
-          star<sor<testbed, ignored>>,          // Testbeds
-          star<ignored>,                        // Whitespace etc
-          plus<block>,                          // One or more blocks
-          star<ignored>,                        // Skip trailing comments/blanks
-          opt<eof>                              // Optional EOF (more forgiving)
-          > {};
+struct grammar : seq<star<ignored>, // Skip initial comments/blanks
+                     top_matter,    // testbed, module vars, etc
+                     plus<block>,   // One or more blocks
+                     opt<eof>       // Optional EOF (more forgiving)
+                     > {};
 
 } // namespace Skald

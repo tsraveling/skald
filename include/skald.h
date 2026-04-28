@@ -57,6 +57,22 @@ inline const MethodCall *rval_get_call(const RValue &val) {
 using SimpleRValue = std::variant<std::string, bool, int, float>;
 
 // Simple RVal helper functions
+inline const ValueType srval_get_type(const SimpleRValue &val) {
+  return std::visit(
+      [](const auto &value) -> ValueType {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, std::string>) {
+          return ValueType::STRING;
+        } else if constexpr (std::is_same_v<T, bool>) {
+          return ValueType::BOOL;
+        } else if constexpr (std::is_same_v<T, int>) {
+          return ValueType::INT;
+        } else if constexpr (std::is_same_v<T, float>) {
+          return ValueType::FLOAT;
+        }
+      },
+      val);
+}
 inline const std::string *srval_get_str(const SimpleRValue &val) {
   return std::get_if<std::string>(&val);
 }
@@ -100,8 +116,8 @@ inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
 }
 
 struct ModuleVar : LineEntity {
-  Variable var;
   SimpleRValue initial_value;
+  Variable var;
 };
 
 struct MethodCall : LineEntity {

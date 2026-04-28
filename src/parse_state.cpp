@@ -159,6 +159,7 @@ RValue ParseState::rval_buffer_pop() {
   return back;
 }
 
+// FIXME: handle errors correctly
 SimpleRValue ParseState::simple_rval_buffer_pop() {
   dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
   auto back = rval_buffer.back();
