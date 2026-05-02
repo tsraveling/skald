@@ -19,10 +19,10 @@ namespace Skald {
 
 // SECTION: UTIL
 
-std::pair<Block &, Beat &> Engine::getCurrentBlockAndBeat() {
+std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
   Block &block = current->blocks[cursor.current_block_index];
-  Beat &beat = block.beats[cursor.current_beat_index];
-  return {block, beat};
+  BlockMember &member = block.members[cursor.current_member_index];
+  return {block, member};
 }
 
 // SECTION: STATE
@@ -73,6 +73,7 @@ bool equals(SimpleRValue ra, SimpleRValue rb) {
   return compare(ra, rb, ConditionalAtom::Comparison::EQUALS);
 }
 
+// STUB: Refactor this to queries_for_member
 std::vector<Query> queries_for_conditional(const Conditional &cond) {
 
   std::vector<Query> result;
@@ -100,6 +101,7 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
   return result;
 }
 
+// STUB: Refactor this to fit the inline op model
 std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
   std::vector<Query> ret;
   for (auto &op : ops) {
@@ -114,8 +116,9 @@ std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
 
 /** This is called in the Conditional beat phase, to check if the beat should be
  * processed at all */
-std::vector<Query> queries_for_beat_conditional(const Beat &beat) {
+std::vector<Query> queries_for_member_conditional(const Beat &beat) {
   std::vector<Query> ret;
+  // STUB: if this is a ChoiceGroup, collect all, otherwise get the one
   if (beat.condition) {
     auto cond = queries_for_conditional(*beat.condition);
     ret.insert(ret.end(), cond.begin(), cond.end());
@@ -326,9 +329,9 @@ std::optional<Error> Engine::do_operation(Operation &op) {
 /** This sets the phase to first and queues the beat's conditional for
  *  processing. */
 void Engine::setup_beat() {
-  auto [block, beat] = getCurrentBlockAndBeat();
-  cursor.resolution_stack = queries_for_beat_conditional(beat);
-  dbg_out("     (" << block.tag << ":" << cursor.current_beat_index
+  auto [block, member] = get_current_block_and_member();
+  cursor.resolution_stack = queries_for_member_conditional(member);
+  dbg_out("     (" << block.tag << ":" << cursor.current_member_index
                    << ") -> [COND: " << cursor.resolution_stack.size()
                    << " queries queued ]");
   cursor.current_phase = ProcessPhase::Conditional;
@@ -339,7 +342,7 @@ void Engine::setup_beat() {
 /** This sets the phase to second and queues the beat's ops and choices for
  *  processing. */
 void Engine::process_beat() {
-  auto [block, beat] = getCurrentBlockAndBeat();
+  auto [block, beat] = get_current_block_and_member();
 
   // STUB: Index checking and error throwing system
 
@@ -379,7 +382,7 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
 // SECTION: 4 - EXECUTION
 
 void Engine::setup_choice() {
-  auto [block, beat] = getCurrentBlockAndBeat();
+  auto [block, beat] = get_current_block_and_member();
   auto &choice = beat.choices[cursor.choice_selection];
   cursor.resolution_stack = queries_for_choice_exec(choice);
   dbg_out("     [CHOICE EXEC: there are " << cursor.resolution_stack.size()
@@ -402,27 +405,27 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     dbg_out("    >>> now on block index " << new_index);
 
     // This allows the next clause to check for empty block
-    cursor.current_beat_index = -1;
+    cursor.current_member_index = -1;
     cursor.queued_transition = "";
   }
 
   Block &block = current->blocks[cursor.current_block_index];
-  cursor.current_beat_index++;
-  dbg_out("    >>> now on beat index " << cursor.current_beat_index << ", of "
+  cursor.current_member_index++;
+  dbg_out("    >>> now on beat index " << cursor.current_member_index << ", of "
                                        << block.beats.size());
-  if (cursor.current_beat_index >= block.beats.size()) {
+  if (cursor.current_member_index >= block.beats.size()) {
     cursor.current_block_index++;
     dbg_out(
         "    >>> passed end of block, jumping in at first beat of next block: "
         << cursor.current_block_index);
-    cursor.current_beat_index = 0;
+    cursor.current_member_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
       return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
                    from_line_number);
     }
   }
   dbg_out("CURSOR --> " << cursor.current_block_index << ", "
-                        << cursor.current_beat_index);
+                        << cursor.current_member_index);
   setup_beat();
   return std::nullopt;
 }
@@ -456,7 +459,7 @@ Response Engine::next() {
 
     // If we get here, it means we're ready to do logic
 
-    auto [block, beat] = getCurrentBlockAndBeat();
+    auto [block, beat] = get_current_block_and_member();
     switch (cursor.current_phase) {
     case ProcessPhase::Conditional: {
       if (beat.is_else) {
@@ -538,7 +541,7 @@ Response Engine::next() {
 // SECTION: PLAYER INPUT
 
 Response Engine::act(int choice_index) {
-  auto [block, beat] = getCurrentBlockAndBeat();
+  auto [block, beat] = get_current_block_and_member();
   if (beat.choices.size() > 0) {
 
     // Make sure the selection is in bounds
@@ -620,10 +623,10 @@ Response Engine::start() {
   return enter(1, 0);
 }
 
-Response Engine::enter(int block, int beat) {
+Response Engine::enter(int block, int index) {
   cursor.reset();
-  cursor.current_block_index = 0;
-  cursor.current_beat_index = 0;
+  cursor.current_block_index = block;
+  cursor.current_member_index = 0;
   setup_beat();
   return next();
 }

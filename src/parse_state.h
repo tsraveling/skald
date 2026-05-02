@@ -55,7 +55,7 @@ struct ParseState {
   // SECTION: BEATS
 
   /** The current beat attribution tag */
-  std::string current_tag;
+  std::string current_attrib_tag;
 
   /** The current beat content stack */
   std::vector<TextPart> beat_content_queue;

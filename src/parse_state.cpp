@@ -45,10 +45,6 @@ void ParseState::start_block(const std::string &tag) {
 
 // SECTION: BEATS
 
-void ParseState::store_beat_text() {
-  beat_content_queue = std::move(text_content_queue);
-}
-
 Beat *ParseState::add_beat() {
   dbg_out(">>> add_beat()");
   if (!current_block) {
@@ -57,12 +53,18 @@ Beat *ParseState::add_beat() {
   Log::verbose(" - Adding beat.");
 
   Beat beat;
-  beat.condition = conditional_buffer_pop();
-  beat.content.parts = std::move(beat_content_queue);
-  beat.attribution = current_tag;
-  current_tag = "";
-  current_block->beats.push_back(beat);
-  return &current_block->beats.back();
+
+  // Will consume a conditional if one is present
+  beat.condition.condition = conditional_buffer_pop();
+
+  // Grab the text content
+  beat.content.parts = std::move(text_content_queue);
+
+  // Consume the attribution tag if there is one
+  beat.attribution = current_attrib_tag;
+  current_attrib_tag = "";
+  current_block->members.push_back(beat);
+  return &std::get<Beat>(current_block->members.back());
 }
 
 // SECTION: CHOICES
@@ -76,7 +78,7 @@ Choice *ParseState::add_choice() {
   Choice choice;
   choice.content.parts = std::move(text_content_queue);
   choice.operations = std::move(operation_queue);
-  choice.condition = conditional_buffer_pop();
+  choice.condition.condition = conditional_buffer_pop();
   choice_stack.push_back(choice);
   return &choice_stack.back();
 }

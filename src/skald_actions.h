@@ -533,37 +533,6 @@ template <> struct action<choice_block> {
 
 // SECTION: BEATS
 
-template <> struct action<logic_beat_single> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> logic_beat_single: " << input.string());
-    auto *beat = state.add_logic_beat();
-    beat->line_number = input.position().line;
-  }
-};
-
-// template <> struct action<logic_beat_conditional> {
-//   static void apply0(ParseState &state) {
-//     dbg_out(">>> logic_beat_conditional");
-//   }
-// };
-
-template <> struct action<logic_beat_else> {
-  static void apply0(ParseState &state) {
-    dbg_out(">>> logic_beat_else");
-    state.store_is_else = true;
-  }
-};
-
-template <> struct action<logic_beat_clause> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> logic_beat_clause:\n" << input.string());
-    auto *beat = state.add_logic_beat();
-    beat->line_number = input.position().line;
-  }
-};
-
 template <> struct action<beat_attribution> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
@@ -574,20 +543,14 @@ template <> struct action<beat_attribution> {
 
     // Trim leading whitespace
     auto start = tag.find_first_not_of(" \t");
-    state.current_tag = (start != std::string::npos) ? tag.substr(start) : tag;
+    state.current_attrib_tag =
+        (start != std::string::npos) ? tag.substr(start) : tag;
   }
 };
 
-template <> struct action<beat_line> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    const position p = input.position();
-    dbg_out("--> " << p << ": beat line:\n > " << input.string());
-    state.store_beat_text();
-  }
-};
+// FIXME: Glue these guys together
 
-template <> struct action<beat_clause> {
+template <> struct action<beat> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     const position p = input.position();

@@ -633,7 +633,8 @@ struct Cursor {
   int current_block_index = 0;
 
   /** Which beat are we currently working through */
-  int current_beat_index = 0;
+  // STUB: Refer to parts, not beats
+  int current_member_index = 0;
 
   /** Which choice do we need to process? */
   int choice_selection = 0;
@@ -661,7 +662,7 @@ struct Cursor {
     queued_transition = "";
     choice_selection = 0;
     current_block_index = 0;
-    current_beat_index = 0;
+    current_member_index = 0;
     did_last_condition_pass = true;
   }
 };
@@ -677,7 +678,7 @@ private:
   void build_state(const Module &module);
 
   // Util
-  std::pair<Block &, Beat &> getCurrentBlockAndBeat();
+  std::pair<Block &, BlockMember &> get_current_block_and_member();
 
   /** This zeroes the state and drops us in at this beat index, e.g. from an
    *  external entry point. It also initializes Skald state, leaving extant
