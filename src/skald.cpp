@@ -27,14 +27,14 @@ std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
 
 // SECTION: STATE
 
-void Engine::build_state(const Module &module) {
-  state.clear();
-  for (auto &var : module.declarations) {
-    // We don't overwrite variables that are already in state
-    if (!state.count(var.var.name))
-      state[var.var.name] = var.initial_value;
-  }
-}
+// void Engine::build_state(const Module &module) {
+//   state.clear();
+//   for (auto &var : module.declarations) {
+//     // We don't overwrite variables that are already in state
+//     if (!state.count(var.var.name))
+//       state[var.var.name] = var.initial_value;
+//   }
+// }
 
 bool compare(SimpleRValue ra, SimpleRValue rb,
              ConditionalAtom::Comparison comparison) {
@@ -73,7 +73,11 @@ bool equals(SimpleRValue ra, SimpleRValue rb) {
   return compare(ra, rb, ConditionalAtom::Comparison::EQUALS);
 }
 
-// STUB: Refactor this to queries_for_member
+void Engine::warn(std::string tx, size_t ln) {
+  warnings.push_back(Warning{.message = tx, .line_number = ln});
+}
+
+/** This extracts all queries needed to solve a Conditional. */
 std::vector<Query> queries_for_conditional(const Conditional &cond) {
 
   std::vector<Query> result;
@@ -101,34 +105,68 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
   return result;
 }
 
-// STUB: Refactor this to fit the inline op model
+/** This returns all the queries needed to resolve a given conditional */
+std::vector<Query> queries_for_attached_condition(const AttachedCondition &c) {
+  if (c.condition) {
+    return queries_for_conditional(*c.condition);
+  } else {
+    return {};
+  }
+}
+
+/** Returns all queries needed to execute a given operation */
+std::vector<Query> queries_for_op(const Operation &op) {
+  std::vector<Query> ret;
+  auto *call = op_get_call(op);
+  if (call)
+    ret.push_back(Query{.call = *call,
+                        .expects_response = false,
+                        .line_number = call->line_number});
+  return ret;
+}
+
+/** Returns all queries needed to execute a list of ops */
 std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
   std::vector<Query> ret;
   for (auto &op : ops) {
-    auto *call = op_get_call(op);
-    if (call)
-      ret.push_back(Query{.call = *call,
-                          .expects_response = false,
-                          .line_number = call->line_number});
+    auto q = queries_for_op(op);
+    ret.insert(ret.end(), q.begin(), q.end());
   }
   return ret;
 }
 
-/** This is called in the Conditional beat phase, to check if the beat should be
- * processed at all */
-std::vector<Query> queries_for_member_conditional(const Beat &beat) {
+/** Returns all queries needed to display a list of choices. Ops are handled
+ *  on player picking a choice, so aren't queried here. */
+std::vector<Query> queries_for_choice_group(const ChoiceGroup &group) {
   std::vector<Query> ret;
-  // STUB: if this is a ChoiceGroup, collect all, otherwise get the one
-  if (beat.condition) {
-    auto cond = queries_for_conditional(*beat.condition);
-    ret.insert(ret.end(), cond.begin(), cond.end());
+  for (const auto &choice : group.choices) {
+    auto q = queries_for_attached_condition(choice.condition);
+    ret.insert(ret.end(), q.begin(), q.end());
   }
   return ret;
+}
+
+/** This is called in the Conditional beat phase, to check if the beat should
+ * be processed at all */
+std::vector<Query> queries_for_member_conditional(const BlockMember &mem) {
+  return std::visit(
+      [](const auto &value) -> std::vector<Query> {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, Beat>) {
+          return queries_for_attached_condition(value.condition);
+        } else if constexpr (std::is_same_v<T, LineOp>) {
+          auto v = queries_for_attached_condition(value.condition);
+          return v;
+        } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
+          return queries_for_choice_group(value);
+        }
+      },
+      mem);
 }
 
 /** Sets up queries for a beat's operations, choice conditionals,
- *  and choice ops. Will be called only if its conditionals have previously been
- * queried and resolved to true. */
+ *  and choice ops. Will be called only if its conditionals have previously
+ * been queried and resolved to true. */
 std::vector<Query> queries_for_beat(const Beat &beat) {
   std::vector<Query> ret;
   if (beat.operations.size() > 0) {
@@ -157,11 +195,88 @@ std::vector<Query> queries_for_choice_exec(const Choice &choice) {
   return ret;
 }
 
-// SECTION: RESOLVERS
+// SECTION: RESOLVERS AND STATE
 
-/** Resolves an rvalue (potentialy including method calls or variables) down to
- *  a simple value based on the current state and query cache. If no key exists,
- *  boolean false will be returned. */
+/** Returns value for given var name. Checks global, then module, then ad-hoc
+ *  state, in that order. Returns bool false if nothing found, and throws
+ *  warning. */
+SimpleRValue Engine::var_get(const std::string var_name) {
+  // 1. Check global
+  auto it = global_state.find(var_name);
+  if (it != global_state.end())
+    return it->second;
+
+  // 2. Check module
+  it = module_state.find(var_name);
+  if (it != global_state.end())
+    return it->second;
+
+  // 3. Check local
+  it = local_state.find(var_name);
+  if (it != global_state.end())
+    return it->second;
+
+  // Default
+  warn("Getting value for " + var_name +
+       ", and found nothing. Defaulting to `false`.");
+  return false;
+}
+
+/** Sets var. Checks types against global, then module, then local state. If
+ *  none are set, sets value as local var. */
+std::optional<Error> Engine::var_set(const std::string var_name,
+                                     const RValue &rval, size_t ln) {
+  // Get the set value
+  auto val = resolve_rval_to_simple(rval);
+  auto t = srval_get_type(val);
+
+  // 1. Check global
+  auto it = global_state.find(var_name);
+  if (it != global_state.end()) {
+    auto ot = srval_get_type(it->second);
+    if (t != ot) {
+      return Error(ERROR_TYPE_MISMATCH,
+                   "Tried to set global var " + var_name + " to " +
+                       rval_to_string(val),
+                   ln);
+    }
+    global_state[var_name] = val;
+    return std::nullopt;
+  }
+
+  // 2. Check module
+  it = module_state.find(var_name);
+  if (it != module_state.end()) {
+    auto ot = srval_get_type(it->second);
+    if (t != ot) {
+      return Error(ERROR_TYPE_MISMATCH,
+                   "Tried to set module var " + var_name + " to " +
+                       rval_to_string(val),
+                   ln);
+    }
+    module_state[var_name] = val;
+    return std::nullopt;
+  }
+
+  // 3. Check local
+  it = local_state.find(var_name);
+  if (it != local_state.end()) {
+    auto ot = srval_get_type(it->second);
+    if (t != ot) {
+      return Error(ERROR_TYPE_MISMATCH,
+                   "Tried to set local var " + var_name + " to " +
+                       rval_to_string(val),
+                   ln);
+    }
+  }
+
+  local_state[var_name] = val;
+  return std::nullopt;
+}
+
+/** Resolves an rvalue (potentially including method calls or variables) down
+ * to a simple value based on the current state and query cache. If no key
+ * exists, boolean false will be returned. */
 SimpleRValue Engine::resolve_rval_to_simple(const RValue &rval) {
   return std::visit(
       [this](const auto &value) -> SimpleRValue {
@@ -170,11 +285,13 @@ SimpleRValue Engine::resolve_rval_to_simple(const RValue &rval) {
           auto key = key_for_call(*value);
           auto it = query_cache.find(key);
           auto val = it != query_cache.end() ? it->second : SimpleRValue{false};
-          dbg_out(">>> lookup for " << key << ": val=" << rval_to_string(val));
+          if (it == query_cache.end()) {
+            warn("Tried to resolve query key " + key +
+                 " and got nothing; defaulting to `false`.");
+          }
           return val;
         } else if constexpr (std::is_same_v<T, Variable>) {
-          auto it = state.find(value.name);
-          return it != state.end() ? it->second : SimpleRValue{false};
+          return var_get(value.name);
         } else {
           return value;
         }
@@ -415,9 +532,9 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
                                        << block.beats.size());
   if (cursor.current_member_index >= block.beats.size()) {
     cursor.current_block_index++;
-    dbg_out(
-        "    >>> passed end of block, jumping in at first beat of next block: "
-        << cursor.current_block_index);
+    dbg_out("    >>> passed end of block, jumping in at first beat of next "
+            "block: "
+            << cursor.current_block_index);
     cursor.current_member_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
       return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
@@ -507,9 +624,9 @@ Response Engine::next() {
         break;
       }
 
-      // Assemble the content to return. After this, the cursor will advance via
-      // act. Choice effects will also be applied in act(), so next() hangs here
-      // until user input occurs.
+      // Assemble the content to return. After this, the cursor will advance
+      // via act. Choice effects will also be applied in act(), so next()
+      // hangs here until user input occurs.
       auto content = Content{};
       content.text = resolve_text(beat.content);
       content.attribution = beat.attribution;

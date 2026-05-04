@@ -555,6 +555,12 @@ struct Error {
       : code(code), message(std::move(message)), line_number(line_number) {}
 };
 
+/** Added to warning stack when non-breaking warnings happen */
+struct Warning {
+  std::string message;
+  size_t line_number;
+};
+
 /** Will be sent back by the client as an answer to the current open query --
  *  will be undefined if no value is returned. Undefined will not be keyed into
  *  the map, which will be treated as falsy if used in a conditional. */
@@ -669,56 +675,9 @@ struct Cursor {
 
 enum ProgressResult { OK, END_OF_FILE, MODULE_NOT_FOUND };
 
+// SECTION: Main Engine
+
 class Engine {
-private:
-  std::unique_ptr<Module> current;
-  std::unordered_map<std::string, SimpleRValue> state;
-  std::unordered_map<std::string, SimpleRValue> query_cache;
-
-  void build_state(const Module &module);
-
-  // Util
-  std::pair<Block &, BlockMember &> get_current_block_and_member();
-
-  /** This zeroes the state and drops us in at this beat index, e.g. from an
-   *  external entry point. It also initializes Skald state, leaving extant
-   *  state intact. */
-  Response enter(int block, int beat);
-
-  std::optional<Error> advance_cursor(int from_line_number = 0);
-
-  // Shared
-
-  std::optional<Error> do_operation(Operation &op);
-
-  // 1. Conditional phase
-
-  void setup_beat();
-
-  // 2. Resolution phase
-
-  void process_beat();
-
-  // 3. Presentation phase
-
-  // 4. Execution phase
-
-  void setup_choice();
-
-  SimpleRValue resolve_rval_to_simple(const RValue &rval);
-  bool resolve_conditional_atom(const ConditionalAtom &atom);
-  bool resolve_conditional_item(const ConditionalItem &item);
-  bool resolve_condition(const std::optional<Conditional> &cond);
-  bool resolve_condition(const Conditional &cond);
-  // STUB: Add a perform_operation() method
-  std::string resolve_simple(const SimpleInsertion &ins);
-  std::string resolve_tern(const TernaryInsertion &tern);
-  std::vector<Chunk> resolve_text(const TextContent &text_content);
-
-  Cursor cursor;
-  // STUB: Next: see TODO>CURRENT
-  Response next();
-
 public:
   void load(std::string path);
   void trace(std::string path);
@@ -750,6 +709,77 @@ public:
     }
     return ret;
   }
+
+private:
+  ///--  MODULE AND STATE  --///
+
+  std::unique_ptr<Module> current;
+
+  /** Not cleared */
+  std::unordered_map<std::string, SimpleRValue> global_state;
+
+  /** Cleared on EXIT */
+  std::unordered_map<std::string, SimpleRValue> module_state;
+
+  /** Cleared on every new module start */
+  std::unordered_map<std::string, SimpleRValue> local_state;
+
+  std::unordered_map<std::string, SimpleRValue> query_cache;
+
+  // void build_state(const Module &module);
+
+  ///--  UTIL  --///
+  std::pair<Block &, BlockMember &> get_current_block_and_member();
+
+  /** This zeroes the state and drops us in at this beat index, e.g. from an
+   *  external entry point. It also initializes Skald state, leaving extant
+   *  state intact. */
+  Response enter(int block, int beat);
+
+  std::optional<Error> advance_cursor(int from_line_number = 0);
+
+  ///--  ENGINE LOGIC FLOW  --///
+
+  std::vector<Warning> warnings;
+
+  /** Log to the warning stack without blocking operation */
+  void warn(std::string tx, size_t ln = 0);
+
+  std::optional<Error> do_operation(Operation &op);
+
+  // 1. Conditional phase
+
+  void setup_beat();
+
+  // 2. Resolution phase
+
+  void process_beat();
+
+  // 3. Presentation phase
+
+  // 4. Execution phase
+
+  void setup_choice();
+
+  ///-- RESOLUTION --///
+
+  SimpleRValue var_get(const std::string var_name);
+  std::optional<Error> var_set(const std::string var_name, const RValue &rval,
+                               size_t ln = 0);
+
+  SimpleRValue resolve_rval_to_simple(const RValue &rval);
+  bool resolve_conditional_atom(const ConditionalAtom &atom);
+  bool resolve_conditional_item(const ConditionalItem &item);
+  bool resolve_condition(const std::optional<Conditional> &cond);
+  bool resolve_condition(const Conditional &cond);
+  // STUB: Add a perform_operation() method
+  std::string resolve_simple(const SimpleInsertion &ins);
+  std::string resolve_tern(const TernaryInsertion &tern);
+  std::vector<Chunk> resolve_text(const TextContent &text_content);
+
+  Cursor cursor;
+  // STUB: Next: see TODO>CURRENT
+  Response next();
 };
 
 } // namespace Skald
