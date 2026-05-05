@@ -164,28 +164,6 @@ std::vector<Query> queries_for_member_conditional(const BlockMember &mem) {
       mem);
 }
 
-/** Sets up queries for a beat's operations, choice conditionals,
- *  and choice ops. Will be called only if its conditionals have previously
- * been queried and resolved to true. */
-std::vector<Query> queries_for_beat(const Beat &beat) {
-  std::vector<Query> ret;
-  if (beat.operations.size() > 0) {
-    auto op = queries_for_operations(beat.operations);
-    ret.insert(ret.end(), op.begin(), op.end());
-  }
-  if (beat.choices.size() > 0) {
-    for (auto &choice : beat.choices) {
-      if (choice.condition) {
-        auto cond = queries_for_conditional(*choice.condition);
-        ret.insert(ret.end(), cond.begin(), cond.end());
-      }
-      // We only process ops if this choice is selected.
-    }
-  }
-
-  return ret;
-}
-
 std::vector<Query> queries_for_choice_exec(const Choice &choice) {
   std::vector<Query> ret;
   if (choice.operations.size() > 0) {
@@ -197,26 +175,21 @@ std::vector<Query> queries_for_choice_exec(const Choice &choice) {
 
 // SECTION: RESOLVERS AND STATE
 
+std::array<Engine::Scope, 3> Engine::scopes() {
+  return {{{"global", global_state},
+           {"module", module_state},
+           {"local", local_state}}};
+}
+
 /** Returns value for given var name. Checks global, then module, then ad-hoc
  *  state, in that order. Returns bool false if nothing found, and throws
  *  warning. */
 SimpleRValue Engine::var_get(const std::string var_name) {
-  // 1. Check global
-  auto it = global_state.find(var_name);
-  if (it != global_state.end())
-    return it->second;
-
-  // 2. Check module
-  it = module_state.find(var_name);
-  if (it != global_state.end())
-    return it->second;
-
-  // 3. Check local
-  it = local_state.find(var_name);
-  if (it != global_state.end())
-    return it->second;
-
-  // Default
+  for (auto &s : scopes()) {
+    auto it = s.map.find(var_name);
+    if (it != s.map.end())
+      return it->second;
+  }
   warn("Getting value for " + var_name +
        ", and found nothing. Defaulting to `false`.");
   return false;
@@ -226,52 +199,103 @@ SimpleRValue Engine::var_get(const std::string var_name) {
  *  none are set, sets value as local var. */
 std::optional<Error> Engine::var_set(const std::string var_name,
                                      const RValue &rval, size_t ln) {
-  // Get the set value
   auto val = resolve_rval_to_simple(rval);
   auto t = srval_get_type(val);
 
-  // 1. Check global
-  auto it = global_state.find(var_name);
-  if (it != global_state.end()) {
-    auto ot = srval_get_type(it->second);
-    if (t != ot) {
+  for (auto &s : scopes()) {
+    auto it = s.map.find(var_name);
+    if (it == s.map.end())
+      continue;
+    if (srval_get_type(it->second) != t) {
       return Error(ERROR_TYPE_MISMATCH,
-                   "Tried to set global var " + var_name + " to " +
-                       rval_to_string(val),
+                   "Tried to set " + std::string(s.name) + " var " + var_name +
+                       " to " + rval_to_string(val),
                    ln);
     }
-    global_state[var_name] = val;
+    s.map[var_name] = val;
     return std::nullopt;
   }
 
-  // 2. Check module
-  it = module_state.find(var_name);
-  if (it != module_state.end()) {
-    auto ot = srval_get_type(it->second);
-    if (t != ot) {
-      return Error(ERROR_TYPE_MISMATCH,
-                   "Tried to set module var " + var_name + " to " +
-                       rval_to_string(val),
-                   ln);
-    }
-    module_state[var_name] = val;
-    return std::nullopt;
-  }
-
-  // 3. Check local
-  it = local_state.find(var_name);
-  if (it != local_state.end()) {
-    auto ot = srval_get_type(it->second);
-    if (t != ot) {
-      return Error(ERROR_TYPE_MISMATCH,
-                   "Tried to set local var " + var_name + " to " +
-                       rval_to_string(val),
-                   ln);
-    }
-  }
-
+  // Not found anywhere; define as local.
   local_state[var_name] = val;
   return std::nullopt;
+}
+
+/** Toggles a bool var in whichever scope (global, module, local) holds it. */
+std::optional<Error> Engine::var_switch(const std::string var_name, size_t ln) {
+  for (auto &s : scopes()) {
+    auto it = s.map.find(var_name);
+    if (it == s.map.end())
+      continue;
+    auto b = srval_get_bool(it->second);
+    if (!b) {
+      return Error(ERROR_TYPE_MISMATCH,
+                   "Tried to switch " + var_name + ", but it is not a boolean.",
+                   ln);
+    }
+    s.map[var_name] = !*b;
+    return std::nullopt;
+  }
+  warn("Tried to switch " + var_name +
+           ", and found nothing. Setting it as a local variable to `false`.",
+       ln);
+  local_state[var_name] = false;
+  return std::nullopt;
+}
+
+/** Will mathematically mutate a float or int. Errors if string or bool, or if
+ * arg is string or bool. floats and ints can be used interchangeably (int -
+ * float will round down). If sign is false, will subtract. */
+std::optional<Error> Engine::var_add(const std::string var_name,
+                                     const RValue &rval, bool sign, size_t ln) {
+
+  // Get the arg and make sure it's a number
+  auto arg = resolve_rval_to_simple(rval);
+  auto arg_type = srval_get_type(arg);
+  if (arg_type != ValueType::INT && arg_type != ValueType::FLOAT) {
+    return Error(ERROR_TYPE_MISMATCH,
+                 "Tried to add non-numeric value " + rval_to_string(arg) +
+                     " to " + var_name + ".",
+                 ln);
+  }
+
+  // Convert to float because it's more flexible
+  float arg_f = arg_type == ValueType::INT ? (float)*srval_get_int(arg)
+                                           : *srval_get_float(arg);
+
+  // Handle subtraction
+  if (!sign)
+    arg_f = -arg_f;
+
+  // Global -> Module -> Local
+  for (auto &s : scopes()) {
+    auto it = s.map.find(var_name);
+    if (it == s.map.end())
+      continue;
+
+    // If int, convert arg to int and add
+    auto var_type = srval_get_type(it->second);
+    if (var_type == ValueType::INT) {
+      s.map[var_name] = *srval_get_int(it->second) + (int)arg_f;
+      return std::nullopt;
+    }
+
+    // Same but for floats
+    if (var_type == ValueType::FLOAT) {
+      s.map[var_name] = *srval_get_float(it->second) + arg_f;
+      return std::nullopt;
+    }
+
+    // If we have the var but it's not a number, error
+    return Error(ERROR_TYPE_MISMATCH,
+                 "Tried to add to " + std::string(s.name) + " var " + var_name +
+                     ", but it is not numeric.",
+                 ln);
+  }
+
+  // If var not found, error
+  return Error(ERROR_VAR_UNDEFINED,
+               "Tried to add to undefined var " + var_name + ".", ln);
 }
 
 /** Resolves an rvalue (potentially including method calls or variables) down
@@ -400,33 +424,29 @@ std::optional<Error> Engine::do_operation(Operation &op) {
           dbg_out("   ---> going to " << o.target_tag);
           cursor.queued_transition = o.target_tag;
         } else if constexpr (std::is_same_v<T, MethodCall>) {
-          dbg_out("   (alraedy called)");
+          dbg_out("   (already called)");
           // This has already been done in the resolution phase; do nothing
         } else if constexpr (std::is_same_v<T, Mutation>) {
-          auto val = o.rvalue ? resolve_rval_to_simple(*o.rvalue) : false;
+          // auto val = o.rvalue ? resolve_rval_to_simple(*o.rvalue) : false;
           switch (o.type) {
           case Mutation::Type::EQUATE:
-            state[o.lvalue] = val;
+            if (!o.rvalue) {
+              ret = Error(ERROR_UNEXPECTED_NULL,
+                          "Tried to set " + o.lvalue +
+                              " to an rvalue that is unexpectedly null.",
+                          o.line_number);
+              return;
+            }
+            ret = var_set(o.lvalue, *o.rvalue, o.line_number);
             break;
           case Mutation::Type::ADD:
-            dbg_out(">>> TODO: Implement adding");
+            ret = var_add(o.lvalue, *o.rvalue, true, o.line_number);
             break;
           case Mutation::Type::SUBTRACT:
-            dbg_out(">>> TODO: Implement subtraction");
+            ret = var_add(o.lvalue, *o.rvalue, false, o.line_number);
             break;
           case Mutation::Type::SWITCH:
-            if (state.count(o.lvalue)) {
-              if (auto *bval = std::get_if<bool>(&val)) {
-                *bval = !*bval;
-              } else {
-                ret = Error(ERROR_TYPE_MISMATCH,
-                            "Tried to switch " + o.lvalue +
-                                ", which is not a boolean",
-                            o.line_number);
-              }
-            } else {
-              state[o.lvalue] = true;
-            }
+            ret = var_switch(o.lvalue);
             break;
           }
         } else if constexpr (std::is_same_v<T, GoModule>) {
@@ -445,7 +465,7 @@ std::optional<Error> Engine::do_operation(Operation &op) {
 
 /** This sets the phase to first and queues the beat's conditional for
  *  processing. */
-void Engine::setup_beat() {
+void Engine::setup_member() {
   auto [block, member] = get_current_block_and_member();
   cursor.resolution_stack = queries_for_member_conditional(member);
   dbg_out("     (" << block.tag << ":" << cursor.current_member_index
@@ -458,13 +478,13 @@ void Engine::setup_beat() {
 
 /** This sets the phase to second and queues the beat's ops and choices for
  *  processing. */
-void Engine::process_beat() {
-  auto [block, beat] = get_current_block_and_member();
+void Engine::process_member() {
+  auto [block, member] = get_current_block_and_member();
 
   // STUB: Index checking and error throwing system
 
   // Queue up any queries that need to happen
-  cursor.resolution_stack = queries_for_beat(beat);
+  cursor.resolution_stack = queries_for_member_conditional(member);
   cursor.current_phase = ProcessPhase::Resolution;
   dbg_out("      [PROCESS: there are " << cursor.resolution_stack.size()
                                        << " queries queued ]");
@@ -543,7 +563,7 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
   }
   dbg_out("CURSOR --> " << cursor.current_block_index << ", "
                         << cursor.current_member_index);
-  setup_beat();
+  setup_member();
   return std::nullopt;
 }
 
@@ -587,13 +607,13 @@ Response Engine::next() {
             return *err;
         } else {
           // An else beat will succeed if the last beat did not!
-          process_beat();
+          process_member();
           cursor.did_last_condition_pass = true;
           break;
         }
       }
       if (resolve_condition(beat.condition)) {
-        process_beat(); // This advances cursor as well
+        process_member(); // This advances cursor as well
         cursor.did_last_condition_pass = true;
       } else {
         auto err = advance_cursor();
@@ -744,7 +764,7 @@ Response Engine::enter(int block, int index) {
   cursor.reset();
   cursor.current_block_index = block;
   cursor.current_member_index = 0;
-  setup_beat();
+  setup_member();
   return next();
 }
 

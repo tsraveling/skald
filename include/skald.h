@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -546,6 +547,8 @@ const uint ERROR_CHOICE_UNAVAILABLE = 5;
 const uint ERROR_EXPECTED_ANSWER = 6;
 const uint ERROR_RESOLUTION_QUEUE_EMPTY = 7;
 const uint ERROR_TYPE_MISMATCH = 8;
+const uint ERROR_UNEXPECTED_NULL = 9;
+const uint ERROR_VAR_UNDEFINED = 10;
 struct Error {
   uint code = 0;
   std::string message;
@@ -749,11 +752,11 @@ private:
 
   // 1. Conditional phase
 
-  void setup_beat();
+  void setup_member();
 
   // 2. Resolution phase
 
-  void process_beat();
+  void process_member();
 
   // 3. Presentation phase
 
@@ -763,9 +766,32 @@ private:
 
   ///-- RESOLUTION --///
 
+  struct Scope {
+    const char *name;
+    std::unordered_map<std::string, SimpleRValue> &map;
+  };
+
+  /** Returns the scope maps in lookup-priority order: global, module, local. */
+  std::array<Scope, 3> scopes();
+
+  /** Gets a var, preferring global, module, then local. Gets false if local,
+   *  and warns. */
   SimpleRValue var_get(const std::string var_name);
+
+  /** Set a variable, preferring global, module, and then local var. Sets as
+   *  local if not exists. */
   std::optional<Error> var_set(const std::string var_name, const RValue &rval,
                                size_t ln = 0);
+
+  /** Will switch a bool. Throws an error if not a bool, and a warning if not
+   *  previously set (and sets to false in this case) */
+  std::optional<Error> var_switch(const std::string var_name, size_t ln = 0);
+
+  /** Will mathematically mutate a float or int. Errors if string or bool, or if
+   * arg is string or bool. floats and ints can be used interchangeably (int -
+   * float will round down). If sign is false, will subtract. */
+  std::optional<Error> var_add(const std::string var_name, const RValue &rval,
+                               bool sign, size_t ln = 0);
 
   SimpleRValue resolve_rval_to_simple(const RValue &rval);
   bool resolve_conditional_atom(const ConditionalAtom &atom);
