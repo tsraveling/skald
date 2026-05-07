@@ -677,40 +677,45 @@ Response Engine::next() {
 
 // SECTION: PLAYER INPUT
 
+/** Called by client on continue (`act(0)`) or choice (`act(n)`). */
 Response Engine::act(int choice_index) {
-  auto [block, beat] = get_current_block_and_member();
-  if (beat.choices.size() > 0) {
+  auto [block, member] = get_current_block_and_member();
 
-    // Make sure the selection is in bounds
-    if (choice_index >= beat.choices.size()) {
-      return Error(ERROR_CHOICE_OUT_OF_BOUNDS,
-                   "You picked choice " + std::to_string(choice_index) +
-                       ", but there are only " +
-                       std::to_string(beat.choices.size()) +
-                       " choices available!",
-                   beat.line_number);
-    }
+  std::visit(
+      [&](const auto &mem) {
+        using T = std::decay_t<decltype(mem)>;
+        if constexpr (std::is_same_v<T, Beat>) {
+          auto err = advance_cursor(mem.line_number);
+          if (err)
+            return *err;
+        } else if constexpr (std::is_same_v<T, LineOp>) {
+        } else if constexpr (std::is_same_v<T, ChoiceGroup()>) {
+          if (choice_index >= mem.choices.size()) {
+            return Error(ERROR_CHOICE_OUT_OF_BOUNDS,
+                         "You picked choice " + std::to_string(choice_index) +
+                             ", but there are only " +
+                             std::to_string(mem.choices.size()) +
+                             " choices available!",
+                         mem.line_number);
+          }
 
-    auto &choice = beat.choices[choice_index];
+          auto &choice = mem.choices[choice_index];
 
-    // Make sure the selection is valid
-    if (!resolve_condition(choice.condition)) {
-      return Error(ERROR_CHOICE_UNAVAILABLE,
-                   "You picked choice " + std::to_string(choice_index) +
-                       ", but it is unavailable.",
-                   choice.line_number);
-    }
+          // Make sure the selection is valid
+          if (!resolve_condition(choice.condition)) {
+            return Error(ERROR_CHOICE_UNAVAILABLE,
+                         "You picked choice " + std::to_string(choice_index) +
+                             ", but it is unavailable.",
+                         choice.line_number);
+          }
 
-    // Process any queries that are needed
-    cursor.choice_selection = choice_index;
-    setup_choice(); // This also sets us to execution phase
-  } else {
+          // Process any queries that are needed
+          cursor.choice_selection = choice_index;
+          setup_choice(); // This also sets us to execution phase
+        }
+      },
+      member);
 
-    // If there are no choices, just proceed to next
-    auto err = advance_cursor(beat.line_number);
-    if (err)
-      return *err;
-  }
   return next();
 }
 

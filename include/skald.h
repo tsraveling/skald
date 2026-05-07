@@ -457,13 +457,13 @@ struct Choice : LineEntity {
 // This contains one or more choices, exists at any place in a block,
 // and blocks proceeding until a choice is selected. If no individual
 // choice is available, the group will be ignored.
-struct ChoiceGroup {
+struct ChoiceGroup : LineEntity {
   std::vector<Choice> choices;
 };
 
 // STUB: Build LineOp
 // This is an operation that exists inline on a block.
-struct LineOp {
+struct LineOp : LineEntity {
   AttachedCondition condition;
   Operation op;
   std::string dbg_desc() const { return condition.dbg_desc() + dbg_dsc_op(op); }
