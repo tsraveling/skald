@@ -82,8 +82,9 @@ template <> struct action<testbed_open> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     if (state.top_matter_section != ParseState::TopMatterSection::NONE) {
-      state.err(input.pos, "Tried to open a testbed but another top matter "
-                           "section was already open.");
+      state.err(input.position(),
+                "Tried to open a testbed but another top matter "
+                "section was already open.");
     }
     state.module.testbeds.push_back(Testbed{.name = state.pop_id()});
     state.top_matter_section = ParseState::TopMatterSection::TESTBED;
@@ -94,7 +95,8 @@ template <> struct action<testbed_closed> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     if (state.top_matter_section != ParseState::TopMatterSection::TESTBED) {
-      state.err(input.pos, "Got a testbed end, but no testbed was open!");
+      state.err(input.position(),
+                "Got a testbed end, but no testbed was open!");
     }
     state.top_matter_section = ParseState::TopMatterSection::NONE;
   }
@@ -104,7 +106,8 @@ template <> struct action<testbed_set> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     if (state.top_matter_section != ParseState::TopMatterSection::TESTBED) {
-      state.err(input.pos, "Got a testbed set, but no testbed was open!");
+      state.err(input.position(),
+                "Got a testbed set, but no testbed was open!");
       return;
     }
     auto val = *cast_rval_to_simple(state.rval_buffer_pop());
@@ -123,8 +126,9 @@ template <> struct action<let_open> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     if (state.top_matter_section != ParseState::TopMatterSection::NONE) {
-      state.err(input.pos, "Tried to open a let clause but another top matter "
-                           "section was already open.");
+      state.err(input.position(),
+                "Tried to open a let clause but another top matter "
+                "section was already open.");
     }
     state.top_matter_section = ParseState::TopMatterSection::LET;
   }
@@ -134,7 +138,7 @@ template <> struct action<let_close> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     if (state.top_matter_section != ParseState::TopMatterSection::LET) {
-      state.err(input.pos, "Got a let end, but no let clause was open!");
+      state.err(input.position(), "Got a let end, but no let clause was open!");
     }
     state.top_matter_section = ParseState::TopMatterSection::NONE;
   }
@@ -146,7 +150,7 @@ template <> struct action<let> {
     dbg_out("<<< let clause");
     if (state.module.module_vars.size() > 0) {
       state.err(
-          input.pos,
+          input.position(),
           "Got a second let clause; a given module should only have one.");
     }
     state.module.module_vars = std::move(state.module_vars_stack);
@@ -162,7 +166,7 @@ template <> struct action<declaration> {
     // Rule: Must *either* be typed or valued (or both)
     if (!state.declaration_was_valued || !state.declaration_was_typed) {
       state.err(
-          input.pos,
+          input.position(),
           "Declaration must have either a type or a default value (or both).");
       return;
     }
@@ -174,7 +178,7 @@ template <> struct action<declaration> {
       t = srval_get_type(v);
       if (state.declaration_was_typed) {
         if (t != state.last_type) {
-          state.err(input.pos, "Default value and type do not match");
+          state.err(input.position(), "Default value and type do not match");
           return;
         }
       }

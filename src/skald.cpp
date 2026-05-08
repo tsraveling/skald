@@ -464,28 +464,13 @@ std::optional<Error> Engine::do_operation(Operation &op) {
   return ret;
 }
 
-// SECTION: 1 - BEAT CONDITIONAL
-
-/** This sets the phase to first and queues the beat's conditional for
- *  processing. */
+/** Queues the member's conditional for processing. Called on cursor movement
+ * and by the engine on first enter. */
 void Engine::setup_member() {
   auto [block, member] = get_current_block_and_member();
   cursor.resolution_stack = queries_for_member_conditional(member);
-  dbg_out("     (" << block.tag << ":" << cursor.current_member_index
-                   << ") -> [COND: " << cursor.resolution_stack.size()
-                   << " queries queued ]");
-  cursor.current_phase = ProcessPhase::Conditional;
+  cursor.is_preprocessed = true;
 }
-
-// SECTION: 2 - BEAT RESOLUTION
-
-/** This sets the phase to second and queues the beat's ops and choices for
- *  processing. */
-void Engine::process_member() {
-  // FIXME: remove later
-}
-
-// SECTION: 3 - PRESENTATION
 
 std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
   std::vector<Chunk> ret;
@@ -511,29 +496,14 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
   return ret;
 }
 
-// SECTION: 4 - EXECUTION
-
-std::optional<Error> Engine::setup_choice() {
-  auto [block, member] = get_current_block_and_member();
-
-  if (auto *cg = std::get_if<ChoiceGroup>(&member)) {
-    auto &choice = cg->choices[cursor.choice_selection];
-    cursor.resolution_stack = queries_for_choice_exec(choice);
-    dbg_out("     [CHOICE EXEC: there are " << cursor.resolution_stack.size()
-                                            << " queries queued ]");
-    cursor.current_phase = ProcessPhase::Execution;
-  } else {
-    return Error(ERROR_CHOICE_UNAVAILABLE,
-                 "Tried to setup choice but cursor not in a choice group.", 0);
-  }
-  return std::nullopt;
-}
-
+/** Advances the cursor one beat.
+ *  - from_line_number is for error logging.
+ */
 std::optional<Error> Engine::advance_cursor(int from_line_number) {
 
+  // If we have a queued transition, find the relevant block and jump there,
   // consuming the queued transition tag as we do so.
   if (cursor.queued_transition.length() > 0) {
-    dbg_out("    >>> transitioning to " << cursor.queued_transition);
     auto new_index = current->get_block_index(cursor.queued_transition);
     if (new_index == -1)
       return Error(ERROR_MODULE_TAG_NOT_FOUND,
@@ -541,31 +511,34 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
                    from_line_number);
 
     cursor.current_block_index = new_index;
-    dbg_out("    >>> now on block index " << new_index);
 
-    // This allows the next clause to check for empty block
+    // Start "above the top" of the next block in order to handle empty
+    // blocks where we immediately move to the next one.
     cursor.current_member_index = -1;
     cursor.queued_transition = "";
   }
 
+  // Now we move into the block.
   Block &block = current->blocks[cursor.current_block_index];
-  cursor.current_member_index++;
-  dbg_out("    >>> now on beat index " << cursor.current_member_index << ", of "
-                                       << block.beats.size());
-  if (cursor.current_member_index >= block.beats.size()) {
+  cursor.current_member_index++; // aka will -> 0 after a transition
+
+  // Are we at the end of the block?
+  if (cursor.current_member_index >= block.members.size()) {
     cursor.current_block_index++;
-    dbg_out("    >>> passed end of block, jumping in at first beat of next "
-            "block: "
-            << cursor.current_block_index);
     cursor.current_member_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
       return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
                    from_line_number);
     }
   }
+
   dbg_out("CURSOR --> " << cursor.current_block_index << ", "
                         << cursor.current_member_index);
+
+  // Queue up any conditional queries etc needed to run our next member
   setup_member();
+
+  // And return ok.
   return std::nullopt;
 }
 
@@ -581,8 +554,8 @@ Response Engine::next() {
   // the module until something happens, or until we need to return an error.
   while (true) {
 
-    // Debug stopper; while developing, lock loop iterations to 50 to keep from
-    // getting stuck in a permaloop.
+    // Debug stopper; while developing, lock loop iterations to 50 to keep
+    // from getting stuck in a permaloop.
     debug_blocker++;
     if (debug_blocker > 50) {
       dbg_out(">>> Engine::next infinite loop exception! breaking.");
@@ -606,16 +579,9 @@ Response Engine::next() {
 
     /// Block Logic and Interaction ///
 
-    // STUB: we should process_member first for all these ...?
-
     auto [block, member] = get_current_block_and_member();
 
-    // Get all the stuff we need to process through the member
-    if (!cursor.is_preprocessed) {
-      cursor.resolution_stack = queries_for_member_conditional(member);
-      cursor.is_preprocessed = true;
-      continue;
-    }
+    assert(cursor.is_preprocessed);
 
     // STUB: Hood open: step through until we hit a response.
 
@@ -631,33 +597,31 @@ Response Engine::next() {
 
           } else if constexpr (std::is_same_v<T, LineOp()>) {
             /// LineOps ///
-            if (resolve_condition(mem.condition)) {
-              process_member(); // advances to resolution
-            } else {
-              return do_operation(mem.op);
-            }
+            return do_operation(mem.op);
           } else if constexpr (std::is_same_v<T, ChoiceGroup()>) {
-            // FIXME: Break this into its own return type
+            auto grp = OptionGroup{};
             for (auto &choice : mem.choices) {
               auto opt = Option{};
               opt.text = resolve_text(choice.content);
               opt.is_available = resolve_condition(choice.condition);
-              content.options.push_back(opt);
+              grp.options.push_back(opt);
             }
-            return value.second_method();
+            return grp;
           }
           return std::nullopt;
         },
         member);
 
-    // If we got something out of the member, return it; otherwise loop de loop.
+    // If we got something out of the member, return it; otherwise loop de
+    // loop.
     if (response)
       return *response;
-
-    // FIXME: This seems like it was important.
-    // advance_cursor(choice.line_number);
     break;
   } // end of main next() loop.
+
+  return Error(ERROR_UNKNOWN,
+               "Exited the next() main control loop without returning a value!",
+               0);
 }
 
 // SECTION: PLAYER INPUT
@@ -709,7 +673,7 @@ Response Engine::act(int choice_index) {
 
           // Process any queries that are needed
           cursor.choice_selection = choice_index;
-          setup_choice(); // This also sets us to execution phase
+          cursor.resolution_stack = queries_for_choice_exec(choice);
         }
       },
       member);
@@ -792,8 +756,8 @@ void Engine::load(std::string path) {
 
     dbg_out(">>> Parse results:\n");
 
-    dbg_out("DECLARATIONS:");
-    for (const auto &dec : pstate.module.declarations) {
+    dbg_out("MODULE VARS:");
+    for (const auto &dec : pstate.module.module_vars) {
       dbg_out(" - " << dec.var.name << " (" << rval_to_string(dec.initial_value)
                     << ")");
     }
@@ -806,14 +770,26 @@ void Engine::load(std::string path) {
     dbg_out("\nSTRUCTURE:");
     // Print details about each block
     for (const auto &block : pstate.module.blocks) {
-      dbg_out("\n- Block '" << block.tag << "': " << block.beats.size()
-                            << " beats");
-      for (const auto &beat : block.beats) {
-        dbg_out("  - Beat: " << beat.dbg_desc());
-        for (const auto &choice : beat.choices) {
-          dbg_out("    > Choice: " << choice.dbg_desc());
-          dbg_out(dbg_desc_ops(choice.operations));
-        }
+      dbg_out("\n- Block '" << block.tag << "': " << block.members.size()
+                            << " members");
+      for (const auto &mem : block.members) {
+
+        std::visit(
+            [](const auto &member) {
+              using T = std::decay_t<decltype(member)>;
+              if constexpr (std::is_same_v<T, Beat>) {
+                dbg_out("  - Beat: " << member.dbg_desc());
+              } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
+                dbg_out("  - ChoiceGroup: ");
+                for (const auto &choice : member.choices) {
+                  dbg_out("    > Choice: " << choice.dbg_desc());
+                  dbg_out(dbg_desc_ops(choice.operations));
+                }
+              } else if constexpr (std::is_same_v<T, LineOp>) {
+                dbg_out("  - LineOp: " << member.dbg_desc());
+              }
+            },
+            mem);
       }
     }
 

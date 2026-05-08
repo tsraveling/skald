@@ -580,7 +580,8 @@ struct QueryAnswer {
 struct End {};
 
 /** Will contain either a Content struct or a Query */
-using Response = std::variant<Content, Query, Exit, GoModule, End, Error>;
+using Response =
+    std::variant<Content, Query, Exit, GoModule, OptionGroup, End, Error>;
 
 enum class ResponseType {
   CONTENT,
@@ -747,19 +748,8 @@ private:
 
   std::optional<Error> do_operation(Operation &op);
 
-  // 1. Conditional phase
-
+  /** Queues the member's conditional for processing. */
   void setup_member();
-
-  // 2. Resolution phase
-
-  void process_member();
-
-  // 3. Presentation phase
-
-  // 4. Execution phase
-
-  std::optional<Error> setup_choice();
 
   ///-- RESOLUTION --///
 

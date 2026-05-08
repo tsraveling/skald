@@ -16,7 +16,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 option(SKALD_BUILD_TEST_EXECUTABLE "Build test executable" OFF)
 option(SKALD_BUILD_SKALDER "Build skalder TUI tool" ON)
-option(SKALD_BUILD_SHARED "Build shared library with C bindings" ON)
+option(SKALD_BUILD_SHARED "Build shared library with C bindings" OFF)
 
 # Include PEGTL
 add_subdirectory(deps/pegtl)
@@ -24,6 +24,7 @@ add_subdirectory(deps/pegtl)
 # Core sources (used by both static and shared builds)
 set(SKALD_CORE_SOURCES
     src/debug.cpp
+    src/parse_state.cpp
     src/skald.cpp
 )
 
@@ -141,7 +142,7 @@ if(SKALD_BUILD_SKALDER)
     target_link_libraries(skalder PRIVATE skald_static ftxui::screen ftxui::dom ftxui::component)
 endif()
 
-option(SKALD_BUILD_LSP "Build the Skald LSP server" ON)
+option(SKALD_BUILD_LSP "Build the Skald LSP server" OFF)
 
 if(SKALD_BUILD_LSP)
     FetchContent_Declare(json

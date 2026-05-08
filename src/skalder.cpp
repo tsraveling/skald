@@ -62,19 +62,16 @@ public:
           if constexpr (std::is_same_v<T, Content>) {
             narrative.push_back(NarrativeItem{.attribution = value.attribution,
                                               .content = stitch(value.text)});
-            if (value.options.size() > 0) {
-              expected_input = InputType::CHOICES;
-              for (size_t i = 0; i < value.options.size(); i++) {
-                auto &opt = value.options[i];
-                current_options.push_back(
-                    NarrativeOption{.text = stitch(opt.text),
-                                    .is_available = opt.is_available});
-              }
-              current_prompt = "Select an option";
-            } else {
-              expected_input = InputType::CONTINUE;
-              current_prompt = "Spacebar to continue ...";
+            expected_input = InputType::CONTINUE;
+            current_prompt = "Spacebar to continue ...";
+          } else if constexpr (std::is_same_v<T, OptionGroup>) {
+            expected_input = InputType::CHOICES;
+            for (size_t i = 0; i < value.options.size(); i++) {
+              auto &opt = value.options[i];
+              current_options.push_back(NarrativeOption{
+                  .text = stitch(opt.text), .is_available = opt.is_available});
             }
+            current_prompt = "Select an option";
           } else if constexpr (std::is_same_v<T, Query>) {
             current_prompt = value.call.dbg_desc();
             expected_input = InputType::TEXT;
