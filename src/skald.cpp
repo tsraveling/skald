@@ -375,6 +375,9 @@ bool Engine::resolve_condition(const std::optional<Conditional> &cond) {
     return resolve_condition(*cond);
   return true;
 }
+bool Engine::resolve_condition(const AttachedCondition &cond) {
+  return resolve_condition(cond.condition);
+}
 
 /** Internal helper function to print values as an engine output */
 std::string string_for_val(SimpleRValue val) {
@@ -479,15 +482,7 @@ void Engine::setup_member() {
 /** This sets the phase to second and queues the beat's ops and choices for
  *  processing. */
 void Engine::process_member() {
-  auto [block, member] = get_current_block_and_member();
-
-  // STUB: Index checking and error throwing system
-
-  // Queue up any queries that need to happen
-  cursor.resolution_stack = queries_for_member_conditional(member);
-  cursor.current_phase = ProcessPhase::Resolution;
-  dbg_out("      [PROCESS: there are " << cursor.resolution_stack.size()
-                                       << " queries queued ]");
+  // FIXME: remove later
 }
 
 // SECTION: 3 - PRESENTATION
@@ -518,17 +513,24 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
 
 // SECTION: 4 - EXECUTION
 
-void Engine::setup_choice() {
-  auto [block, beat] = get_current_block_and_member();
-  auto &choice = beat.choices[cursor.choice_selection];
-  cursor.resolution_stack = queries_for_choice_exec(choice);
-  dbg_out("     [CHOICE EXEC: there are " << cursor.resolution_stack.size()
-                                          << " queries queued ]");
-  // STUB: NEXT: tie this back into next()
-  cursor.current_phase = ProcessPhase::Execution;
+std::optional<Error> Engine::setup_choice() {
+  auto [block, member] = get_current_block_and_member();
+
+  if (auto *cg = std::get_if<ChoiceGroup>(&member)) {
+    auto &choice = cg->choices[cursor.choice_selection];
+    cursor.resolution_stack = queries_for_choice_exec(choice);
+    dbg_out("     [CHOICE EXEC: there are " << cursor.resolution_stack.size()
+                                            << " queries queued ]");
+    cursor.current_phase = ProcessPhase::Execution;
+  } else {
+    return Error(ERROR_CHOICE_UNAVAILABLE,
+                 "Tried to setup choice but cursor not in a choice group.", 0);
+  }
+  return std::nullopt;
 }
 
 std::optional<Error> Engine::advance_cursor(int from_line_number) {
+
   // consuming the queued transition tag as we do so.
   if (cursor.queued_transition.length() > 0) {
     dbg_out("    >>> transitioning to " << cursor.queued_transition);
@@ -574,14 +576,21 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
 Response Engine::next() {
   // Processor loop
   int debug_blocker = 0;
+
+  // This will loop forever until something returns. Basically steps through
+  // the module until something happens, or until we need to return an error.
   while (true) {
+
+    // Debug stopper; while developing, lock loop iterations to 50 to keep from
+    // getting stuck in a permaloop.
     debug_blocker++;
     if (debug_blocker > 50) {
       dbg_out(">>> Engine::next infinite loop exception! breaking.");
       return End{};
     }
 
-    // Handle exits and module transitions
+    /// EXIT and GO ///
+
     if (cursor.queued_exit) {
       return *cursor.queued_exit;
     }
@@ -589,90 +598,66 @@ Response Engine::next() {
       return *cursor.queued_go;
     }
 
-    // If there's a pending query, do that.
+    /// Query Stack ///
+
     if (cursor.resolution_stack.size() > 0) {
       return cursor.resolution_stack.back();
     }
 
-    // If we get here, it means we're ready to do logic
+    /// Block Logic and Interaction ///
 
-    auto [block, beat] = get_current_block_and_member();
-    switch (cursor.current_phase) {
-    case ProcessPhase::Conditional: {
-      if (beat.is_else) {
-        if (cursor.did_last_condition_pass) {
-          // An else beat will always fail if the previos beat passed.
-          auto err = advance_cursor();
-          if (err)
-            return *err;
-        } else {
-          // An else beat will succeed if the last beat did not!
-          process_member();
-          cursor.did_last_condition_pass = true;
-          break;
-        }
-      }
-      if (resolve_condition(beat.condition)) {
-        process_member(); // This advances cursor as well
-        cursor.did_last_condition_pass = true;
-      } else {
-        auto err = advance_cursor();
-        cursor.did_last_condition_pass = false;
-        if (err)
-          return *err;
-      }
-      break;
-    }
-    case ProcessPhase::Resolution: {
-      // Do the operations that are connected to the beat itself
-      for (auto &op : beat.operations) {
-        auto err = do_operation(op);
-        if (err)
-          return *err;
-      }
-      // Then present the text
-      cursor.current_phase = ProcessPhase::Presentation;
-      break;
-    }
-    case ProcessPhase::Presentation: {
+    // STUB: we should process_member first for all these ...?
 
-      // Logic beats just progress
-      if (beat.is_logic_block) {
-        auto err = advance_cursor();
-        if (err)
-          return *err;
-        break;
-      }
+    auto [block, member] = get_current_block_and_member();
 
-      // Assemble the content to return. After this, the cursor will advance
-      // via act. Choice effects will also be applied in act(), so next()
-      // hangs here until user input occurs.
-      auto content = Content{};
-      content.text = resolve_text(beat.content);
-      content.attribution = beat.attribution;
-      for (auto &choice : beat.choices) {
-        auto opt = Option{};
-        opt.text = resolve_text(choice.content);
-        opt.is_available = resolve_condition(choice.condition);
-        content.options.push_back(opt);
-      }
-      return content;
+    // Get all the stuff we need to process through the member
+    if (!cursor.is_preprocessed) {
+      cursor.resolution_stack = queries_for_member_conditional(member);
+      cursor.is_preprocessed = true;
+      continue;
     }
-    case ProcessPhase::Execution: {
-      // Now that e have queried any method calls, do all the operations
-      auto &choice = beat.choices[cursor.choice_selection];
-      for (auto &op : choice.operations) {
-        auto err = do_operation(op);
-        if (err)
-          return *err;
-      }
 
-      // And proceed
-      advance_cursor(choice.line_number);
-      break;
-    }
-    }
-  }
+    // STUB: Hood open: step through until we hit a response.
+
+    std::optional<Response> response = std::visit(
+        [&](const auto &mem) -> std::optional<Response> {
+          using T = std::decay_t<decltype(mem)>;
+          if constexpr (std::is_same_v<T, Beat>) {
+            /// Beats ///
+            auto content = Content{};
+            content.text = resolve_text(mem.content);
+            content.attribution = mem.attribution;
+            return content;
+
+          } else if constexpr (std::is_same_v<T, LineOp()>) {
+            /// LineOps ///
+            if (resolve_condition(mem.condition)) {
+              process_member(); // advances to resolution
+            } else {
+              return do_operation(mem.op);
+            }
+          } else if constexpr (std::is_same_v<T, ChoiceGroup()>) {
+            // FIXME: Break this into its own return type
+            for (auto &choice : mem.choices) {
+              auto opt = Option{};
+              opt.text = resolve_text(choice.content);
+              opt.is_available = resolve_condition(choice.condition);
+              content.options.push_back(opt);
+            }
+            return value.second_method();
+          }
+          return std::nullopt;
+        },
+        member);
+
+    // If we got something out of the member, return it; otherwise loop de loop.
+    if (response)
+      return *response;
+
+    // FIXME: This seems like it was important.
+    // advance_cursor(choice.line_number);
+    break;
+  } // end of main next() loop.
 }
 
 // SECTION: PLAYER INPUT
@@ -680,33 +665,46 @@ Response Engine::next() {
 /** Called by client on continue (`act(0)`) or choice (`act(n)`). */
 Response Engine::act(int choice_index) {
   auto [block, member] = get_current_block_and_member();
-
+  std::optional<Error> err;
   std::visit(
       [&](const auto &mem) {
         using T = std::decay_t<decltype(mem)>;
         if constexpr (std::is_same_v<T, Beat>) {
-          auto err = advance_cursor(mem.line_number);
-          if (err)
-            return *err;
+
+          /// Act on a beat: CONTINUE ///
+
+          err = advance_cursor(mem.line_number);
         } else if constexpr (std::is_same_v<T, LineOp>) {
+
+          /// Act on a line op: ERROR ///
+
+          err = Error(ERROR_UNEXPECTED_ACT,
+                      "Got a user act input on a LineOp; state may be broken.",
+                      mem.line_number);
         } else if constexpr (std::is_same_v<T, ChoiceGroup()>) {
+
+          /// Act on a choice group: CHOICE ///
+
           if (choice_index >= mem.choices.size()) {
-            return Error(ERROR_CHOICE_OUT_OF_BOUNDS,
-                         "You picked choice " + std::to_string(choice_index) +
-                             ", but there are only " +
-                             std::to_string(mem.choices.size()) +
-                             " choices available!",
-                         mem.line_number);
+            err = Error(ERROR_CHOICE_OUT_OF_BOUNDS,
+                        "You picked choice " + std::to_string(choice_index) +
+                            ", but there are only " +
+                            std::to_string(mem.choices.size()) +
+                            " choices available!",
+                        mem.line_number);
+            return;
           }
 
           auto &choice = mem.choices[choice_index];
 
           // Make sure the selection is valid
           if (!resolve_condition(choice.condition)) {
-            return Error(ERROR_CHOICE_UNAVAILABLE,
-                         "You picked choice " + std::to_string(choice_index) +
-                             ", but it is unavailable.",
-                         choice.line_number);
+            err = Error(ERROR_CHOICE_UNAVAILABLE,
+                        "You picked choice " + std::to_string(choice_index) +
+                            ", but it is unavailable.",
+                        choice.line_number);
+
+            return;
           }
 
           // Process any queries that are needed
@@ -715,6 +713,10 @@ Response Engine::act(int choice_index) {
         }
       },
       member);
+
+  // Handle any errors thrown by the members
+  if (err)
+    return *err;
 
   return next();
 }

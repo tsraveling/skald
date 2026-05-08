@@ -524,6 +524,10 @@ struct Option {
 struct Content {
   std::string attribution = "";
   std::vector<Chunk> text;
+};
+
+// Contains one or more options
+struct OptionGroup {
   std::vector<Option> options;
 };
 
@@ -549,6 +553,7 @@ const uint ERROR_RESOLUTION_QUEUE_EMPTY = 7;
 const uint ERROR_TYPE_MISMATCH = 8;
 const uint ERROR_UNEXPECTED_NULL = 9;
 const uint ERROR_VAR_UNDEFINED = 10;
+const uint ERROR_UNEXPECTED_ACT = 11;
 struct Error {
   uint code = 0;
   std::string message;
@@ -616,14 +621,6 @@ struct Action {
   int selection;
 };
 
-/** This is the phase of processing for a given beat:
- *  1. Conditional: checking to see if the beat should be played at all.
- *  2. Resolution: applying the beat's effects.
- *  3. Presentation: returning the content to the client and waiting for player
- *  4. Execution: applying effects of the selected choice, if there is one
- * */
-enum class ProcessPhase { Conditional, Resolution, Presentation, Execution };
-
 /** Marks where we are in the module, and what is expected from the client
  * next
  */
@@ -633,10 +630,8 @@ struct Cursor {
    * the next advance_cursor */
   std::string queued_transition;
 
-  /** Each beat has a conditional, resolution, and presentation phase. These
-   *  check if the beat is valid, calculate values via method calls etc. to the
-   *  external client, and present the content, respectively. */
-  ProcessPhase current_phase = ProcessPhase::Conditional;
+  /** Is the next member pre-processed, queries queued etc */
+  bool is_preprocessed = false;
 
   /** Which block are we currently in */
   int current_block_index = 0;
@@ -659,9 +654,10 @@ struct Cursor {
    *  engine will proceed. */
   std::vector<Query> resolution_stack;
 
+  // FIXME: Remove once new conditional stuff is in place
   /** Tracks if the previous beat conditioned out or not. If it didn't, a
    *  following else block will succeed. */
-  bool did_last_condition_pass = false;
+  // bool did_last_condition_pass = false;
 
   /** This will reset the cursor to a "new" state */
   void reset() {
@@ -672,7 +668,8 @@ struct Cursor {
     choice_selection = 0;
     current_block_index = 0;
     current_member_index = 0;
-    did_last_condition_pass = true;
+    is_preprocessed = false;
+    // did_last_condition_pass = true;
   }
 };
 
@@ -762,7 +759,7 @@ private:
 
   // 4. Execution phase
 
-  void setup_choice();
+  std::optional<Error> setup_choice();
 
   ///-- RESOLUTION --///
 
@@ -798,6 +795,7 @@ private:
   bool resolve_conditional_item(const ConditionalItem &item);
   bool resolve_condition(const std::optional<Conditional> &cond);
   bool resolve_condition(const Conditional &cond);
+  bool resolve_condition(const AttachedCondition &cond);
   // STUB: Add a perform_operation() method
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);

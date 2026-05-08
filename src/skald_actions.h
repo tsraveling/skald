@@ -499,6 +499,8 @@ template <> struct action<op_line> {
     auto text = input.string();
     dbg_out(">>> op_line: " << text);
     // STUB: Formulate and add to module op
+    // TODO: assign input.position().line to LineOp::line_number on build
+    (void)input.position().line;
   }
 };
 
@@ -527,6 +529,8 @@ template <> struct action<choice_block> {
   static void apply(const ActionInput &input, ParseState &state) {
     // STUB: Build ChoiceGroup here
     dbg_out(">>> choice block: " << input.string());
+    // TODO: assign input.position().line to ChoiceGroup::line_number on build
+    (void)input.position().line;
     // state.add_beat();
   }
 };
