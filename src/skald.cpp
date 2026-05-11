@@ -619,6 +619,23 @@ Response Engine::next() {
             /// LineOps ///
             return do_operation(mem.op);
           } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
+
+            // STUB: Next: choice selection is still stuck at -1 here even after
+            // act, figure out why
+
+            // Execute choice if we made one
+            if (cursor.choice_selection >= 0) {
+              dbg_out("Processing choice " << cursor.choice_selection
+                                           << " and breaking");
+              auto &choice = mem.choices[cursor.choice_selection];
+              cursor.choice_selection = -1;
+              for (auto &op : choice.operations) {
+                auto e = do_operation(op);
+                if (e)
+                  return *e;
+              }
+              return std::nullopt;
+            }
             dbg_out("next(): hit a ChoiceGroup, returning OG");
             auto grp = OptionGroup{};
             for (auto &choice : mem.choices) {

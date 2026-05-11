@@ -671,7 +671,7 @@ struct Cursor {
   int current_member_index = 0;
 
   /** Which choice do we need to process? */
-  int choice_selection = 0;
+  int choice_selection = -1;
 
   /** If this is present, do an exit */
   Exit *queued_exit;
@@ -695,7 +695,7 @@ struct Cursor {
     queued_exit = NULL;
     queued_go = NULL;
     queued_transition = "";
-    choice_selection = 0;
+    choice_selection = -1;
     current_block_index = 0;
     current_member_index = 0;
     is_preprocessed = false;
