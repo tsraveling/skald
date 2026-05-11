@@ -31,14 +31,24 @@ std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
 
 // SECTION: STATE
 
-// void Engine::build_state(const Module &module) {
-//   state.clear();
-//   for (auto &var : module.declarations) {
-//     // We don't overwrite variables that are already in state
-//     if (!state.count(var.var.name))
-//       state[var.var.name] = var.initial_value;
-//   }
-// }
+void Engine::build_state(const Module &module) {
+  local_state.clear();
+  for (auto &var : module.module_vars) {
+    auto it = module_state.find(var.var.name);
+    if (it == module_state.end()) {
+      module_state[var.var.name] = var.initial_value;
+      continue;
+    }
+    // SimpleRValue index order matches ValueType enum order
+    // (string, bool, int, float).
+    auto existing_type = static_cast<ValueType>(it->second.index());
+    if (existing_type != var.var.type) {
+      warn("Module var '" + var.var.name +
+               "' redeclared with different type; keeping existing value.",
+           var.line_number);
+    }
+  }
+}
 
 bool compare(SimpleRValue ra, SimpleRValue rb,
              ConditionalAtom::Comparison comparison) {
@@ -750,6 +760,7 @@ Response Engine::start() {
 Response Engine::enter(int block, int index) {
   dbg_out("Engine::enter");
   cursor.reset();
+  build_state(*current);
   cursor.current_block_index = block;
   cursor.current_member_index = 0;
   setup_member();

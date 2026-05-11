@@ -756,7 +756,7 @@ private:
 
   std::unordered_map<std::string, SimpleRValue> query_cache;
 
-  // void build_state(const Module &module);
+  void build_state(const Module &module);
 
   ///--  UTIL  --///
   std::pair<Block &, BlockMember &> get_current_block_and_member();
