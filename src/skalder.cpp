@@ -65,6 +65,8 @@ public:
             expected_input = InputType::CONTINUE;
             current_prompt = "Spacebar to continue ...";
           } else if constexpr (std::is_same_v<T, OptionGroup>) {
+            dbg_out("Got an option group with " << value.options.size()
+                                                << " options");
             expected_input = InputType::CHOICES;
             for (size_t i = 0; i < value.options.size(); i++) {
               auto &opt = value.options[i];
@@ -124,6 +126,9 @@ public:
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
           if constexpr (std::is_same_v<T, Content>) {
+            return engine.act(0);
+          } else if constexpr (std::is_same_v<T, OptionGroup>) {
+            // TODO: Consider erroring out here if we require a choice
             return engine.act(0);
           } else if constexpr (std::is_same_v<T, Exit>) {
             return End{"Module EXIT."};
@@ -283,6 +288,7 @@ int main(int argc, char *argv[]) {
       prompt_content = nullptr;
       break;
     case SkaldTester::CHOICES: {
+      dbg_out("Setting up a current_options thing");
       Elements choices;
       int i = 1;
       for (auto &opt : tester.current_options) {
