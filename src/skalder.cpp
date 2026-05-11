@@ -10,6 +10,20 @@
 using namespace ftxui;
 using namespace Skald;
 
+namespace {
+enum class LogSeverity { DEBUG, INFO, WARN, ERROR };
+struct SkalderLog {
+  std::string msg;
+  LogSeverity severity;
+};
+std::vector<SkalderLog> log_lines;
+constexpr int DEBUG_PANEL_HEIGHT = 12;
+
+void dbg_log(std::string msg, LogSeverity sev = LogSeverity::DEBUG) {
+  log_lines.push_back({std::move(msg), sev});
+}
+} // namespace
+
 enum class NarrativeItemType { NORMAL, SYSTEM, ERROR, INPUT };
 
 struct NarrativeItem {
@@ -46,6 +60,7 @@ public:
       if (auto *q = std::get_if<Query>(&resp)) {
         if (!q->expects_response) {
           note_system(q->call.dbg_desc());
+          dbg_log("Query w/ auto-response: " + q->call.dbg_desc());
           resp = engine.answer(std::nullopt);
           continue;
         }
@@ -60,13 +75,14 @@ public:
         [&](const auto &value) {
           using T = std::decay_t<decltype(value)>;
           if constexpr (std::is_same_v<T, Content>) {
+            dbg_log("processing Content");
             narrative.push_back(NarrativeItem{.attribution = value.attribution,
                                               .content = stitch(value.text)});
             expected_input = InputType::CONTINUE;
             current_prompt = "Spacebar to continue ...";
           } else if constexpr (std::is_same_v<T, OptionGroup>) {
-            dbg_out("Got an option group with " << value.options.size()
-                                                << " options");
+            dbg_log("processing OptionGroup with " +
+                    std::to_string(value.options.size()) + " options");
             expected_input = InputType::CHOICES;
             for (size_t i = 0; i < value.options.size(); i++) {
               auto &opt = value.options[i];
@@ -75,16 +91,20 @@ public:
             }
             current_prompt = "Select an option";
           } else if constexpr (std::is_same_v<T, Query>) {
+            dbg_log("Processing Query");
             current_prompt = value.call.dbg_desc();
             expected_input = InputType::TEXT;
           } else if constexpr (std::is_same_v<T, Exit>) {
+            dbg_log("Processing Exit");
             current_prompt = "Press spacebar to conclude script.";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, GoModule>) {
+            dbg_log("Processing GoModule");
             current_prompt =
                 "Press spacebar to continue to " + value.module_path + "!";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, End>) {
+            dbg_log("Processing End");
             current_prompt =
                 "This is an END response -- we shouldn't be here anymore!";
             expected_input = InputType::CONTINUE;
@@ -216,6 +236,7 @@ public:
 
 int main(int argc, char *argv[]) {
   dbg_out_on = true;
+  dbg_sink = [](const std::string &s) { dbg_log(s); };
 
   auto screen = ScreenInteractive::Fullscreen();
 
@@ -225,6 +246,7 @@ int main(int argc, char *argv[]) {
   SkaldTester tester{};
   tester.engine.load(path);
   tester.note_system("STARTING MODULE: " + path);
+  dbg_log("STARTING MODULE: " + path);
 
   Response response;
   response = tester.engine.start();
@@ -232,6 +254,7 @@ int main(int argc, char *argv[]) {
 
   std::string input_content;
   std::string exit_reason;
+  bool show_logs = false;
   auto input = Input(&input_content, "string, int, float, true, or false");
 
   auto component = Renderer(input, [&] {
@@ -288,7 +311,7 @@ int main(int argc, char *argv[]) {
       prompt_content = nullptr;
       break;
     case SkaldTester::CHOICES: {
-      dbg_out("Setting up a current_options thing");
+      dbg_log("Setting up a current_options thing");
       Elements choices;
       int i = 1;
       for (auto &opt : tester.current_options) {
@@ -312,11 +335,48 @@ int main(int argc, char *argv[]) {
     auto prompt_box =
         prompt_contents | borderStyled(ROUNDED, Color::MediumPurple2);
 
-    return vbox({
-               padded_logs,
-               prompt_box,
-           }) |
-           borderStyled(ROUNDED, Color::White);
+    auto main_box = vbox({
+                        padded_logs,
+                        prompt_box,
+                    }) |
+                    borderStyled(ROUNDED, Color::White) | flex;
+
+    if (!show_logs) {
+      return main_box;
+    }
+
+    Elements debug_elements;
+    debug_elements.push_back(filler());
+    size_t available = DEBUG_PANEL_HEIGHT - 2;
+    size_t start =
+        log_lines.size() > available ? log_lines.size() - available : 0;
+    for (size_t i = start; i < log_lines.size(); i++) {
+      Color c = Color::GrayLight;
+      switch (log_lines[i].severity) {
+      case LogSeverity::DEBUG:
+        c = Color::GrayLight;
+        break;
+      case LogSeverity::INFO:
+        c = Color::White;
+        break;
+      case LogSeverity::WARN:
+        c = Color::Yellow;
+        break;
+      case LogSeverity::ERROR:
+        c = Color::Red;
+        break;
+      }
+      auto line = text(log_lines[i].msg) | color(c);
+      if (i == log_lines.size() - 1) {
+        line = line | bold;
+      }
+      debug_elements.push_back(line);
+    }
+    auto debug_panel = vbox(debug_elements) |
+                       size(HEIGHT, EQUAL, DEBUG_PANEL_HEIGHT) |
+                       borderStyled(ROUNDED, Color::Yellow);
+
+    return vbox({main_box, debug_panel});
   });
 
   // This will advance to the next point and exit if we reach an END type.
@@ -336,6 +396,10 @@ int main(int argc, char *argv[]) {
     if (event == Event::Escape) {
       exit_reason = "Exited because user pressed Escape.";
       screen.Exit();
+      return true;
+    }
+    if (event == Event::F12) {
+      show_logs = !show_logs;
       return true;
     }
     switch (tester.expected_input) {
