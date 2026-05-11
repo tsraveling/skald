@@ -126,12 +126,13 @@ public:
           if constexpr (std::is_same_v<T, Content>) {
             return engine.act(0);
           } else if constexpr (std::is_same_v<T, Exit>) {
-            return End{};
+            return End{"Module EXIT."};
           } else if constexpr (std::is_same_v<T, Query>) {
             return engine.answer(std::nullopt);
           } else {
             // TODO: Better error handling if this is a problem
-            return End{};
+            return End("Exiting because tried to continue on an unknown "
+                       "Response type.");
           }
         },
         response);
@@ -149,11 +150,12 @@ public:
     return std::visit(
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, Content>) {
+          if constexpr (std::is_same_v<T, OptionGroup>) {
             return engine.act(choice);
           } else {
             // TODO: Better error handling if this is a problem
-            return End{};
+            return End{"Exited because we tried to process a choice on "
+                       "something that wasn't a ChoiceGroup!"};
           }
         },
         response);
@@ -208,7 +210,7 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-  dbg_out_on = false;
+  dbg_out_on = true;
 
   auto screen = ScreenInteractive::Fullscreen();
 
@@ -224,6 +226,7 @@ int main(int argc, char *argv[]) {
   tester.process(response);
 
   std::string input_content;
+  std::string exit_reason;
   auto input = Input(&input_content, "string, int, float, true, or false");
 
   auto component = Renderer(input, [&] {
@@ -313,6 +316,9 @@ int main(int argc, char *argv[]) {
   // This will advance to the next point and exit if we reach an END type.
   auto do_next = [&] {
     if (std::holds_alternative<End>(response)) {
+      auto &end = std::get<End>(response);
+      exit_reason = end.reason.empty() ? "Exited because narrative reached End."
+                                       : end.reason;
       screen.Exit();
       return;
     }
@@ -322,12 +328,13 @@ int main(int argc, char *argv[]) {
 
   component = CatchEvent(component, [&](Event event) {
     if (event == Event::Escape) {
+      exit_reason = "Exited because user pressed Escape.";
       screen.Exit();
       return true;
     }
     switch (tester.expected_input) {
     case SkaldTester::CONTINUE: {
-      if (event == Event::Character(' ')) {
+      if (event == Event::Character(' ') || event == Event::Character('n')) {
         response = tester.do_continue(response);
         do_next();
         return true;
@@ -373,6 +380,9 @@ int main(int argc, char *argv[]) {
 
   screen.Loop(component);
 
+  if (!exit_reason.empty()) {
+    std::cout << exit_reason << std::endl;
+  }
   std::cout << "\n\nGoodbye!" << std::endl;
   return 0;
 }

@@ -5,7 +5,7 @@
 int main() {
   // Disable debug output from skald library
   Skald::log_level = Skald::SkaldLogLevel::OFF;
-  dbg_out_on = false;
+  dbg_out_on = true;
 
   SkaldLsp::Server server;
 

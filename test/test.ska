@@ -27,24 +27,7 @@ tester: This is an attributed beat.
 
 > This choice will continue
 > Goes to grandchild
-  -> .child1.grandchild1
 > Goes to child2
-  -> .child2
 
 This is the continuation beat.
 
-## child1
-
-This is child1.
-
-### grandchild1
-
-This is grandchild1.
-
-## child2
-
-This is child2.
-
-# a
-
-# b

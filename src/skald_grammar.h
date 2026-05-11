@@ -241,7 +241,7 @@ struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
 
 /** Inline operations; part of blocks. */
-struct op_line : seq<opt<conditional>, operation, functional_eol> {};
+struct op_line : seq<opt<seq<conditional, ws>>, operation, functional_eol> {};
 struct op_choice : seq<indent, operation, functional_eol> {};
 
 // SECTION: CHOICES

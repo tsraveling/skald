@@ -1,5 +1,7 @@
 # Skald TODO
 
+- [ ] LineOps and ChoiceGroups are not getting properly identified and added as members.
+
 ## Notes
 
 - Character state

@@ -1,6 +1,7 @@
 #include "parse_state.h"
 #include "debug.h"
 #include "logger.h"
+#include "skald.h"
 #include <utility>
 
 namespace Skald {
@@ -16,6 +17,8 @@ ParseState::ParseState(const std::string &filename) {
 void ParseState::err(const tao::pegtl::position pos, std::string msg) {
   errors.push_back(ParseError{
       .pos = pos, .msg = msg, .severity = ParseError::Severity::ERROR});
+
+  dbg_out("XXX ERR: " << msg);
 }
 void ParseState::warn(const tao::pegtl::position pos, std::string msg) {
   errors.push_back(ParseError{
@@ -83,7 +86,21 @@ Choice *ParseState::add_choice() {
   return &choice_stack.back();
 }
 
+void ParseState::add_choice_group(int line_number) {
+  ChoiceGroup grp;
+  grp.choices = std::move(choice_stack);
+  grp.line_number = line_number;
+  current_block->members.push_back(grp);
+}
+
 // SECTION: OPERATIONS
+
+Operation ParseState::operation_queue_pop() {
+  dbg_out(">>> operation_queue_pop: " << operation_queue.size() << " -1 ");
+  auto back = std::move(operation_queue.back());
+  operation_queue.pop_back();
+  return back;
+}
 
 // SECTION: TEXT
 

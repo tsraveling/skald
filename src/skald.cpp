@@ -20,7 +20,11 @@ namespace Skald {
 // SECTION: UTIL
 
 std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
+  dbg_out("get_current_b&m: block " << cursor.current_block_index
+                                    << ", m: " << cursor.current_member_index);
+  assert(current->blocks.size() > cursor.current_block_index);
   Block &block = current->blocks[cursor.current_block_index];
+  assert(block.members.size() > cursor.current_member_index);
   BlockMember &member = block.members[cursor.current_member_index];
   return {block, member};
 }
@@ -341,6 +345,8 @@ bool Engine::resolve_conditional_atom(const ConditionalAtom &atom) {
   return compare(ra, rb, atom.comparison);
 }
 
+// STUB: Record the result of the conditional resolution so we can return it
+
 bool Engine::resolve_conditional_item(const ConditionalItem &item) {
   return std::visit(
       [&](const auto &c) -> bool {
@@ -467,6 +473,7 @@ std::optional<Error> Engine::do_operation(Operation &op) {
 /** Queues the member's conditional for processing. Called on cursor movement
  * and by the engine on first enter. */
 void Engine::setup_member() {
+  dbg_out("Engine::setup_member");
   auto [block, member] = get_current_block_and_member();
   cursor.resolution_stack = queries_for_member_conditional(member);
   cursor.is_preprocessed = true;
@@ -547,19 +554,22 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
 /** This steps forward to whatever the next thing is that needs to happen, and
  *  as soon as any response is pending, returns it. */
 Response Engine::next() {
+  dbg_out("Engine::next()");
   // Processor loop
   int debug_blocker = 0;
 
   // This will loop forever until something returns. Basically steps through
   // the module until something happens, or until we need to return an error.
   while (true) {
+    dbg_out(">>> next looping " << debug_blocker);
 
     // Debug stopper; while developing, lock loop iterations to 50 to keep
     // from getting stuck in a permaloop.
     debug_blocker++;
     if (debug_blocker > 50) {
       dbg_out(">>> Engine::next infinite loop exception! breaking.");
-      return End{};
+      return End("Exited due to infinite loop (50 iteration debug threshold "
+                 "reached)!");
     }
 
     /// EXIT and GO ///
@@ -616,7 +626,11 @@ Response Engine::next() {
     // loop.
     if (response)
       return *response;
-    break;
+
+    // If no response, step forward
+    auto err = advance_cursor();
+    if (err)
+      return *err;
   } // end of main next() loop.
 
   return Error(ERROR_UNKNOWN,
@@ -728,10 +742,11 @@ Response Engine::start() {
     return Error(ERROR_EMPTY_MODULE,
                  "No blocks were found in the current module!", 0);
   }
-  return enter(1, 0);
+  return enter(0, 0);
 }
 
 Response Engine::enter(int block, int index) {
+  dbg_out("Engine::enter");
   cursor.reset();
   cursor.current_block_index = block;
   cursor.current_member_index = 0;
@@ -758,8 +773,8 @@ void Engine::load(std::string path) {
 
     dbg_out("MODULE VARS:");
     for (const auto &dec : pstate.module.module_vars) {
-      dbg_out(" - " << dec.var.name << " (" << rval_to_string(dec.initial_value)
-                    << ")");
+      dbg_out(" - " << dec.var.dbg_desc() << " = "
+                    << rval_to_string(dec.initial_value));
     }
 
     dbg_out("TESTBEDS:");

@@ -71,10 +71,16 @@ struct ParseState {
   /** Adds a choice */
   Choice *add_choice();
 
+  /** Consolidates a choice group */
+  void add_choice_group(int line_number);
+
   // SECTION: OPERATIONS
 
   /** Current operations stack */
   std::vector<Operation> operation_queue;
+
+  /** Pops the most recent operation off the queue and returns it */
+  Operation operation_queue_pop();
 
   // SECTION: TEXT
 

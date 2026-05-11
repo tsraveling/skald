@@ -153,18 +153,29 @@ template <> struct action<let> {
           input.position(),
           "Got a second let clause; a given module should only have one.");
     }
+    dbg_out(">>> saving " << state.module_vars_stack.size() << " module vars");
     state.module.module_vars = std::move(state.module_vars_stack);
   }
 };
 
 /// Declarations ///
 
+template <> struct action<declaration_default> {
+  static void apply0(ParseState &state) { state.declaration_was_valued = true; }
+};
+template <> struct action<declaration_type> {
+  static void apply0(ParseState &state) { state.declaration_was_typed = true; }
+};
 template <> struct action<declaration> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
 
+    dbg_out("!!! declaration");
+
+    // FIXME: declaration_was valued and _was_typed are not being set!
+
     // Rule: Must *either* be typed or valued (or both)
-    if (!state.declaration_was_valued || !state.declaration_was_typed) {
+    if (!state.declaration_was_valued && !state.declaration_was_typed) {
       state.err(
           input.position(),
           "Declaration must have either a type or a default value (or both).");
@@ -190,6 +201,7 @@ template <> struct action<declaration> {
     auto var = Variable{.name = n, .type = t};
 
     // Add to stack
+    dbg_out("+++> storing module var: " << var.name);
     state.module_vars_stack.push_back(
         ModuleVar{.initial_value = v, .var = var});
 
@@ -502,9 +514,11 @@ template <> struct action<op_line> {
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
     dbg_out(">>> op_line: " << text);
-    // STUB: Formulate and add to module op
-    // TODO: assign input.position().line to LineOp::line_number on build
-    (void)input.position().line;
+    LineOp lo;
+    lo.line_number = input.position().line;
+    lo.op = state.operation_queue_pop();
+    lo.condition.condition = state.conditional_buffer_pop();
+    state.current_block->members.push_back(lo);
   }
 };
 
@@ -531,11 +545,8 @@ template <> struct action<choice_clause> {
 template <> struct action<choice_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    // STUB: Build ChoiceGroup here
-    dbg_out(">>> choice block: " << input.string());
-    // TODO: assign input.position().line to ChoiceGroup::line_number on build
-    (void)input.position().line;
-    // state.add_beat();
+    dbg_out(">>> adding ChoiceGroup: " << input.string());
+    state.add_choice_group(input.position().line);
   }
 };
 

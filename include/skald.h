@@ -25,6 +25,26 @@ enum ValueType { STRING, BOOL, INT, FLOAT };
 struct Variable {
   std::string name;
   ValueType type;
+
+  std::string dbg_desc() const {
+    std::string ret = name + " (";
+    switch (type) {
+    case STRING:
+      ret += "string";
+      break;
+    case BOOL:
+      ret += "bool";
+      break;
+    case INT:
+      ret += "int";
+      break;
+    case FLOAT:
+      ret += "float";
+      break;
+    }
+    ret += ")";
+    return ret;
+  }
 };
 
 // Forward declarations
@@ -576,8 +596,17 @@ struct QueryAnswer {
   std::optional<SimpleRValue> val;
 };
 
+// STUB: Build this out to notify the user of calls and mutations
+struct Notification {};
+
 /** Empty struct signifying that the script is concluded. */
-struct End {};
+struct End {
+
+  /** Optionally stores a reason for hitting an end; useful for debugging. */
+  std::string reason;
+
+  End(std::string reason = "") : reason(std::move(reason)) {}
+};
 
 /** Will contain either a Content struct or a Query */
 using Response =
