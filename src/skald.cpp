@@ -596,7 +596,7 @@ Response Engine::next() {
     // STUB: Hood open: step through until we hit a response.
 
     std::optional<Response> response = std::visit(
-        [&](const auto &mem) -> std::optional<Response> {
+        [&](auto &mem) -> std::optional<Response> {
           using T = std::decay_t<decltype(mem)>;
           if constexpr (std::is_same_v<T, Beat>) {
             /// Beats ///
@@ -605,10 +605,11 @@ Response Engine::next() {
             content.attribution = mem.attribution;
             return content;
 
-          } else if constexpr (std::is_same_v<T, LineOp()>) {
+          } else if constexpr (std::is_same_v<T, LineOp>) {
             /// LineOps ///
             return do_operation(mem.op);
-          } else if constexpr (std::is_same_v<T, ChoiceGroup()>) {
+          } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
+            dbg_out("next(): hit a ChoiceGroup, returning OG");
             auto grp = OptionGroup{};
             for (auto &choice : mem.choices) {
               auto opt = Option{};
@@ -628,6 +629,7 @@ Response Engine::next() {
       return *response;
 
     // If no response, step forward
+    dbg_out(">>> advancing cursor ...");
     auto err = advance_cursor();
     if (err)
       return *err;

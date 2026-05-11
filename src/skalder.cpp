@@ -109,6 +109,7 @@ public:
                 "This is an END response -- we shouldn't be here anymore!";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, Error>) {
+            dbg_log(value.message, LogSeverity::ERROR);
             current_prompt = value.message;
             expected_input = InputType::CONTINUE;
           }
@@ -180,7 +181,7 @@ public:
           } else {
             // TODO: Better error handling if this is a problem
             return End{"Exited because we tried to process a choice on "
-                       "something that wasn't a ChoiceGroup!"};
+                       "something that wasn't an OptionGroup!"};
           }
         },
         response);
