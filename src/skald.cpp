@@ -688,7 +688,7 @@ Response Engine::act(int choice_index) {
           err = Error(ERROR_UNEXPECTED_ACT,
                       "Got a user act input on a LineOp; state may be broken.",
                       mem.line_number);
-        } else if constexpr (std::is_same_v<T, ChoiceGroup()>) {
+        } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
 
           /// Act on a choice group: CHOICE ///
 
