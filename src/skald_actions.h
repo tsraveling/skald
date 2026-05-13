@@ -456,6 +456,14 @@ template <> struct action<module_path> {
   }
 };
 
+template <> struct action<move_identifier> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    // Do something here
+  }
+};
+
 // This checks if the currently processed GO line has a start tag on the end
 template <> struct action<op_go_start_tag> {
   static void apply0(ParseState &state) { state.does_go_have_start_tag = true; }
@@ -486,6 +494,7 @@ template <> struct action<op_exit> {
 template <> struct action<op_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
+    // STUB: NEXT: capture move_id instead of pop_id
     state.operation_queue.push_back(
         Move{input.position().line, state.pop_id()});
     dbg_out(">>> op_move: " << input.string());

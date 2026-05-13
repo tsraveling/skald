@@ -233,10 +233,20 @@ struct op_mutation : sor<op_mutate_equate, op_mutate_switch, op_mutate_add,
 struct keyword_go : keyword<'G', 'O'> {};
 struct keyword_exit : keyword<'E', 'X', 'I', 'T'> {};
 struct op_exit : seq<keyword_exit, opt<sp, rvalue>> {};
-struct op_go_start_tag : seq<sp, move_marker, ws, identifier, ws> {};
+
+struct move_child : seq<one<'.'>, identifier> {};
+struct move_sib : seq<one<'-'>, identifier> {};
+struct move_parent : one<'^'> {};
+struct move_relative : sor<move_child, move_sib, move_parent> {};
+struct move_identifier_short : plus<move_relative> {};
+struct move_identifier_full
+    : seq<identifier,
+          opt<seq<one<'.'>, identifier, opt<seq<one<'.'>, identifier>>>>> {};
+struct op_go_start_tag : seq<sp, move_marker, ws, move_identifier_full, ws> {};
 struct op_go : seq<keyword_go, plus<space>, module_path, opt<op_go_start_tag>> {
 };
-struct op_move : seq<move_marker, ws, identifier, ws> {};
+struct op_move : seq<move_marker, ws,
+                     sor<move_identifier_full, move_identifier_short>, ws> {};
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
 
@@ -279,9 +289,8 @@ struct block_tag_name : identifier {};
  *  - ## child_tag
  *  - ### grandchild_tag
  */
-struct block_tag_line
-    : seq<block_prefix, one<' '>, block_tag_name, ws, opt<end_line_comment>,
-          eol> {};
+struct block_tag_line : seq<block_prefix, one<' '>, block_tag_name, ws,
+                            opt<end_line_comment>, eol> {};
 
 /** The `some_tag: ...` part of a beat. */
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
