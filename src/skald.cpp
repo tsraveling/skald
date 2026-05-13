@@ -603,8 +603,6 @@ Response Engine::next() {
 
     assert(cursor.is_preprocessed);
 
-    // STUB: Hood open: step through until we hit a response.
-
     std::optional<Response> response = std::visit(
         [&](auto &mem) -> std::optional<Response> {
           using T = std::decay_t<decltype(mem)>;
@@ -619,9 +617,6 @@ Response Engine::next() {
             /// LineOps ///
             return do_operation(mem.op);
           } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
-
-            // STUB: Next: choice selection is still stuck at -1 here even after
-            // act, figure out why
 
             // Execute choice if we made one
             if (cursor.choice_selection >= 0) {

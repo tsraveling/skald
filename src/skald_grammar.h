@@ -92,7 +92,7 @@ struct module_path
 using block1_prefix = string<'#'>;
 using block2_prefix = string<'#', '#'>;
 using block3_prefix = string<'#', '#', '#'>;
-using block_prefix = sor<block1_prefix, block2_prefix, block3_prefix>;
+using block_prefix = sor<block3_prefix, block2_prefix, block1_prefix>;
 
 // SECTION: KEYWORDS
 
@@ -280,8 +280,8 @@ struct block_tag_name : identifier {};
  *  - ### grandchild_tag
  */
 struct block_tag_line
-    : seq<sor<block1_prefix, block2_prefix, block3_prefix>, one<' '>,
-          block_tag_name, ws, opt<end_line_comment>, eol> {};
+    : seq<block_prefix, one<' '>, block_tag_name, ws, opt<end_line_comment>,
+          eol> {};
 
 /** The `some_tag: ...` part of a beat. */
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};

@@ -454,6 +454,27 @@ int main(int argc, char *argv[]) {
   if (!exit_reason.empty()) {
     std::cout << exit_reason << std::endl;
   }
+
+  std::cout << "\n--- LOGS ---" << std::endl;
+  for (const auto &entry : log_lines) {
+    const char *prefix = "~ ";
+    switch (entry.severity) {
+    case LogSeverity::DEBUG:
+      prefix = "";
+      break;
+    case LogSeverity::INFO:
+      prefix = "";
+      break;
+    case LogSeverity::WARN:
+      prefix = "[*] ";
+      break;
+    case LogSeverity::ERROR:
+      prefix = "[!] ";
+      break;
+    }
+    std::cout << prefix << entry.msg << std::endl;
+  }
+
   std::cout << "\n\nGoodbye!" << std::endl;
   return 0;
 }

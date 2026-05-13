@@ -26,8 +26,23 @@ This is the first beat.
 tester: This is an attributed beat.
 
 > This choice will continue
-> Goes to grandchild
+> Goes to grandchild b
 > Goes to child2
 
 This is the continuation beat.
 
+## alice
+
+This is first child block
+
+### a
+
+This is grandchild a
+
+### b
+
+This is grandchild b
+
+## bob
+
+This is second child block

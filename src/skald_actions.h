@@ -15,15 +15,48 @@ template <typename Rule> struct action {};
 
 // SECTION: BLOCK TAGS
 
-// STUB: Store tag level here
-template <> struct action<block1_prefix> {
-  static void apply0(ParseState &state) { dbg_out(">>> #"); }
+template <> struct action<block1_prefix> { // #
+  static void apply0(ParseState &state) { state.last_tag_level = 0; }
+};
+template <> struct action<block2_prefix> { // ##
+  static void apply0(ParseState &state) { state.last_tag_level = 1; }
+};
+template <> struct action<block3_prefix> { // ###
+  static void apply0(ParseState &state) { state.last_tag_level = 2; }
 };
 
+// Tags will be encoded as {parent}.{child}.{grandchild}
 template <> struct action<block_tag_name> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto tag = input.string();
+    auto base = input.string();
+    std::string tag;
+    switch (state.last_tag_level) {
+    case 0: // #
+      tag = base;
+      state.open_parent_tag = base;
+      state.open_child_tag = ""; // Close child tags from previous block
+      break;
+    case 1: // ##
+      if (state.open_parent_tag.size() == 0) {
+        state.err(input.position(),
+                  "Got a child tag but no parent block was open");
+        return;
+      }
+      tag = state.open_parent_tag + "." + base;
+      state.open_child_tag = base;
+      break;
+    case 2: // ###
+      if (state.open_child_tag.size() == 0) {
+        state.err(input.position(),
+                  "Got a grandchild tag but no child tag was open");
+        return;
+      }
+      // should be handled by case 1 but just in case:
+      assert(state.open_parent_tag != "");
+      tag = state.open_parent_tag + "." + state.open_child_tag + "." + base;
+      break;
+    }
     state.start_block(tag);
   }
 };
@@ -33,7 +66,6 @@ template <> struct action<identifier> {
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
     state.last_identifier = text;
-    dbg_out(">>> last_id: " << text);
   }
 };
 

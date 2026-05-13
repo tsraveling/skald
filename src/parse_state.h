@@ -45,6 +45,12 @@ struct ParseState {
 
   // SECTION: BLOCKS
 
+  std::string open_parent_tag;
+  std::string open_child_tag;
+
+  /** 0: parent, 1: child, 2: grandhchild */
+  int last_tag_level = 0;
+
   /** The block currently under construction */
   Block *current_block = nullptr;
 
