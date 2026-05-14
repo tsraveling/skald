@@ -27,7 +27,9 @@ tester: This is an attributed beat.
 
 > This choice will continue
 > Goes to grandchild b
+  -> .alice.b
 > Goes to child2
+  -> .bob
 
 This is the continuation beat.
 
@@ -39,6 +41,11 @@ This is first child block
 
 This is grandchild a
 
+> Up to parent
+  -> ^^
+> To sib
+  -> -b
+
 ### b
 
 This is grandchild b
@@ -46,3 +53,7 @@ This is grandchild b
 ## bob
 
 This is second child block
+
+And this is the end.
+
+EXIT

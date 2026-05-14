@@ -5,6 +5,7 @@
 #include "skald.h"
 #include "skald_grammar.h"
 #include "tao/pegtl/position.hpp"
+#include <array>
 #include <optional>
 #include <string>
 #include <vector>
@@ -45,6 +46,7 @@ template <> struct action<block_tag_name> {
       }
       tag = state.open_parent_tag + "." + base;
       state.open_child_tag = base;
+      state.open_grandchild_tag = "";
       break;
     case 2: // ###
       if (state.open_child_tag.size() == 0) {
@@ -55,6 +57,7 @@ template <> struct action<block_tag_name> {
       // should be handled by case 1 but just in case:
       assert(state.open_parent_tag != "");
       tag = state.open_parent_tag + "." + state.open_child_tag + "." + base;
+      state.open_grandchild_tag = base;
       break;
     }
     state.start_block(tag);
@@ -456,11 +459,100 @@ template <> struct action<module_path> {
   }
 };
 
-template <> struct action<move_identifier> {
+// Relative Move Steps
+template <> struct action<move_child> {
+  static void apply0(ParseState &state) {
+    auto step =
+        ParseState::RelMoveStep{.type = ParseState::RelMoveStep::Type::CHILD,
+                                .identifier = state.pop_id()};
+    state.rel_move_steps.push_back(step);
+  }
+};
+template <> struct action<move_sib> {
+  static void apply0(ParseState &state) {
+    auto step =
+        ParseState::RelMoveStep{.type = ParseState::RelMoveStep::Type::SIB,
+                                .identifier = state.pop_id()};
+    state.rel_move_steps.push_back(step);
+  }
+};
+template <> struct action<move_parent> {
+  static void apply0(ParseState &state) {
+    auto step = ParseState::RelMoveStep{
+        .type = ParseState::RelMoveStep::Type::PARENT, .identifier = ""};
+    state.rel_move_steps.push_back(step);
+  }
+};
+
+// Captures move identifier and transforms it into an absolute string
+template <> struct action<move_identifier_short> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    // Do something here
+    dbg_out("o---> SHORT: " << input.string());
+    assert(state.open_parent_tag != ""); // No op possible w/out an open block
+
+    // Assemble the starting tag
+    std::array<std::string, 3> tag = {
+        state.open_parent_tag, state.open_child_tag, state.open_grandchild_tag};
+    int cursor = 0;
+    if (state.open_child_tag != "")
+      cursor = 1;
+    if (state.open_grandchild_tag != "")
+      cursor = 2;
+    // dbg_out("   =. start: " << tag[0] << "." << tag[1] << "." << tag[2]);
+
+    // Modify tag list via steps
+    for (auto &step : state.rel_move_steps) {
+      switch (step.type) {
+      case ParseState::RelMoveStep::Type::PARENT:
+        if (cursor == 0) {
+          state.err(input.position(),
+                    "Relative parent move from cursor, but already at parent!");
+          return;
+        }
+        // dbg_out("     =]  (parent)");
+        tag[cursor] = ""; // clear and step up
+        cursor--;
+        break;
+      case ParseState::RelMoveStep::Type::SIB:
+        // dbg_out("     =]  (sib) " << step.identifier);
+        tag[cursor] = step.identifier; // swap out current id
+        break;
+      case ParseState::RelMoveStep::Type::CHILD:
+        if (cursor >= 2) {
+          state.err(
+              input.position(),
+              "Relative child move from cursor, but already at grandchild!");
+          return;
+        }
+        // dbg_out("     =]  (child) " << step.identifier);
+        cursor++;
+        tag[cursor] = step.identifier;
+        break;
+      }
+      // dbg_out("   =.  step: " << tag[0] << "." << tag[1] << "." << tag[2]);
+    }
+    state.rel_move_steps.clear();
+
+    std::string joined;
+    for (const auto &part : tag) {
+      if (part.empty())
+        continue;
+      if (!joined.empty())
+        joined += ".";
+      joined += part;
+    }
+    state.move_identifier_store = joined;
+    dbg_out("   => FULL: " << state.move_identifier_store);
+  }
+};
+
+// Move identifier already as absolute string
+template <> struct action<move_identifier_full> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.move_identifier_store = input.string();
+    dbg_out("o---> FULL: " << state.move_identifier_store);
   }
 };
 
@@ -473,7 +565,8 @@ template <> struct action<op_go> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_go: " << input.string() << " (pushing onto queue)");
-    std::string start_tag = state.does_go_have_start_tag ? state.pop_id() : "";
+    std::string start_tag =
+        state.does_go_have_start_tag ? state.move_identifier_store : "";
     dbg_out(" - >>> start_tag: " << start_tag);
     state.operation_queue.push_back(
         GoModule{.module_path = state.path_buffer, .start_in_tag = start_tag});
@@ -494,9 +587,8 @@ template <> struct action<op_exit> {
 template <> struct action<op_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    // STUB: NEXT: capture move_id instead of pop_id
     state.operation_queue.push_back(
-        Move{input.position().line, state.pop_id()});
+        Move{input.position().line, state.move_identifier_store});
     dbg_out(">>> op_move: " << input.string());
   }
 };

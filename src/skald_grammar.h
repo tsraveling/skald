@@ -237,8 +237,7 @@ struct op_exit : seq<keyword_exit, opt<sp, rvalue>> {};
 struct move_child : seq<one<'.'>, identifier> {};
 struct move_sib : seq<one<'-'>, identifier> {};
 struct move_parent : one<'^'> {};
-struct move_relative : sor<move_child, move_sib, move_parent> {};
-struct move_identifier_short : plus<move_relative> {};
+struct move_identifier_short : plus<sor<move_child, move_sib, move_parent>> {};
 struct move_identifier_full
     : seq<identifier,
           opt<seq<one<'.'>, identifier, opt<seq<one<'.'>, identifier>>>>> {};

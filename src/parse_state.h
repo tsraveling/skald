@@ -47,6 +47,7 @@ struct ParseState {
 
   std::string open_parent_tag;
   std::string open_child_tag;
+  std::string open_grandchild_tag;
 
   /** 0: parent, 1: child, 2: grandhchild */
   int last_tag_level = 0;
@@ -81,6 +82,19 @@ struct ParseState {
   void add_choice_group(int line_number);
 
   // SECTION: OPERATIONS
+
+  /** Stores pieces of a relative transition for parsing later */
+  struct RelMoveStep {
+    enum Type { PARENT, SIB, CHILD };
+    Type type;
+    std::string identifier;
+  };
+
+  /** Stack of relative movement steps for parsing */
+  std::vector<RelMoveStep> rel_move_steps;
+
+  /** Stores move identifier for transitions and GO statements */
+  std::string move_identifier_store;
 
   /** Current operations stack */
   std::vector<Operation> operation_queue;
