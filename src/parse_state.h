@@ -59,6 +59,15 @@ struct ParseState {
    * state */
   void start_block(const std::string &tag);
 
+  // SECTION: MEMBERS AND CONDITIONAL CHAINS
+
+  /** Adds a member either to the main thread, or the open conditional block */
+  void add_member(BlockMember mem);
+
+  /** Holds open chain if there is one. Members will be added to last block in
+   *  list. */
+  ConditionalChain *open_chain = nullptr;
+
   // SECTION: BEATS
 
   /** The current beat attribution tag */
@@ -71,7 +80,7 @@ struct ParseState {
   void store_beat_text();
 
   /** Creates a beat and adds it to the current block */
-  Beat *add_beat();
+  void add_beat(int line_number);
 
   // SECTION: CHOICES
 
@@ -110,9 +119,6 @@ struct ParseState {
   /** Will either append to the last string if also a simple string, or add it
    * to the stack if not. */
   void add_text_string(std::string str);
-
-  /** Called whenever a text queue is concluded */
-  void conclude_text();
 
   /** This will hold the initial rval in an injectable so it can be used in
    * whatever format the injectable ends up being. */

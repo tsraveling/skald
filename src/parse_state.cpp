@@ -46,9 +46,19 @@ void ParseState::start_block(const std::string &tag) {
   current_block = &module.blocks.back();
 }
 
+/** Adds a member either to the main thread, or the open conditional block */
+void ParseState::add_member(BlockMember mem) {
+  if (open_chain != nullptr) {
+    assert(open_chain->cond_blocks.size() > 0); // must have members
+    open_chain->cond_blocks.back().members.push_back(std::move(mem));
+  } else {
+    current_block->members.push_back(MainBlockMember{std::move(mem)});
+  }
+}
+
 // SECTION: BEATS
 
-Beat *ParseState::add_beat() {
+void ParseState::add_beat(int line_number) {
   dbg_out(">>> add_beat()");
   if (!current_block) {
     Log::err("Found beat but there is no current block!");
@@ -66,8 +76,8 @@ Beat *ParseState::add_beat() {
   // Consume the attribution tag if there is one
   beat.attribution = current_attrib_tag;
   current_attrib_tag = "";
-  current_block->members.push_back(beat);
-  return &std::get<Beat>(current_block->members.back());
+  beat.line_number = line_number;
+  add_member(beat);
 }
 
 // SECTION: CHOICES
@@ -90,7 +100,7 @@ void ParseState::add_choice_group(int line_number) {
   ChoiceGroup grp;
   grp.choices = std::move(choice_stack);
   grp.line_number = line_number;
-  current_block->members.push_back(grp);
+  add_member(grp);
 }
 
 // SECTION: OPERATIONS
@@ -115,11 +125,6 @@ void ParseState::add_text_string(std::string str) {
     last_str +=
         (last_str.back() == ' ' && str.front() == ' ') ? str.substr(1) : str;
   }
-}
-
-void ParseState::conclude_text() {
-  dbg_out(">>> conclude_text()");
-  add_beat();
 }
 
 RValue ParseState::injectable_buffer_pop() {

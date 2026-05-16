@@ -25,8 +25,15 @@ std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
   assert(current->blocks.size() > cursor.current_block_index);
   Block &block = current->blocks[cursor.current_block_index];
   assert(block.members.size() > cursor.current_member_index);
-  BlockMember &member = block.members[cursor.current_member_index];
-  return {block, member};
+  MainBlockMember &main = block.members[cursor.current_member_index];
+  if (auto *bm = std::get_if<BlockMember>(&main)) {
+    return {block, *bm};
+  }
+  auto &chain = std::get<ConditionalChain>(main);
+  assert(chain.cond_blocks.size() > cursor.thread_block);
+  auto &cb = chain.cond_blocks[cursor.thread_block];
+  assert(cb.members.size() > cursor.thread_member);
+  return {block, cb.members[cursor.thread_member]};
 }
 
 // SECTION: STATE
@@ -812,8 +819,7 @@ void Engine::load(std::string path) {
     for (const auto &block : pstate.module.blocks) {
       dbg_out("\n- Block '" << block.tag << "': " << block.members.size()
                             << " members");
-      for (const auto &mem : block.members) {
-
+      auto print_bm = [](const BlockMember &mem) {
         std::visit(
             [](const auto &member) {
               using T = std::decay_t<decltype(member)>;
@@ -827,6 +833,25 @@ void Engine::load(std::string path) {
                 }
               } else if constexpr (std::is_same_v<T, LineOp>) {
                 dbg_out("  - LineOp: " << member.dbg_desc());
+              }
+            },
+            mem);
+      };
+      for (const auto &mem : block.members) {
+        std::visit(
+            [&](const auto &m) {
+              using T = std::decay_t<decltype(m)>;
+              if constexpr (std::is_same_v<T, BlockMember>) {
+                print_bm(m);
+              } else if constexpr (std::is_same_v<T, ConditionalChain>) {
+                dbg_out("  - ConditionalChain: " << m.cond_blocks.size()
+                                                 << " blocks");
+                for (const auto &cb : m.cond_blocks) {
+                  dbg_out("    > CondBlock: " << cb.cond.dbg_desc());
+                  for (const auto &inner : cb.members) {
+                    print_bm(inner);
+                  }
+                }
               }
             },
             mem);

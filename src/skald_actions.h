@@ -651,7 +651,7 @@ template <> struct action<op_line> {
     lo.line_number = input.position().line;
     lo.op = state.operation_queue_pop();
     lo.condition.condition = state.conditional_buffer_pop();
-    state.current_block->members.push_back(lo);
+    state.add_member(lo);
   }
 };
 
@@ -707,12 +707,20 @@ template <> struct action<beat> {
   static void apply(const ActionInput &input, ParseState &state) {
     const position p = input.position();
     dbg_out("+++ " << p << ": BEAT CLAUSE END:\n" << input.string());
-    auto *beat = state.add_beat();
-    beat->line_number = input.position().line;
+    state.add_beat(input.position().line);
   }
 };
 
 // SECTION: CONDITIONAL CHAINS
+
+// Opens a conditional chain
+template <> struct action<cond_chain_if> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain_if_block: " << text);
+  }
+};
 
 template <> struct action<cond_chain_if_block> {
   template <typename ActionInput>
@@ -722,13 +730,27 @@ template <> struct action<cond_chain_if_block> {
   }
 };
 
-// STUB: NEXT: assign beats to open conditional segments!
+template <> struct action<cond_chain_elseif> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain_elseif_block: " << text);
+  }
+};
 
 template <> struct action<cond_chain_elseif_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
     dbg_out("@@? cond_chain_elseif_block: " << text);
+  }
+};
+
+template <> struct action<cond_chain_else> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain_else_block: " << text);
   }
 };
 

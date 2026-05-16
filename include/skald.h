@@ -473,7 +473,6 @@ struct Choice : LineEntity {
   }
 };
 
-// STUB: Build ChoiceGroup
 // This contains one or more choices, exists at any place in a block,
 // and blocks proceeding until a choice is selected. If no individual
 // choice is available, the group will be ignored.
@@ -481,7 +480,6 @@ struct ChoiceGroup : LineEntity {
   std::vector<Choice> choices;
 };
 
-// STUB: Build LineOp
 // This is an operation that exists inline on a block.
 struct LineOp : LineEntity {
   AttachedCondition condition;
@@ -489,6 +487,7 @@ struct LineOp : LineEntity {
   std::string dbg_desc() const { return condition.dbg_desc() + dbg_dsc_op(op); }
 };
 
+/** A narrative beat (text; attributed or not.) */
 struct Beat : LineEntity {
 
   AttachedCondition condition;
@@ -501,18 +500,25 @@ struct Beat : LineEntity {
   }
 };
 
+/** A Beat, LineOp, or ChoiceGroup. Child of a Block or a ConditionalBlock. */
 using BlockMember = std::variant<Beat, LineOp, ChoiceGroup>;
 
-// STUB: Build ConditionalBlock
-struct ConditionalBlock {};
+/** A block in a conditional chain. If cond is null, this is an else block. */
+struct ConditionalBlock : LineEntity {
+  AttachedCondition cond;
+  std::vector<BlockMember> members;
+};
 
-// STUB: Build ConditionalChain
-struct ConditionalChain {};
+/** A string of 1-n conditional blocks: if, elseif..., endif. */
+struct ConditionalChain {
+  std::vector<ConditionalBlock> cond_blocks;
+};
 
-// STUB: Implement Block levels and parents
+using MainBlockMember = std::variant<BlockMember, ConditionalChain>;
+
 struct Block : LineEntity {
   std::string tag;
-  std::vector<BlockMember> members{};
+  std::vector<MainBlockMember> members{};
 };
 
 class Module {
@@ -666,9 +672,14 @@ struct Cursor {
   /** Which block are we currently in */
   int current_block_index = 0;
 
-  /** Which beat are we currently working through */
-  // STUB: Refer to parts, not beats
+  /** Which part are we currently working through */
   int current_member_index = 0;
+
+  /** If we are in a conditional thread, which block? */
+  int thread_block = 0;
+
+  /** And which member in that block? */
+  int thread_member = 0;
 
   /** Which choice do we need to process? */
   int choice_selection = -1;
