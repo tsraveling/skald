@@ -374,7 +374,7 @@ There are three **scopes** of variable:
 
 **Module** variables are defined at the top of a .ska file. They are strongly typed, and will be **pushed** to any modules navigated to via `GO` (4.1.1).
 
-```
+```skald
 --- Items in the following section will be "pushed" through GO operations.
 --- It should come before any narrative blocks.
 @let 
@@ -391,7 +391,7 @@ The game is afoot ...
 
 If you are using Neovim or VSCode to write Skald, the LSP will detect when a module is pushed to by another, and include its module-scoped variables in autocomplete. If you expect to receive a push from a module that hasn't been fully written yet, you can mark it for the LSP like this:
 
-```
+```skald
 @receive subfolder/scene.ska
 ```
 
@@ -401,13 +401,14 @@ See Module Transitions 4.1.1 for more details on how module-scoped variables are
 
 **Ad Hoc** variables are defined inline, off-the-cuff, and are not syntactically typed (aka you don't have to do e.g. `~ ad_hoc_var int = 10`. However they are typed to their initial value at creation, so you can't do this:
 
-```
+```skald
 ~ ad_hoc = 10 --- first time variable is used creates ad_hoc int
 ~ ad_hoc = "no-op" --- this will throw an error because you can't change types
+```
 
 They are also not pushed through to following modules; they are intended for immediate conversational state:
 
-```
+```skald
 --- Ad hoc variables
 
 (? temp_check) This will resolve to false, because it hasn't been set yet.
@@ -418,11 +419,12 @@ They are also not pushed through to following modules; they are intended for imm
 ```
 
 Global variables are defined in the .codex file (4.2). 
+
 ### 3.1.4 Variable Types
 
 Variables can either be **boolean**, **integer**, **float** or **string**:
 
-```
+```skald
 @let
   health int
   speed  float
@@ -437,7 +439,7 @@ TODO: add details on conditionals between ad hoc vars.
 
 You can **set** all variables, and **mutate** bool and integer variables:
 
-```
+```skald
 > Mutate things ...
   ~ num_var += 1                -- You can add to variables
   ~ num_var -= 1                -- or subtract
@@ -449,7 +451,7 @@ You can **set** all variables, and **mutate** bool and integer variables:
 
 You can also use **same-type** values on the righthand side:
 
-```
+```skald
 > Mutate by another variable ...
   ~ num_var += another_num_var
   ~ str_var = another_str_var
@@ -485,7 +487,7 @@ These are ad hoc operations:
 
 **Inline conditionals** live at the start of a beat, before an operation, or right after the `>` carat on a choice:
 
-```
+```skald
 (? bool_var) This beat will only appear (and attached operations will only be run) if bool_var is true.
 
 (? bool_var) :call_method() -- only called if bool_var is true
@@ -495,7 +497,7 @@ These are ad hoc operations:
 
 **Conditional blocks** wrap any of these:
 
-```
+```skald
 @if condition
 
 Condition is true!
@@ -510,7 +512,7 @@ Seems apocalyptic
 
 Everything seems fine!
 
-@end
+@endif
 
 (? check) this is still a one-liner.
 ```

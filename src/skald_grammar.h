@@ -99,9 +99,10 @@ using block_prefix = sor<block3_prefix, block2_prefix, block1_prefix>;
 struct keyword_testbed : keyword<'@', 't', 'e', 's', 't', 'b', 'e', 'd'> {};
 struct keyword_let : keyword<'@', 'l', 'e', 't'> {};
 struct keyword_end : keyword<'@', 'e', 'n', 'd'> {};
-struct keyword_if : keyword<'@', 'e', 'n', 'd'> {};
+struct keyword_if : keyword<'@', 'i', 'f'> {};
 struct keyword_elseif : keyword<'@', 'e', 'l', 's', 'e', 'i', 'f'> {};
 struct keyword_else : keyword<'@', 'e', 'l', 's', 'e'> {};
+struct keyword_endif : keyword<'@', 'e', 'n', 'd', 'i', 'f'> {};
 struct keyword_receive : keyword<'@', 'r', 'e', 'c', 'e', 'i', 'v', 'e'> {};
 
 struct type_int : keyword<'i', 'n', 't'> {};
@@ -305,12 +306,28 @@ struct beat : seq<not_at<seq<ws, eol>>,      // Not at end of line or whitespace
                   opt<beat_attribution>,     // Optional attribution
                   text_content, eol> {};     // The text content
 
+// SECTION: CONDITIONAL CHAINS
+
+using block_member = sor<ignored, op_line, choice_block, beat>;
+using block_members = star<block_member>;
+
+struct cond_chain_if
+    : seq<keyword_if, sp, checkable_clause, ws, functional_eol> {};
+struct cond_chain_if_block : seq<cond_chain_if, block_members> {};
+struct cond_chain_elseif
+    : seq<keyword_elseif, sp, checkable_clause, ws, functional_eol> {};
+struct cond_chain_elseif_block : seq<cond_chain_elseif, block_members> {};
+struct cond_chain_else : seq<keyword_elseif, ws, functional_eol> {};
+struct cond_chain_else_block : seq<cond_chain_else, block_members> {};
+struct cond_chain_endif : seq<keyword_endif, ws, functional_eol> {};
+struct cond_chain : seq<cond_chain_if_block, star<cond_chain_elseif_block>,
+                        opt<cond_chain_else_block>, cond_chain_endif> {};
+
 // SECTION: BLOCKS
 
 /** A `block` starts with a tag line, then has beats, comments/blank,
  * operations, choice blocks until the next block starts. */
-struct block
-    : seq<block_tag_line, star<sor<ignored, op_line, choice_block, beat>>> {};
+struct block : seq<block_tag_line, star<block_member>> {};
 
 // SECTION: FULL GRAMMAR
 
