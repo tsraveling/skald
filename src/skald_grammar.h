@@ -327,7 +327,7 @@ struct cond_chain : seq<cond_chain_if_block, star<cond_chain_elseif_block>,
 
 /** A `block` starts with a tag line, then has beats, comments/blank,
  * operations, choice blocks until the next block starts. */
-struct block : seq<block_tag_line, star<block_member>> {};
+struct block : seq<block_tag_line, star<sor<cond_chain, block_member>>> {};
 
 // SECTION: FULL GRAMMAR
 

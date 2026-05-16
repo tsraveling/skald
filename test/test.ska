@@ -35,7 +35,23 @@ This is the continuation beat.
 
 ## alice
 
-This is first child block
+This is first child block. And here we do some conditionals:
+
+@if age > 30
+
+I'm over 30!
+
+@elseif age > 10
+
+I'm over 10!
+
+@else
+
+I'm 10 or under!
+
+@endif
+
+This comes after the conditional blocks.
 
 ### a
 

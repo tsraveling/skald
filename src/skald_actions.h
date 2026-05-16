@@ -712,6 +712,38 @@ template <> struct action<beat> {
   }
 };
 
-} // namespace Skald
-
 // SECTION: CONDITIONAL CHAINS
+
+template <> struct action<cond_chain_if_block> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain_if_block: " << text);
+  }
+};
+
+template <> struct action<cond_chain_elseif_block> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain_elseif_block: " << text);
+  }
+};
+
+template <> struct action<cond_chain_else_block> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain_else_block: " << text);
+  }
+};
+
+template <> struct action<cond_chain> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    auto text = input.string();
+    dbg_out("@@? cond_chain: " << text);
+  }
+};
+
+} // namespace Skald
