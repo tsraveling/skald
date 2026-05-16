@@ -308,7 +308,8 @@ struct beat : seq<not_at<seq<ws, eol>>,      // Not at end of line or whitespace
 
 // SECTION: CONDITIONAL CHAINS
 
-using block_member = sor<ignored, op_line, choice_block, beat>;
+using block_member =
+    seq<not_at<one<'@'>>, sor<ignored, op_line, choice_block, beat>>;
 using block_members = star<block_member>;
 
 struct cond_chain_if

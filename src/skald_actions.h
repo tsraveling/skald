@@ -722,6 +722,8 @@ template <> struct action<cond_chain_if_block> {
   }
 };
 
+// STUB: NEXT: assign beats to open conditional segments!
+
 template <> struct action<cond_chain_elseif_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
