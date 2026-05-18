@@ -457,6 +457,9 @@ struct TextContent {
 // the conditional will be resolved.
 struct AttachedCondition {
   std::optional<Conditional> condition;
+
+  // Allows truthy checks:
+  explicit operator bool() const { return condition.has_value(); }
   std::string dbg_desc() const {
     return (condition ? condition->dbg_desc() + " " : "");
   }
@@ -773,6 +776,7 @@ private:
   void build_state(const Module &module);
 
   ///--  UTIL  --///
+  std::pair<Block &, MainBlockMember &> get_current_block_and_main_member();
   std::pair<Block &, BlockMember &> get_current_block_and_member();
 
   /** This zeroes the state and drops us in at this beat index, e.g. from an
@@ -792,7 +796,7 @@ private:
   std::optional<Error> do_operation(Operation &op);
 
   /** Queues the member's conditional for processing. */
-  void setup_member();
+  void setup_block_member();
 
   ///-- RESOLUTION --///
 

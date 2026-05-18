@@ -19,16 +19,20 @@ namespace Skald {
 
 // SECTION: UTIL
 
-std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
-  dbg_out("get_current_b&m: block " << cursor.current_block_index
-                                    << ", m: " << cursor.current_member_index);
+std::pair<Block &, MainBlockMember &>
+Engine::get_current_block_and_main_member() {
   assert(current->blocks.size() > cursor.current_block_index);
   Block &block = current->blocks[cursor.current_block_index];
   assert(block.members.size() > cursor.current_member_index);
-  MainBlockMember &main = block.members[cursor.current_member_index];
+  return {block, block.members[cursor.current_member_index]};
+}
+
+std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
+  auto [block, main] = get_current_block_and_main_member();
   if (auto *bm = std::get_if<BlockMember>(&main)) {
     return {block, *bm};
   }
+  assert(cursor.entered_thread_block); // Must have resolved a cond
   auto &chain = std::get<ConditionalChain>(main);
   assert(chain.cond_blocks.size() > cursor.thread_block);
   auto &cb = chain.cond_blocks[cursor.thread_block];
@@ -489,9 +493,26 @@ std::optional<Error> Engine::do_operation(Operation &op) {
 
 /** Queues the member's conditional for processing. Called on cursor movement
  * and by the engine on first enter. */
-void Engine::setup_member() {
-  dbg_out("Engine::setup_member");
-  auto [block, member] = get_current_block_and_member();
+void Engine::setup_block_member() {
+
+  dbg_out("Engine::setup_block_member");
+
+  auto [block, main] = get_current_block_and_main_member();
+
+  // If this is a chain, queue queries for the first cond block. The next()
+  // loop will iterate via thread_block until one resolves true.
+  if (auto *cc = std::get_if<ConditionalChain>(&main)) {
+    cursor.thread_block = 0;
+    cursor.thread_member = 0;
+    cursor.entered_thread_block = false;
+    auto &cb = cc->cond_blocks[cursor.thread_block];
+    assert(cb.cond); // First cond block must not be an else
+    cursor.resolution_stack = queries_for_attached_condition(cb.cond);
+    cursor.is_preprocessed = true;
+    return;
+  }
+
+  auto &member = std::get<BlockMember>(main);
   cursor.resolution_stack = queries_for_member_conditional(member);
   cursor.is_preprocessed = true;
 }
@@ -542,25 +563,28 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     cursor.queued_transition = "";
   }
 
-  // Now we move into the block.
-  Block &block = current->blocks[cursor.current_block_index];
+  // Step forward one
   cursor.current_member_index++; // aka will -> 0 after a transition
 
-  // Are we at the end of the block?
-  if (cursor.current_member_index >= block.members.size()) {
+  // Account for end of block + empty blocks:
+  Block &block = current->blocks[cursor.current_block_index];
+  while (cursor.current_member_index >= block.members.size()) {
     cursor.current_block_index++;
     cursor.current_member_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
       return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
                    from_line_number);
     }
+    block = current->blocks[cursor.current_block_index];
   }
+
+  // If we get here, that means the block has members.
 
   dbg_out("CURSOR --> " << cursor.current_block_index << ", "
                         << cursor.current_member_index);
 
   // Queue up any conditional queries etc needed to run our next member
-  setup_member();
+  setup_block_member();
 
   // And return ok.
   return std::nullopt;
@@ -604,12 +628,49 @@ Response Engine::next() {
       return cursor.resolution_stack.back();
     }
 
-    // STUB: Step through cond chain here
+    assert(cursor.is_preprocessed); // Queries already must be handled
+
+    /// Conditional Chains ///
+
+    auto [block, main] = get_current_block_and_main_member();
+    if (auto *cc = std::get_if<ConditionalChain>(&main)) {
+      // Get current cond block
+      assert(cc->cond_blocks.size() > cursor.thread_block);
+      auto &cb = cc->cond_blocks[cursor.thread_block];
+
+      // Resolve conditional (auto handles else also)
+      if (resolve_condition(cb.cond)) {
+
+        // Enter into this block (cursor.thread_block)
+        cursor.entered_thread_block = true;
+      } else {
+        cursor.thread_block++;
+
+        // If at end of thread, just drop out
+        if (cursor.thread_block >= cc->cond_blocks.size()) {
+          auto err = advance_cursor();
+          if (err)
+            return *err;
+          continue;
+        } else {
+          // Get the next block in line
+          auto &nb = cc->cond_blocks[cursor.thread_block];
+
+          // else block (no conditional)?
+          if (!nb.cond) {
+            cursor.entered_thread_block = true;
+          } else {
+            // elseif block: add to res stack and loop de loop.
+            cursor.resolution_stack = queries_for_attached_condition(nb.cond);
+            continue; // Will get resolved on next main loop iteration
+          }
+        }
+      }
+    }
 
     /// Block Logic and Interaction ///
 
-    assert(cursor.is_preprocessed);
-    auto [block, member] = get_current_block_and_member();
+    auto [_, member] = get_current_block_and_member();
 
     std::optional<Response> response = std::visit(
         [&](auto &mem) -> std::optional<Response> {
@@ -783,7 +844,7 @@ Response Engine::enter(int block, int index) {
   build_state(*current);
   cursor.current_block_index = block;
   cursor.current_member_index = 0;
-  setup_member();
+  setup_block_member();
   return next();
 }
 

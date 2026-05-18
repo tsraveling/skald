@@ -18,10 +18,25 @@
 
 This is the first beat.
 
+@if age > 30
+
+I'm over 30!
+
+@elseif age > 10
+
+I'm over 10!
+
+@else
+
+I'm 10 or under!
+
+@endif
+
 ~ age += 1  --- inline mutation
 :call_method()
 
 (? gender = "m") ~ age += 2 --- conditional operation
+
 
 tester: This is an attributed beat.
 
@@ -37,19 +52,6 @@ This is the continuation beat.
 
 This is first child block. And here we do some conditionals:
 
-@if age > 30
-
-I'm over 30!
-
-@elseif age > 10
-
-I'm over 10!
-
-@else
-
-I'm 10 or under!
-
-@endif
 
 This comes after the conditional blocks.
 
