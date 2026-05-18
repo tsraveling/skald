@@ -604,11 +604,12 @@ Response Engine::next() {
       return cursor.resolution_stack.back();
     }
 
+    // STUB: Step through cond chain here
+
     /// Block Logic and Interaction ///
 
-    auto [block, member] = get_current_block_and_member();
-
     assert(cursor.is_preprocessed);
+    auto [block, member] = get_current_block_and_member();
 
     std::optional<Response> response = std::visit(
         [&](auto &mem) -> std::optional<Response> {

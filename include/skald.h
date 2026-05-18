@@ -678,6 +678,9 @@ struct Cursor {
   /** If we are in a conditional thread, which block? */
   int thread_block = 0;
 
+  /** We've processed the conditionals sufficiently to enter a block */
+  bool entered_thread_block = false;
+
   /** And which member in that block? */
   int thread_member = 0;
 
