@@ -16,7 +16,7 @@
 
 # start
 
-This is the first beat.
+This is the first beat. My age is {age}.
 
 @if age > 30
 
@@ -33,6 +33,10 @@ I'm 10 or under!
 @endif
 
 ~ age += 1  --- inline mutation
+
+Another year! Now my age is {age}.
+
+EXIT
 :call_method()
 
 (? gender = "m") ~ age += 2 --- conditional operation

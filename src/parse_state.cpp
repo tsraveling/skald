@@ -59,7 +59,6 @@ void ParseState::add_member(BlockMember mem) {
 // SECTION: BEATS
 
 void ParseState::add_beat(int line_number) {
-  dbg_out(">>> add_beat()");
   if (!current_block) {
     Log::err("Found beat but there is no current block!");
   }
@@ -177,7 +176,7 @@ void ParseState::add_conditional_atom(const ConditionalAtom &atom) {
 // SECTION: RVALUES
 
 RValue ParseState::rval_buffer_pop() {
-  dbg_out(">>> rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+  // dbg_out(">>> rval_buffer_pop: " << rval_buffer.size() << " -1 ");
   auto back = rval_buffer.back();
   rval_buffer.pop_back();
   return back;
@@ -185,7 +184,7 @@ RValue ParseState::rval_buffer_pop() {
 
 // FIXME: handle errors correctly
 SimpleRValue ParseState::simple_rval_buffer_pop() {
-  dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+  // dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
   auto back = rval_buffer.back();
   rval_buffer.pop_back();
 

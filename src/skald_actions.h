@@ -205,8 +205,6 @@ template <> struct action<declaration> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
 
-    dbg_out("!!! declaration");
-
     // FIXME: declaration_was valued and _was_typed are not being set!
 
     // Rule: Must *either* be typed or valued (or both)
@@ -236,7 +234,6 @@ template <> struct action<declaration> {
     auto var = Variable{.name = n, .type = t};
 
     // Add to stack
-    dbg_out("+++> storing module var: " << var.name);
     state.module_vars_stack.push_back(
         ModuleVar{.initial_value = v, .var = var});
 
@@ -254,36 +251,30 @@ template <> struct action<val_bool> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.rval_buffer.push_back(state.bool_buffer);
-    dbg_out("<<< rval_buffer -> push_back: val_bool: " << state.bool_buffer);
   }
 };
 template <> struct action<val_int> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.rval_buffer.push_back(std::stoi(input.string()));
-    dbg_out("<<< rval_buffer -> push_back: val_int: " << input.string());
   }
 };
 template <> struct action<val_float> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.rval_buffer.push_back(std::stof(input.string()));
-    dbg_out("<<< rval_buffer -> push_back: val_float: " << input.string());
   }
 };
 template <> struct action<val_string> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.rval_buffer.push_back(state.string_buffer);
-    dbg_out(
-        "<<< rval_buffer -> push_back: val_string: " << state.string_buffer);
   }
 };
 template <> struct action<r_variable> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.rval_buffer.push_back(Variable{input.string()});
-    dbg_out("<<< rval_buffer -> push_back: r_variable: " << input.string());
   }
 };
 template <> struct action<r_method> {
@@ -292,8 +283,6 @@ template <> struct action<r_method> {
     auto method_call = std::make_shared<MethodCall>(MethodCall{
         .method = state.pop_id(), .args = std::move(state.argument_queue)});
     state.rval_buffer.push_back(method_call);
-    dbg_out(
-        "<<< rval_buffer -> push_back: r_method: " << method_call->dbg_desc());
   }
 };
 
@@ -301,7 +290,6 @@ template <> struct action<argument> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     state.argument_queue.push_back(state.rval_buffer_pop());
-    dbg_out("<<< argument (adding to queue): " << input.string());
   }
 };
 
@@ -364,7 +352,6 @@ template <> struct action<inline_text_segment> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
-    dbg_out(">>> inline_text_segment: " << text);
     state.add_text_string(text);
   }
 };
@@ -663,14 +650,12 @@ template <> struct action<inline_choice_move> {
     auto text = input.string();
     state.operation_queue.push_back(
         Move{input.position().line, state.pop_id()});
-    dbg_out(">>> inline_choice_move: " << text);
   }
 };
 
 template <> struct action<choice_clause> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> choice_clause: " << input.string());
     state.add_choice();
   }
 };
@@ -678,7 +663,6 @@ template <> struct action<choice_clause> {
 template <> struct action<choice_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out(">>> adding ChoiceGroup: " << input.string());
     state.add_choice_group(input.position().line);
   }
 };
@@ -706,15 +690,14 @@ template <> struct action<beat> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     const position p = input.position();
-    dbg_out("+++ " << p << ": BEAT CLAUSE END:\n" << input.string());
     state.add_beat(input.position().line);
   }
 };
 
 // SECTION: CONDITIONAL CHAINS
 
-// Opens a conditional chain
-template <> struct action<cond_chain_if> {
+// Opens a conditional chain. Locks on keyword so conds work right.
+template <> struct action<keyword_if> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out("@cond_chain_if");
@@ -752,7 +735,7 @@ template <> struct action<cond_chain_if_block> {
   }
 };
 
-template <> struct action<cond_chain_elseif> {
+template <> struct action<keyword_elseif> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out("@cond_chain_elseif");
