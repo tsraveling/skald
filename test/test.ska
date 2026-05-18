@@ -36,6 +36,10 @@ I'm 10 or under!
 
 Another year! Now my age is {age}.
 
+> Again!
+  -> start
+> Bye
+
 EXIT
 :call_method()
 
@@ -79,3 +83,4 @@ This is second child block
 And this is the end.
 
 EXIT
+
