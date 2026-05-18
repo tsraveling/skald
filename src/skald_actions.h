@@ -717,6 +717,13 @@ template <> struct action<beat> {
 template <> struct action<cond_chain_if> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
+    if (state.open_chain != nullptr) {
+      state.err(input.position(),
+                "Conditional chain already open but got another if!");
+      return;
+    }
+    // STUB: create cond chain and first block
+    // like this: lo.condition.condition = state.conditional_buffer_pop();
     auto text = input.string();
     dbg_out("@@? cond_chain_if_block: " << text);
   }
