@@ -776,6 +776,7 @@ private:
   void build_state(const Module &module);
 
   ///--  UTIL  --///
+  ConditionalChain *get_current_conditional_chain();
   std::pair<Block &, MainBlockMember &> get_current_block_and_main_member();
   std::pair<Block &, BlockMember &> get_current_block_and_member();
 

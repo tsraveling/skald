@@ -7,8 +7,10 @@ using namespace tao::pegtl;
 
 namespace Skald {
 
+using eolf = sor<eol, eof>;
+
 // Line comment using the same comment marker style
-struct line_comment : seq<string<'-', '-', '-'>, until<eol>> {};
+struct line_comment : seq<string<'-', '-', '-'>, until<eolf>> {};
 struct end_line_comment
     : seq<string<'-', '-', '-'>, star<not_one<'\r', '\n'>>> {};
 
@@ -20,7 +22,7 @@ struct ignored : sor<line_comment, blank_line> {};
 
 /** This can be used to cap any single functional line that allows an end
  * comment */
-struct functional_eol : seq<ws, opt<end_line_comment>, eol> {};
+struct functional_eol : seq<ws, opt<end_line_comment>, eolf> {};
 
 // SECTION: ABSTRACT STRUCTURE
 
@@ -205,7 +207,7 @@ struct inline_comment : seq<string<'{', '-', '-', '-'>, until<string<'}'>>> {};
 
 /** Matches anything up to { or EOL */
 struct inline_text_segment
-    : plus<seq<not_at<string<'{'>>, not_at<eol>, not_at<move_marker>, any>> {};
+    : plus<seq<not_at<string<'{'>>, not_at<eolf>, not_at<move_marker>, any>> {};
 
 /** Any valid part of a text sequence */
 struct text_content_part
@@ -260,7 +262,7 @@ struct inline_choice_move : op_move {};
 
 /** The initial line e.g. `> Some choice` */
 struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
-                         opt<inline_choice_move>, eol> {};
+                         opt<inline_choice_move>, eolf> {};
 
 // STUB: Support child beats here
 
@@ -289,8 +291,8 @@ struct block_tag_name : identifier {};
  *  - ## child_tag
  *  - ### grandchild_tag
  */
-struct block_tag_line : seq<block_prefix, one<' '>, block_tag_name, ws,
-                            opt<end_line_comment>, eol> {};
+struct block_tag_line
+    : seq<block_prefix, one<' '>, block_tag_name, functional_eol> {};
 
 /** The `some_tag: ...` part of a beat. */
 struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
@@ -299,12 +301,12 @@ struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
  *
  *  - alice: Hey there!
  */
-struct beat : seq<not_at<seq<ws, eol>>,      // Not at end of line or whitespace
+struct beat : seq<not_at<seq<ws, eolf>>,     // Not at end of line or whitespace
                   not_at<choice_prefix>,     // Not a choice
                   not_at<block_tag_line>,    // Not at a new block
                   opt<seq<conditional, ws>>, // Optional conditional
                   opt<beat_attribution>,     // Optional attribution
-                  text_content, eol> {};     // The text content
+                  text_content, eolf> {};    // The text content
 
 // SECTION: CONDITIONAL CHAINS
 

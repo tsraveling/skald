@@ -27,6 +27,11 @@ Engine::get_current_block_and_main_member() {
   return {block, block.members[cursor.current_member_index]};
 }
 
+ConditionalChain *Engine::get_current_conditional_chain() {
+  auto [block, main] = get_current_block_and_main_member();
+  return std::get_if<ConditionalChain>(&main);
+}
+
 std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
   auto [block, main] = get_current_block_and_main_member();
   if (auto *bm = std::get_if<BlockMember>(&main)) {
@@ -561,6 +566,12 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     // blocks where we immediately move to the next one.
     cursor.current_member_index = -1;
     cursor.queued_transition = "";
+  }
+
+  // Check to see if we are in a block
+
+  if (auto *cc = get_current_conditional_chain()) {
+    // STUB: step through block here instead of progressing member.
   }
 
   // Step forward one
