@@ -318,7 +318,7 @@ struct cond_chain_if_block : seq<cond_chain_if, block_members> {};
 struct cond_chain_elseif
     : seq<keyword_elseif, sp, checkable_clause, ws, functional_eol> {};
 struct cond_chain_elseif_block : seq<cond_chain_elseif, block_members> {};
-struct cond_chain_else : seq<keyword_elseif, ws, functional_eol> {};
+struct cond_chain_else : seq<keyword_else, ws, functional_eol> {};
 struct cond_chain_else_block : seq<cond_chain_else, block_members> {};
 struct cond_chain_endif : seq<keyword_endif, ws, functional_eol> {};
 struct cond_chain : seq<cond_chain_if_block, star<cond_chain_elseif_block>,

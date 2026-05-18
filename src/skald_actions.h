@@ -717,63 +717,107 @@ template <> struct action<beat> {
 template <> struct action<cond_chain_if> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
+    dbg_out("@cond_chain_if");
     if (state.open_chain != nullptr) {
       state.err(input.position(),
                 "Conditional chain already open but got another if!");
       return;
     }
-    // STUB: create cond chain and first block
-    // like this: lo.condition.condition = state.conditional_buffer_pop();
-    auto text = input.string();
-    dbg_out("@@? cond_chain_if_block: " << text);
+
+    // Set up the new chain
+    state.open_chain = std::make_unique<ConditionalChain>();
+
+    // Add a block to push beats onto
+    auto cb = ConditionalBlock{};
+    cb.line_number = input.position().line;
+    state.open_chain->cond_blocks.push_back(cb);
+
+    // Set up the conditional
+    state.conditional_step_in();
   }
 };
 
 template <> struct action<cond_chain_if_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out("@@? cond_chain_if_block: " << text);
+    dbg_out("@cond_chain_if_block");
+    assert(state.open_chain != nullptr); // must always follow cond_chain_iff
+    assert(state.open_chain->cond_blocks.size() > 0);
+
+    // Attach captured conditional
+    state.conditional_step_out(); // closes conditional following @if
+    state.open_chain->cond_blocks.back().cond.condition =
+        state.conditional_buffer_pop();
+    assert(state.open_chain->cond_blocks.back().cond); // must have cond
   }
 };
 
 template <> struct action<cond_chain_elseif> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out("@@? cond_chain_elseif_block: " << text);
+    dbg_out("@cond_chain_elseif");
+    if (state.open_chain == nullptr) {
+      state.err(input.position(),
+                "Tried to process elseif block but no @if statement was open");
+      return;
+    }
+    assert(state.open_chain->cond_blocks.size() > 0); // must not be first
+
+    // Add a block to push beats onto
+    auto cb = ConditionalBlock{};
+    cb.line_number = input.position().line;
+    state.open_chain->cond_blocks.push_back(cb);
+
+    // Set up cond
+    state.conditional_step_in();
   }
 };
 
 template <> struct action<cond_chain_elseif_block> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out("@@? cond_chain_elseif_block: " << text);
+    dbg_out("@cond_chain_elseif_block");
+    if (state.open_chain == nullptr)
+      return; // Handled at elseif open
+
+    // Attach captured conditional
+    state.conditional_step_out();
+    state.open_chain->cond_blocks.back().cond.condition =
+        state.conditional_buffer_pop();
+    assert(state.open_chain->cond_blocks.back().cond); // must have cond
   }
 };
 
 template <> struct action<cond_chain_else> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out("@@? cond_chain_else_block: " << text);
+    dbg_out("@cond_chain_else");
+    if (state.open_chain == nullptr) {
+      state.err(input.position(),
+                "Tried to process elseif block but no @if statement was open");
+      return;
+    }
+    assert(state.open_chain->cond_blocks.size() > 0); // must not be first
+    auto cb = ConditionalBlock{};
+    cb.line_number = input.position().line;
+    state.open_chain->cond_blocks.push_back(cb);
   }
 };
 
-template <> struct action<cond_chain_else_block> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out("@@? cond_chain_else_block: " << text);
-  }
+// FIXME: delete later
+template <> struct action<cond_chain_endif> {
+  static void apply0(ParseState &state) { dbg_out("@endif"); }
 };
 
 template <> struct action<cond_chain> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out("@@? cond_chain: " << text);
+    dbg_out("@cond_chain");
+    assert(state.open_chain != nullptr); // must close an if clause
+    assert(state.current_block != nullptr);
+    state.current_block->members.push_back(
+        MainBlockMember{std::move(*state.open_chain)});
+    state.open_chain.reset();
   }
 };
 

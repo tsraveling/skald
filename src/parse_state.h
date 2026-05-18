@@ -66,7 +66,7 @@ struct ParseState {
 
   /** Holds open chain if there is one. Members will be added to last block in
    *  list. */
-  ConditionalChain *open_chain = nullptr;
+  std::unique_ptr<ConditionalChain> open_chain;
 
   // SECTION: BEATS
 
