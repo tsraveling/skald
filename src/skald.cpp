@@ -11,6 +11,7 @@
 #include <string>
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/trace.hpp>
+#include <variant>
 #include <vector>
 
 namespace pegtl = tao::pegtl;
@@ -495,6 +496,11 @@ std::optional<Error> Engine::do_operation(Operation &op) {
       op);
   return ret;
 }
+/** Sets up a member directly */
+void Engine::setup_member(BlockMember &member) {
+  cursor.resolution_stack = queries_for_member_conditional(member);
+  cursor.is_preprocessed = true;
+}
 
 /** Queues the member's conditional for processing. Called on cursor movement
  * and by the engine on first enter. */
@@ -507,6 +513,7 @@ void Engine::setup_block_member() {
   // If this is a chain, queue queries for the first cond block. The next()
   // loop will iterate via thread_block until one resolves true.
   if (auto *cc = std::get_if<ConditionalChain>(&main)) {
+    assert(!cursor.entered_thread_block); // must not already be in cond thread
     cursor.thread_block = 0;
     cursor.thread_member = 0;
     cursor.entered_thread_block = false;
@@ -518,8 +525,7 @@ void Engine::setup_block_member() {
   }
 
   auto &member = std::get<BlockMember>(main);
-  cursor.resolution_stack = queries_for_member_conditional(member);
-  cursor.is_preprocessed = true;
+  setup_member(member);
 }
 
 std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
@@ -571,7 +577,18 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
   // Check to see if we are in a block
 
   if (auto *cc = get_current_conditional_chain()) {
-    // STUB: step through block here instead of progressing member.
+    assert(cc->cond_blocks.size() > cursor.thread_block);
+    auto &cb = cc->cond_blocks[cursor.thread_block];
+    assert(cb.members.size() > cursor.thread_member); // must start in bounds
+    cursor.thread_member++;
+    if (cb.members.size() > cursor.thread_member) {
+      auto &mem = cb.members[cursor.thread_member];
+      setup_member(mem);
+      return std::nullopt;
+    } else {
+      // End of block; we exit.
+      cursor.entered_thread_block = false;
+    }
   }
 
   // Step forward one

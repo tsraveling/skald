@@ -799,6 +799,9 @@ private:
   /** Queues the member's conditional for processing. */
   void setup_block_member();
 
+  /** Queues conditional for a child item */
+  void setup_member(BlockMember &member);
+
   ///-- RESOLUTION --///
 
   struct Scope {
