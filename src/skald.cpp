@@ -577,22 +577,24 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     cursor.queued_transition = "";
   }
 
-  // Check to see if we are in a block
-
-  if (auto *cc = get_current_conditional_chain()) {
-    assert(cc->cond_blocks.size() > cursor.thread_block);
-    auto &cb = cc->cond_blocks[cursor.thread_block];
-    assert(cb.members.size() > cursor.thread_member); // must start in bounds
-    cursor.thread_member++;
-    if (cb.members.size() > cursor.thread_member) {
-      auto &mem = cb.members[cursor.thread_member];
-      setup_member(mem);
-      return std::nullopt;
-    } else {
-      // End of block; we exit.
-      cursor.entered_thread_block = false;
-      cursor.thread_member = 0;
-      cursor.thread_block = 0;
+  // Skip for post-transition state:
+  if (cursor.current_member_index >= 0) {
+    // Then advance through chain
+    if (auto *cc = get_current_conditional_chain()) {
+      assert(cc->cond_blocks.size() > cursor.thread_block);
+      auto &cb = cc->cond_blocks[cursor.thread_block];
+      assert(cb.members.size() > cursor.thread_member); // must start in bounds
+      cursor.thread_member++;
+      if (cb.members.size() > cursor.thread_member) {
+        auto &mem = cb.members[cursor.thread_member];
+        setup_member(mem);
+        return std::nullopt;
+      } else {
+        // End of block; we exit.
+        cursor.entered_thread_block = false;
+        cursor.thread_member = 0;
+        cursor.thread_block = 0;
+      }
     }
   }
 
