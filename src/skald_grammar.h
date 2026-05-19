@@ -254,31 +254,6 @@ struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
 
 /** Inline operations; part of blocks. */
 struct op_line : seq<opt<seq<conditional, ws>>, operation, functional_eol> {};
-struct op_choice : seq<indent, operation, functional_eol> {};
-
-// SECTION: CHOICES
-
-struct inline_choice_move : op_move {};
-
-/** The initial line e.g. `> Some choice` */
-struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
-                         opt<inline_choice_move>, eolf> {};
-
-// STUB: Support child beats here
-
-/** The choice line with optional indented operation lines
- *
- *  - > Go left
- *  -   :do_operation()
- */
-struct choice_clause : seq<choice_line, star<op_choice>> {};
-
-/** A group of choices, corresponding to ChoiceGroup
- *
- *  - > First choice
- *  - > Second choice
- */
-struct choice_block : plus<choice_clause> {};
 
 // SECTION: BEATS
 
@@ -307,6 +282,34 @@ struct beat : seq<not_at<seq<ws, eolf>>,     // Not at end of line or whitespace
                   opt<seq<conditional, ws>>, // Optional conditional
                   opt<beat_attribution>,     // Optional attribution
                   text_content, eolf> {};    // The text content
+
+// SECTION: CHOICES
+
+struct inline_choice_move : op_move {};
+
+/** The initial line e.g. `> Some choice` */
+struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
+                         opt<inline_choice_move>, eolf> {};
+
+/** Indented child beats that immediately follow a choice */
+struct choice_subbeat : seq<indent, beat, eolf> {};
+
+/** Operations following a choice */
+struct op_choice : seq<indent, operation, functional_eol> {};
+
+/** The choice line with optional indented operation lines
+ *
+ *  - > Go left
+ *  -   :do_operation()
+ */
+struct choice_clause : seq<choice_line, star<op_choice>> {};
+
+/** A group of choices, corresponding to ChoiceGroup
+ *
+ *  - > First choice
+ *  - > Second choice
+ */
+struct choice_block : plus<choice_clause> {};
 
 // SECTION: CONDITIONAL CHAINS
 
