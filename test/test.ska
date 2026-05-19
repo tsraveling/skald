@@ -40,6 +40,8 @@ I'm 10 or under!
 
 @endif
 
+Coming out of the cond my age is {age}.
+
 ~ age += 1  --- inline mutation
 
 Another year! Now my age is {age}.

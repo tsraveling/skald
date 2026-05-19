@@ -567,6 +567,9 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
                    from_line_number);
 
     cursor.current_block_index = new_index;
+    cursor.entered_thread_block = false;
+    cursor.thread_block = 0;
+    cursor.thread_member = 0;
 
     // Start "above the top" of the next block in order to handle empty
     // blocks where we immediately move to the next one.
@@ -588,6 +591,8 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     } else {
       // End of block; we exit.
       cursor.entered_thread_block = false;
+      cursor.thread_member = 0;
+      cursor.thread_block = 0;
     }
   }
 
