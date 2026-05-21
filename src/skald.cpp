@@ -721,6 +721,7 @@ Response Engine::next() {
             /// LineOps ///
             return do_operation(mem.op);
           } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
+            /// Choice Groups ///
 
             // Execute choice if we made one
             if (cursor.choice_selection >= 0) {

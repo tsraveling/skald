@@ -465,14 +465,31 @@ struct AttachedCondition {
   }
 };
 
+/** A narrative beat (text; attributed or not.) */
+struct Beat : LineEntity {
+
+  AttachedCondition condition;
+  std::string attribution;
+  TextContent content;
+
+  std::string dbg_desc() const {
+    return condition.dbg_desc() +
+           (attribution.length() > 0 ? attribution + ": " : "");
+  }
+};
+
+/** A member of a choice; an operation or a beat (sub-beat in this case) */
+using ChoiceMember = std::variant<Operation, Beat>;
+
+/** A choice. Child of ChoiceGroup. */
 struct Choice : LineEntity {
   AttachedCondition condition;
   TextContent content;
-  std::vector<Operation> operations;
+  std::vector<ChoiceMember> members;
 
   std::string dbg_desc() const {
     return condition.dbg_desc() + content.dbg_desc() + " (" +
-           std::to_string(operations.size()) + " ops)";
+           std::to_string(members.size()) + " members)";
   }
 };
 
@@ -488,19 +505,6 @@ struct LineOp : LineEntity {
   AttachedCondition condition;
   Operation op;
   std::string dbg_desc() const { return condition.dbg_desc() + dbg_dsc_op(op); }
-};
-
-/** A narrative beat (text; attributed or not.) */
-struct Beat : LineEntity {
-
-  AttachedCondition condition;
-  std::string attribution;
-  TextContent content;
-
-  std::string dbg_desc() const {
-    return condition.dbg_desc() +
-           (attribution.length() > 0 ? attribution + ": " : "");
-  }
 };
 
 /** A Beat, LineOp, or ChoiceGroup. Child of a Block or a ConditionalBlock. */
@@ -690,6 +694,12 @@ struct Cursor {
   /** Which choice do we need to process? */
   int choice_selection = -1;
 
+  /** If >= 0, we are stepping through the operations of a choice. */
+  int entered_choice_thread = -1;
+
+  /** If in a choice, which member are we on */
+  int choice_thread_index = 0;
+
   /** If this is present, do an exit */
   Exit *queued_exit;
 
@@ -700,11 +710,6 @@ struct Cursor {
    *  These have to be resolved by the client via the answer() method before the
    *  engine will proceed. */
   std::vector<Query> resolution_stack;
-
-  // FIXME: Remove once new conditional stuff is in place
-  /** Tracks if the previous beat conditioned out or not. If it didn't, a
-   *  following else block will succeed. */
-  // bool did_last_condition_pass = false;
 
   /** This will reset the cursor to a "new" state */
   void reset() {
