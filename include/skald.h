@@ -611,11 +611,10 @@ struct QueryAnswer {
 };
 
 struct Notification {
-  Mutation mut;
-  ValueType val_type;
+  std::string var_name;
+  Mutation::Type mut_type;
+  std::optional<SimpleRValue> rval; // Real value, resolved out
   VarScope scope;
-  SimpleRValue prev;
-  SimpleRValue next;
 };
 
 /** Empty struct signifying that the script is concluded. */
@@ -845,18 +844,20 @@ private:
 
   /** Set a variable, preferring global, module, and then local var. Sets as
    *  local if not exists. */
-  std::optional<Error> var_set(const std::string var_name, const RValue &rval,
-                               size_t ln = 0);
+  std::variant<Error, VarScope>
+  var_set(const std::string var_name, const SimpleRValue &rval, size_t ln = 0);
 
   /** Will switch a bool. Throws an error if not a bool, and a warning if not
    *  previously set (and sets to false in this case) */
-  std::optional<Error> var_switch(const std::string var_name, size_t ln = 0);
+  std::variant<Error, VarScope> var_switch(const std::string var_name,
+                                           size_t ln = 0);
 
   /** Will mathematically mutate a float or int. Errors if string or bool, or if
    * arg is string or bool. floats and ints can be used interchangeably (int -
    * float will round down). If sign is false, will subtract. */
-  std::optional<Error> var_add(const std::string var_name, const RValue &rval,
-                               bool sign, size_t ln = 0);
+  std::variant<Error, VarScope> var_add(const std::string var_name,
+                                        const SimpleRValue &rval, bool sign,
+                                        size_t ln = 0);
 
   SimpleRValue resolve_rval_to_simple(const RValue &rval);
   bool resolve_conditional_atom(const ConditionalAtom &atom);

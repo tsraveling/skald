@@ -234,10 +234,10 @@ SimpleRValue Engine::var_get(const std::string var_name) {
 
 /** Sets var. Checks types against global, then module, then local state. If
  *  none are set, sets value as local var. */
-std::optional<Error> Engine::var_set(const std::string var_name,
-                                     const RValue &rval, size_t ln) {
-  auto val = resolve_rval_to_simple(rval);
-  auto t = srval_get_type(val);
+std::variant<Error, VarScope> Engine::var_set(const std::string var_name,
+                                              const SimpleRValue &rval,
+                                              size_t ln) {
+  auto t = srval_get_type(rval);
 
   for (auto &s : scopes()) {
     auto it = s.map.find(var_name);
@@ -246,20 +246,21 @@ std::optional<Error> Engine::var_set(const std::string var_name,
     if (srval_get_type(it->second) != t) {
       return Error(ERROR_TYPE_MISMATCH,
                    "Tried to set " + std::string(scope_to_string(s.scope)) +
-                       " var " + var_name + " to " + rval_to_string(val),
+                       " var " + var_name + " to " + rval_to_string(rval),
                    ln);
     }
-    s.map[var_name] = val;
-    return std::nullopt;
+    s.map[var_name] = rval;
+    return s.scope;
   }
 
   // Not found anywhere; define as local.
-  local_state[var_name] = val;
-  return std::nullopt;
+  local_state[var_name] = rval;
+  return VarScope::LOCAL;
 }
 
 /** Toggles a bool var in whichever scope (global, module, local) holds it. */
-std::optional<Error> Engine::var_switch(const std::string var_name, size_t ln) {
+std::variant<Error, VarScope> Engine::var_switch(const std::string var_name,
+                                                 size_t ln) {
   for (auto &s : scopes()) {
     auto it = s.map.find(var_name);
     if (it == s.map.end())
@@ -271,34 +272,34 @@ std::optional<Error> Engine::var_switch(const std::string var_name, size_t ln) {
                    ln);
     }
     s.map[var_name] = !*b;
-    return std::nullopt;
+    return s.scope;
   }
   warn("Tried to switch " + var_name +
            ", and found nothing. Setting it as a local variable to `false`.",
        ln);
   local_state[var_name] = false;
-  return std::nullopt;
+  return VarScope::LOCAL;
 }
 
 /** Will mathematically mutate a float or int. Errors if string or bool, or if
  * arg is string or bool. floats and ints can be used interchangeably (int -
  * float will round down). If sign is false, will subtract. */
-std::optional<Error> Engine::var_add(const std::string var_name,
-                                     const RValue &rval, bool sign, size_t ln) {
+std::variant<Error, VarScope> Engine::var_add(const std::string var_name,
+                                              const SimpleRValue &rval,
+                                              bool sign, size_t ln) {
 
-  // Get the arg and make sure it's a number
-  auto arg = resolve_rval_to_simple(rval);
-  auto arg_type = srval_get_type(arg);
+  // Make sure it's a number
+  auto arg_type = srval_get_type(rval);
   if (arg_type != ValueType::INT && arg_type != ValueType::FLOAT) {
     return Error(ERROR_TYPE_MISMATCH,
-                 "Tried to add non-numeric value " + rval_to_string(arg) +
+                 "Tried to add non-numeric value " + rval_to_string(rval) +
                      " to " + var_name + ".",
                  ln);
   }
 
   // Convert to float because it's more flexible
-  float arg_f = arg_type == ValueType::INT ? (float)*srval_get_int(arg)
-                                           : *srval_get_float(arg);
+  float arg_f = arg_type == ValueType::INT ? (float)*srval_get_int(rval)
+                                           : *srval_get_float(rval);
 
   // Handle subtraction
   if (!sign)
@@ -314,13 +315,13 @@ std::optional<Error> Engine::var_add(const std::string var_name,
     auto var_type = srval_get_type(it->second);
     if (var_type == ValueType::INT) {
       s.map[var_name] = *srval_get_int(it->second) + (int)arg_f;
-      return std::nullopt;
+      return s.scope;
     }
 
     // Same but for floats
     if (var_type == ValueType::FLOAT) {
       s.map[var_name] = *srval_get_float(it->second) + arg_f;
-      return std::nullopt;
+      return s.scope;
     }
 
     // If we have the var but it's not a number, error
@@ -457,28 +458,37 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
 }
 
 std::variant<Error, Notification> Engine::do_mutation(Mutation &o) {
-  std::optional<Error> err;
+  std::variant<Error, VarScope> res = VarScope::LOCAL;
+  std::optional<SimpleRValue> rv;
+  if (o.rvalue)
+    rv = resolve_rval_to_simple(*o.rvalue);
   switch (o.type) {
   case Mutation::Type::EQUATE:
-    if (!o.rvalue) {
-      err = Error(ERROR_UNEXPECTED_NULL,
-                  "Tried to set " + o.lvalue +
-                      " to an rvalue that is unexpectedly null.",
-                  o.line_number);
-      return;
-    }
-    err = var_set(o.lvalue, *o.rvalue, o.line_number);
+    assert(rv); // parser must supply this
+    res = var_set(o.lvalue, *rv, o.line_number);
     break;
   case Mutation::Type::ADD:
-    err = var_add(o.lvalue, *o.rvalue, true, o.line_number);
+    assert(rv); // parser must supply this
+    res = var_add(o.lvalue, *rv, true, o.line_number);
     break;
   case Mutation::Type::SUBTRACT:
-    err = var_add(o.lvalue, *o.rvalue, false, o.line_number);
+    assert(rv); // parser must supply this
+    res = var_add(o.lvalue, *rv, false, o.line_number);
     break;
   case Mutation::Type::SWITCH:
-    err = var_switch(o.lvalue);
+    res = var_switch(o.lvalue);
     break;
   }
+  if (auto *err = std::get_if<Error>(&res)) {
+    return *err;
+  }
+  VarScope s = *std::get_if<VarScope>(&res);
+  return Notification{
+      .var_name = o.lvalue,
+      .mut_type = o.type,
+      .rval = rv,
+      .scope = s,
+  };
 }
 
 std::optional<Error> Engine::do_operation(Operation &op) {
