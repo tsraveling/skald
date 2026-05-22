@@ -491,9 +491,9 @@ std::variant<Error, Notification> Engine::do_mutation(Mutation &o) {
   };
 }
 
-std::optional<Error> Engine::do_operation(Operation &op) {
+std::variant<Error, Notification, NoOp> Engine::do_operation(Operation &op) {
   dbg_out("    x-x " << dbg_dsc_op(op));
-  std::optional<Error> ret = std::nullopt;
+  std::variant<Error, Notification, NoOp> ret = NoOp{};
   std::visit(
       [&](auto &o) {
         using T = std::decay_t<decltype(o)>;
@@ -502,9 +502,10 @@ std::optional<Error> Engine::do_operation(Operation &op) {
           cursor.queued_transition = o.target_tag;
         } else if constexpr (std::is_same_v<T, MethodCall>) {
           dbg_out("   (already called)");
-          // This has already been done in the resolution phase; do nothing
+          // STUB: MethodCallPost here
         } else if constexpr (std::is_same_v<T, Mutation>) {
-          // auto val = o.rvalue ? resolve_rval_to_simple(*o.rvalue) : false;
+          auto mres = do_mutation(o);
+          std::visit([&](auto &v) { ret = v; }, mres);
         } else if constexpr (std::is_same_v<T, GoModule>) {
           dbg_out("    --->> CHANGING MODULE");
           cursor.queued_go = &o;

@@ -626,6 +626,9 @@ struct End {
   End(std::string reason = "") : reason(std::move(reason)) {}
 };
 
+/** This means nothing will be done this round, continue the loop. */
+struct NoOp {};
+
 /** Will contain either a Content struct or a Query */
 using Response = std::variant<Content, MethodCallPost, Exit, GoModule,
                               OptionGroup, End, Error>;
@@ -808,7 +811,7 @@ private:
    *  sent directly to the client. */
   std::variant<Error, Notification> do_mutation(Mutation &mut);
 
-  std::optional<Error> do_operation(Operation &op);
+  std::variant<Error, Notification, NoOp> do_operation(Operation &op);
 
   /** Queues the member's conditional for processing. */
   void setup_block_member();
