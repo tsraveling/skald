@@ -4,6 +4,16 @@ A: process choice
 
 - [x] advance_cursor now needs to walk through the open conditional block as well
 
+- Transitions should still be silent.
+- Exit and Go already have Responses
+- [ ] Methods need to happen inline
+- [ ] Mutation needs -> Notification
+
+### NEXT:
+
+- [ ] Make var_set etc return notification
+- [ ] Chase that up the tree
+
 ## Methods
 
 - [ ] Method should still await return (ie function as query) when called, and should write out to log.

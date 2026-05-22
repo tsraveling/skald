@@ -109,26 +109,27 @@ void Engine::warn(std::string tx, size_t ln) {
 }
 
 /** This extracts all queries needed to solve a Conditional. */
-std::vector<Query> queries_for_conditional(const Conditional &cond) {
+std::vector<MethodCallPost>
+method_posts_for_conditional(const Conditional &cond) {
 
-  std::vector<Query> result;
+  std::vector<MethodCallPost> result;
 
   for (const auto &item : cond.items) {
     if (auto *atom = std::get_if<ConditionalAtom>(&item)) {
       const MethodCall *a = rval_get_call(atom->a);
       const MethodCall *b = atom->b ? rval_get_call(*atom->b) : nullptr;
       if (a)
-        result.push_back(Query{.call = *a,
-                               .expects_response = true,
-                               .line_number = a->line_number});
+        result.push_back(MethodCallPost{.call = *a,
+                                        .expects_response = true,
+                                        .line_number = a->line_number});
       if (b)
-        result.push_back(Query{.call = *b,
-                               .expects_response = true,
-                               .line_number = b->line_number});
+        result.push_back(MethodCallPost{.call = *b,
+                                        .expects_response = true,
+                                        .line_number = b->line_number});
 
     } else if (auto *nested =
                    std::get_if<std::shared_ptr<Conditional>>(&item)) {
-      auto queries = queries_for_conditional(**nested);
+      auto queries = method_posts_for_conditional(**nested);
       result.insert(result.end(), queries.begin(), queries.end());
     }
   }
@@ -137,28 +138,31 @@ std::vector<Query> queries_for_conditional(const Conditional &cond) {
 }
 
 /** This returns all the queries needed to resolve a given conditional */
-std::vector<Query> queries_for_attached_condition(const AttachedCondition &c) {
+std::vector<MethodCallPost>
+queries_for_attached_condition(const AttachedCondition &c) {
   if (c.condition) {
-    return queries_for_conditional(*c.condition);
+    return method_posts_for_conditional(*c.condition);
   } else {
     return {};
   }
 }
 
+// STUB: Update this with new approach
 /** Returns all queries needed to execute a given operation */
-std::vector<Query> queries_for_op(const Operation &op) {
-  std::vector<Query> ret;
+std::vector<MethodCallPost> queries_for_op(const Operation &op) {
+  std::vector<MethodCallPost> ret;
   auto *call = op_get_call(op);
   if (call)
-    ret.push_back(Query{.call = *call,
-                        .expects_response = false,
-                        .line_number = call->line_number});
+    ret.push_back(MethodCallPost{.call = *call,
+                                 .expects_response = false,
+                                 .line_number = call->line_number});
   return ret;
 }
 
 /** Returns all queries needed to execute a list of ops */
-std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
-  std::vector<Query> ret;
+std::vector<MethodCallPost>
+queries_for_operations(const std::vector<Operation> &ops) {
+  std::vector<MethodCallPost> ret;
   for (auto &op : ops) {
     auto q = queries_for_op(op);
     ret.insert(ret.end(), q.begin(), q.end());
@@ -168,8 +172,8 @@ std::vector<Query> queries_for_operations(const std::vector<Operation> &ops) {
 
 /** Returns all queries needed to display a list of choices. Ops are handled
  *  on player picking a choice, so aren't queried here. */
-std::vector<Query> queries_for_choice_group(const ChoiceGroup &group) {
-  std::vector<Query> ret;
+std::vector<MethodCallPost> queries_for_choice_group(const ChoiceGroup &group) {
+  std::vector<MethodCallPost> ret;
   for (const auto &choice : group.choices) {
     auto q = queries_for_attached_condition(choice.condition);
     ret.insert(ret.end(), q.begin(), q.end());
@@ -179,9 +183,10 @@ std::vector<Query> queries_for_choice_group(const ChoiceGroup &group) {
 
 /** This is called in the Conditional beat phase, to check if the beat should
  * be processed at all */
-std::vector<Query> queries_for_member_conditional(const BlockMember &mem) {
+std::vector<MethodCallPost>
+queries_for_member_conditional(const BlockMember &mem) {
   return std::visit(
-      [](const auto &value) -> std::vector<Query> {
+      [](const auto &value) -> std::vector<MethodCallPost> {
         using T = std::decay_t<decltype(value)>;
         if constexpr (std::is_same_v<T, Beat>) {
           return queries_for_attached_condition(value.condition);
@@ -195,21 +200,22 @@ std::vector<Query> queries_for_member_conditional(const BlockMember &mem) {
       mem);
 }
 
-std::vector<Query> queries_for_choice_exec(const Choice &choice) {
-  std::vector<Query> ret;
-  if (choice.operations.size() > 0) {
-    auto op = queries_for_operations(choice.operations);
-    ret.insert(ret.end(), op.begin(), op.end());
-  }
+// FIXME: Remove and do iteratively
+std::vector<MethodCallPost> queries_for_choice_exec(const Choice &choice) {
+  std::vector<MethodCallPost> ret;
+  // if (choice.operations.size() > 0) {
+  //   auto op = queries_for_operations(choice.operations);
+  //   ret.insert(ret.end(), op.begin(), op.end());
+  // }
   return ret;
 }
 
 // SECTION: RESOLVERS AND STATE
 
-std::array<Engine::Scope, 3> Engine::scopes() {
-  return {{{"global", global_state},
-           {"module", module_state},
-           {"local", local_state}}};
+std::array<Engine::ScopeMap, 3> Engine::scopes() {
+  return {{{VarScope::GLOBAL, global_state},
+           {VarScope::MODULE, module_state},
+           {VarScope::LOCAL, local_state}}};
 }
 
 /** Returns value for given var name. Checks global, then module, then ad-hoc
@@ -239,8 +245,8 @@ std::optional<Error> Engine::var_set(const std::string var_name,
       continue;
     if (srval_get_type(it->second) != t) {
       return Error(ERROR_TYPE_MISMATCH,
-                   "Tried to set " + std::string(s.name) + " var " + var_name +
-                       " to " + rval_to_string(val),
+                   "Tried to set " + std::string(scope_to_string(s.scope)) +
+                       " var " + var_name + " to " + rval_to_string(val),
                    ln);
     }
     s.map[var_name] = val;
@@ -319,8 +325,8 @@ std::optional<Error> Engine::var_add(const std::string var_name,
 
     // If we have the var but it's not a number, error
     return Error(ERROR_TYPE_MISMATCH,
-                 "Tried to add to " + std::string(s.name) + " var " + var_name +
-                     ", but it is not numeric.",
+                 "Tried to add to " + std::string(scope_to_string(s.scope)) +
+                     " var " + var_name + ", but it is not numeric.",
                  ln);
   }
 
@@ -450,6 +456,31 @@ std::string Engine::resolve_tern(const TernaryInsertion &tern) {
   return "";
 }
 
+std::variant<Error, Notification> Engine::do_mutation(Mutation &o) {
+  std::optional<Error> err;
+  switch (o.type) {
+  case Mutation::Type::EQUATE:
+    if (!o.rvalue) {
+      err = Error(ERROR_UNEXPECTED_NULL,
+                  "Tried to set " + o.lvalue +
+                      " to an rvalue that is unexpectedly null.",
+                  o.line_number);
+      return;
+    }
+    err = var_set(o.lvalue, *o.rvalue, o.line_number);
+    break;
+  case Mutation::Type::ADD:
+    err = var_add(o.lvalue, *o.rvalue, true, o.line_number);
+    break;
+  case Mutation::Type::SUBTRACT:
+    err = var_add(o.lvalue, *o.rvalue, false, o.line_number);
+    break;
+  case Mutation::Type::SWITCH:
+    err = var_switch(o.lvalue);
+    break;
+  }
+}
+
 std::optional<Error> Engine::do_operation(Operation &op) {
   dbg_out("    x-x " << dbg_dsc_op(op));
   std::optional<Error> ret = std::nullopt;
@@ -464,27 +495,6 @@ std::optional<Error> Engine::do_operation(Operation &op) {
           // This has already been done in the resolution phase; do nothing
         } else if constexpr (std::is_same_v<T, Mutation>) {
           // auto val = o.rvalue ? resolve_rval_to_simple(*o.rvalue) : false;
-          switch (o.type) {
-          case Mutation::Type::EQUATE:
-            if (!o.rvalue) {
-              ret = Error(ERROR_UNEXPECTED_NULL,
-                          "Tried to set " + o.lvalue +
-                              " to an rvalue that is unexpectedly null.",
-                          o.line_number);
-              return;
-            }
-            ret = var_set(o.lvalue, *o.rvalue, o.line_number);
-            break;
-          case Mutation::Type::ADD:
-            ret = var_add(o.lvalue, *o.rvalue, true, o.line_number);
-            break;
-          case Mutation::Type::SUBTRACT:
-            ret = var_add(o.lvalue, *o.rvalue, false, o.line_number);
-            break;
-          case Mutation::Type::SWITCH:
-            ret = var_switch(o.lvalue);
-            break;
-          }
         } else if constexpr (std::is_same_v<T, GoModule>) {
           dbg_out("    --->> CHANGING MODULE");
           cursor.queued_go = &o;

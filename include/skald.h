@@ -21,6 +21,7 @@ struct LineEntity {
 
 /** Used for strong typing declarations and methods */
 enum ValueType { STRING, BOOL, INT, FLOAT };
+enum class VarScope { GLOBAL, MODULE, LOCAL };
 
 struct Variable {
   std::string name;
@@ -564,9 +565,9 @@ struct OptionGroup {
   std::vector<Option> options;
 };
 
-/** This contains a query from the Skald engine out to the client. This is
- * mostly method calls. */
-struct Query {
+/** This posts the method out to the client, and is used to key the result back
+ * into Skald state. */
+struct MethodCallPost {
   MethodCall call;
   bool expects_response = false;
   size_t line_number = 0;
@@ -609,8 +610,13 @@ struct QueryAnswer {
   std::optional<SimpleRValue> val;
 };
 
-// STUB: Build this out to notify the user of calls and mutations
-struct Notification {};
+struct Notification {
+  Mutation mut;
+  ValueType val_type;
+  VarScope scope;
+  SimpleRValue prev;
+  SimpleRValue next;
+};
 
 /** Empty struct signifying that the script is concluded. */
 struct End {
@@ -622,8 +628,8 @@ struct End {
 };
 
 /** Will contain either a Content struct or a Query */
-using Response =
-    std::variant<Content, Query, Exit, GoModule, OptionGroup, End, Error>;
+using Response = std::variant<Content, MethodCallPost, Exit, GoModule,
+                              OptionGroup, End, Error>;
 
 enum class ResponseType {
   CONTENT,
@@ -642,7 +648,7 @@ inline ResponseType get_response_type(Response &response) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Content>)
           return ResponseType::CONTENT;
-        else if constexpr (std::is_same_v<T, Query>)
+        else if constexpr (std::is_same_v<T, MethodCallPost>)
           return ResponseType::QUERY;
         else if constexpr (std::is_same_v<T, Exit>)
           return ResponseType::EXIT;
@@ -709,7 +715,7 @@ struct Cursor {
   /** These track method calls etc. that require queries to the external client.
    *  These have to be resolved by the client via the answer() method before the
    *  engine will proceed. */
-  std::vector<Query> resolution_stack;
+  std::vector<MethodCallPost> resolution_stack;
 
   /** This will reset the cursor to a "new" state */
   void reset() {
@@ -799,6 +805,10 @@ private:
   /** Log to the warning stack without blocking operation */
   void warn(std::string tx, size_t ln = 0);
 
+  /** Performs a mutation. Returns either error or a notification that can be
+   *  sent directly to the client. */
+  std::variant<Error, Notification> do_mutation(Mutation &mut);
+
   std::optional<Error> do_operation(Operation &op);
 
   /** Queues the member's conditional for processing. */
@@ -809,13 +819,25 @@ private:
 
   ///-- RESOLUTION --///
 
-  struct Scope {
-    const char *name;
+  static const char *scope_to_string(VarScope s) {
+    switch (s) {
+    case VarScope::GLOBAL:
+      return "global";
+    case VarScope::MODULE:
+      return "module";
+    case VarScope::LOCAL:
+      return "local";
+    }
+    return "unknown";
+  }
+
+  struct ScopeMap {
+    VarScope scope;
     std::unordered_map<std::string, SimpleRValue> &map;
   };
 
   /** Returns the scope maps in lookup-priority order: global, module, local. */
-  std::array<Scope, 3> scopes();
+  std::array<ScopeMap, 3> scopes();
 
   /** Gets a var, preferring global, module, then local. Gets false if local,
    *  and warns. */
