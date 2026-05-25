@@ -491,30 +491,39 @@ std::variant<Error, Notification> Engine::do_mutation(Mutation &o) {
   };
 }
 
-std::variant<Error, Notification, NoOp> Engine::do_operation(Operation &op) {
-  dbg_out("    x-x " << dbg_dsc_op(op));
-  std::variant<Error, Notification, NoOp> ret = NoOp{};
+std::optional<Response> Engine::do_member(Member &mem) {
+  std::optional<Response> ret;
   std::visit(
-      [&](auto &o) {
-        using T = std::decay_t<decltype(o)>;
-        if constexpr (std::is_same_v<T, Move>) {
-          dbg_out("   ---> going to " << o.target_tag);
-          cursor.queued_transition = o.target_tag;
+      [&](auto &m) {
+        using T = std::decay_t<decltype(m)>;
+        if constexpr (std::is_same_v<T, Beat>) {
+          /// BEAT ///
+          auto content = Content{};
+          content.text = resolve_text(m.content);
+          content.attribution = m.attribution;
+          ret = std::move(content);
+        } else if constexpr (std::is_same_v<T, Move>) {
+          /// MOVE ///
+          cursor.queued_transition = m.target_tag;
         } else if constexpr (std::is_same_v<T, MethodCall>) {
+          /// METHOD ///
           dbg_out("   (already called)");
           // STUB: MethodCallPost here
         } else if constexpr (std::is_same_v<T, Mutation>) {
-          auto mres = do_mutation(o);
+          /// MUTATION ///
+          auto mres = do_mutation(m);
           std::visit([&](auto &v) { ret = v; }, mres);
         } else if constexpr (std::is_same_v<T, GoModule>) {
+          /// GO ///
           dbg_out("    --->> CHANGING MODULE");
-          cursor.queued_go = &o;
+          cursor.queued_go = &m;
         } else if constexpr (std::is_same_v<T, Exit>) {
+          /// EXIT ///
           dbg_out("    ---X EXITING");
-          cursor.queued_exit = &o;
+          cursor.queued_exit = &m;
         }
       },
-      op);
+      mem.body);
   return ret;
 }
 /** Sets up a member directly */
@@ -731,21 +740,16 @@ Response Engine::next() {
     std::optional<Response> response = std::visit(
         [&](auto &mem) -> std::optional<Response> {
           using T = std::decay_t<decltype(mem)>;
-          if constexpr (std::is_same_v<T, Beat>) {
-            /// Beats ///
-            auto content = Content{};
-            content.text = resolve_text(mem.content);
-            content.attribution = mem.attribution;
-            return content;
-
-          } else if constexpr (std::is_same_v<T, LineOp>) {
-            /// LineOps ///
-            return do_operation(mem.op);
+          if constexpr (std::is_same_v<T, Member>) {
+            /// NORMAL MEMBERS ///
+            return do_member(mem);
           } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
-            /// Choice Groups ///
+            /// CHOICE GROUPS ///
 
             // Execute choice if we made one
             if (cursor.choice_selection >= 0) {
+
+              // STUB: Handle choice member stepping here.
               dbg_out("Processing choice " << cursor.choice_selection
                                            << " and breaking");
               auto &choice = mem.choices[cursor.choice_selection];

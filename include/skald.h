@@ -122,7 +122,7 @@ inline bool is_simple_rval_truthy(const SimpleRValue &val) {
       val);
 }
 
-/** Attempts to cast an RValue to a SimpleRValue, returnig nullopt if this is
+/** Attempts to cast an RValue to a SimpleRValue, returning nullopt if this is
  * impossible. */
 inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
   return std::visit(
@@ -352,12 +352,6 @@ struct Move : LineEntity {
   std::string target_tag;
 };
 
-using Operation = std::variant<Move, MethodCall, Mutation, GoModule, Exit>;
-
-inline const MethodCall *op_get_call(const Operation &val) {
-  return std::get_if<MethodCall>(&val);
-}
-
 /* DEBUG OUTPUT STUFF TO DELETE LATER */
 
 struct OpDebugProcessor {
@@ -377,18 +371,6 @@ struct OpDebugProcessor {
     return "EXIT: " + exit.dbg_desc();
   }
 };
-
-inline std::string dbg_dsc_op(const Operation &op) {
-  return std::visit(OpDebugProcessor{}, op);
-}
-
-inline std::string dbg_desc_ops(const std::vector<Operation> &ops) {
-  std::string ret = "";
-  for (auto &op : ops) {
-    ret += "\n    * " + dbg_dsc_op(op);
-  }
-  return ret;
-}
 
 using TernaryOption = std::tuple<RValue, RValue>;
 
@@ -468,25 +450,39 @@ struct AttachedCondition {
 
 /** A narrative beat (text; attributed or not.) */
 struct Beat : LineEntity {
-
-  AttachedCondition condition;
   std::string attribution;
   TextContent content;
 
   std::string dbg_desc() const {
-    return condition.dbg_desc() +
-           (attribution.length() > 0 ? attribution + ": " : "");
+    return (attribution.length() > 0 ? attribution + ": " : "") + "<beat>";
   }
 };
 
-/** A member of a choice; an operation or a beat (sub-beat in this case) */
-using ChoiceMember = std::variant<Operation, Beat>;
+/** A member of a block (excludes CGs) or choice. Can be Move, MethodCall,
+ * Mutation, GoModule, Exit, or Beat. */
+struct Member {
+  std::variant<Move, MethodCall, Mutation, GoModule, Exit, Beat> body;
+  AttachedCondition ac;
 
-/** A choice. Child of ChoiceGroup. */
+  const Move *get_move() const { return std::get_if<Move>(&body); }
+  const MethodCall *get_call() const { return std::get_if<MethodCall>(&body); }
+  const Mutation *get_mutation() const { return std::get_if<Mutation>(&body); }
+  const GoModule *get_go_module() const { return std::get_if<GoModule>(&body); }
+  const Exit *get_exit() const { return std::get_if<Exit>(&body); }
+  const Beat *get_beat() const { return std::get_if<Beat>(&body); }
+
+  bool is_move() const { return std::holds_alternative<Move>(body); }
+  bool is_call() const { return std::holds_alternative<MethodCall>(body); }
+  bool is_mutation() const { return std::holds_alternative<Mutation>(body); }
+  bool is_go_module() const { return std::holds_alternative<GoModule>(body); }
+  bool is_exit() const { return std::holds_alternative<Exit>(body); }
+  bool is_beat() const { return std::holds_alternative<Beat>(body); }
+};
+
 struct Choice : LineEntity {
   AttachedCondition condition;
   TextContent content;
-  std::vector<ChoiceMember> members;
+  std::vector<Member> members;
 
   std::string dbg_desc() const {
     return condition.dbg_desc() + content.dbg_desc() + " (" +
@@ -501,15 +497,8 @@ struct ChoiceGroup : LineEntity {
   std::vector<Choice> choices;
 };
 
-// This is an operation that exists inline on a block.
-struct LineOp : LineEntity {
-  AttachedCondition condition;
-  Operation op;
-  std::string dbg_desc() const { return condition.dbg_desc() + dbg_dsc_op(op); }
-};
-
 /** A Beat, LineOp, or ChoiceGroup. Child of a Block or a ConditionalBlock. */
-using BlockMember = std::variant<Beat, LineOp, ChoiceGroup>;
+using BlockMember = std::variant<Member, ChoiceGroup>;
 
 /** A block in a conditional chain. If cond is null, this is an else block. */
 struct ConditionalBlock : LineEntity {
@@ -626,12 +615,9 @@ struct End {
   End(std::string reason = "") : reason(std::move(reason)) {}
 };
 
-/** This means nothing will be done this round, continue the loop. */
-struct NoOp {};
-
 /** Will contain either a Content struct or a Query */
 using Response = std::variant<Content, MethodCallPost, Exit, GoModule,
-                              OptionGroup, End, Error>;
+                              OptionGroup, End, Error, Notification>;
 
 enum class ResponseType {
   CONTENT,
@@ -758,7 +744,7 @@ public:
   /** Get the current response that's awaiting action */
   Response get_current();
 
-  /** Call this to answer a Query reponse; either the value that should be
+  /** Call this to answer a Query response; either the value that should be
    * returned if a return is expected, or null if not. */
   Response answer(std::optional<QueryAnswer> answer);
 
@@ -811,7 +797,7 @@ private:
    *  sent directly to the client. */
   std::variant<Error, Notification> do_mutation(Mutation &mut);
 
-  std::variant<Error, Notification, NoOp> do_operation(Operation &op);
+  std::variant<Response, NoOp> do_member(Member &mem);
 
   /** Queues the member's conditional for processing. */
   void setup_block_member();
