@@ -2,12 +2,10 @@
 
 A: process choice
 
-- [x] advance_cursor now needs to walk through the open conditional block as well
-
-- Transitions should still be silent.
-- Exit and Go already have Responses
-- [ ] Methods need to happen inline
-- [ ] Mutation needs -> Notification
+- [ ] Consolidate consumption of members in grammar and actions
+- [ ] Ensure that these entities get their correct members after grammar etc updates
+- [ ] Ensure conditionals are being properly handled
+- [ ] When composing members, throw a warning if anything comes after a transition
 
 ### NEXT:
 

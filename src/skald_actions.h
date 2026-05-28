@@ -555,8 +555,8 @@ template <> struct action<op_go> {
     std::string start_tag =
         state.does_go_have_start_tag ? state.move_identifier_store : "";
     dbg_out(" - >>> start_tag: " << start_tag);
-    state.operation_queue.push_back(
-        GoModule{.module_path = state.path_buffer, .start_in_tag = start_tag});
+    state.member_body_buffer =
+        GoModule{.module_path = state.path_buffer, .start_in_tag = start_tag};
   }
 };
 
@@ -567,15 +567,15 @@ template <> struct action<op_exit> {
     std::optional<RValue> arg = std::nullopt;
     if (state.rval_buffer.size() > 0)
       arg = state.rval_buffer_pop();
-    state.operation_queue.push_back(Exit{.argument = arg});
+    state.member_body_buffer = Exit{.argument = arg};
   }
 };
 
 template <> struct action<op_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.operation_queue.push_back(
-        Move{input.position().line, state.move_identifier_store});
+    state.member_body_buffer =
+        Move{input.position().line, state.move_identifier_store};
     dbg_out(">>> op_move: " << input.string());
   }
 };
@@ -583,9 +583,8 @@ template <> struct action<op_move> {
 template <> struct action<op_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.operation_queue.push_back(
-        MethodCall{input.position().line, state.pop_id(),
-                   std::move(state.argument_queue)});
+    state.member_body_buffer = MethodCall{input.position().line, state.pop_id(),
+                                          std::move(state.argument_queue)};
     dbg_out(">>> op_method: " << input.string());
   }
 };
@@ -596,51 +595,51 @@ template <> struct action<op_mutate_subtract> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_subtract: " << input.string());
-    state.operation_queue.push_back(Mutation{input.position().line,
-                                             state.pop_id(), Mutation::SUBTRACT,
-                                             state.rval_buffer_pop()});
+    state.member_body_buffer =
+        Mutation{input.position().line, state.pop_id(), Mutation::SUBTRACT,
+                 state.rval_buffer_pop()};
   }
 };
 template <> struct action<op_mutate_add> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_add: " << input.string());
-    state.operation_queue.push_back(Mutation{input.position().line,
-                                             state.pop_id(), Mutation::ADD,
-                                             state.rval_buffer_pop()});
+    state.member_body_buffer = Mutation{input.position().line, state.pop_id(),
+                                        Mutation::ADD, state.rval_buffer_pop()};
   }
 };
 template <> struct action<op_mutate_equate> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_equate: " << input.string());
-    state.operation_queue.push_back(Mutation{input.position().line,
-                                             state.pop_id(), Mutation::EQUATE,
-                                             state.rval_buffer_pop()});
+    state.member_body_buffer =
+        Mutation{input.position().line, state.pop_id(), Mutation::EQUATE,
+                 state.rval_buffer_pop()};
   }
 };
 template <> struct action<op_mutate_switch> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.operation_queue.push_back(
-        Mutation{input.position().line, state.pop_id(), Mutation::SWITCH, {}});
+    state.member_body_buffer =
+        Mutation{input.position().line, state.pop_id(), Mutation::SWITCH, {}};
   }
 };
 
 /// OPERATION CORE ///
 
-template <> struct action<op_line> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, ParseState &state) {
-    auto text = input.string();
-    dbg_out(">>> op_line: " << text);
-    LineOp lo;
-    lo.line_number = input.position().line;
-    lo.op = state.operation_queue_pop();
-    lo.condition.condition = state.conditional_buffer_pop();
-    state.add_member(lo);
-  }
-};
+// FIXME: Remove this once the member consumption works
+// template <> struct action<op_end> {
+//   template <typename ActionInput>
+//   static void apply(const ActionInput &input, ParseState &state) {
+//     auto text = input.string();
+//     dbg_out(">>> op_line: " << text);
+//     LineOp lo;
+//     lo.line_number = input.position().line;
+//     lo.op = state.operation_queue_pop();
+//     lo.condition.condition = state.conditional_buffer_pop();
+//     state.add_member(lo);
+//   }
+// };
 
 // SECTION: CHOICES
 
@@ -648,8 +647,11 @@ template <> struct action<inline_choice_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     auto text = input.string();
-    state.operation_queue.push_back(
-        Move{input.position().line, state.pop_id()});
+
+    // This method adds the move directly to the member queue as the move is
+    // never conditional.
+    state.choice_member_queue.push_back(
+        Member{.body = Move{input.position().line, state.pop_id()}});
   }
 };
 

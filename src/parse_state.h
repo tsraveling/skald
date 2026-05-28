@@ -64,6 +64,9 @@ struct ParseState {
   /** Adds a member either to the main thread, or the open conditional block */
   void add_member(BlockMember mem);
 
+  /** Adds a member to the open choice */
+  void add_choice_member(Member mem);
+
   /** Holds open chain if there is one. Members will be added to last block in
    *  list. */
   std::unique_ptr<ConditionalChain> open_chain;
@@ -105,11 +108,11 @@ struct ParseState {
   /** Stores move identifier for transitions and GO statements */
   std::string move_identifier_store;
 
-  /** Current operations stack */
-  std::vector<Operation> operation_queue;
+  /** Stores the raw member body until we can assemble it */
+  std::optional<MemberBody> member_body_buffer;
 
-  /** Pops the most recent operation off the queue and returns it */
-  Operation operation_queue_pop();
+  /** Current operations stack */
+  std::vector<Member> choice_member_queue;
 
   // SECTION: TEXT
 

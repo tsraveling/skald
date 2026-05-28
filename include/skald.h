@@ -458,10 +458,15 @@ struct Beat : LineEntity {
   }
 };
 
-/** A member of a block (excludes CGs) or choice. Can be Move, MethodCall,
- * Mutation, GoModule, Exit, or Beat. */
+/** The raw types contained by a Member: Move, MethodCall,
+ *  Mutation, GoModule, Exit, or Beat. */
+using MemberBody =
+    std::variant<Move, MethodCall, Mutation, GoModule, Exit, Beat>;
+
+/** A member of a block (excludes CGs) or choice. .body: MemberBody, and ac:
+ *  AttachedCondition. */
 struct Member {
-  std::variant<Move, MethodCall, Mutation, GoModule, Exit, Beat> body;
+  MemberBody body;
   AttachedCondition ac;
 
   const Move *get_move() const { return std::get_if<Move>(&body); }
@@ -689,9 +694,6 @@ struct Cursor {
   int choice_selection = -1;
 
   /** If >= 0, we are stepping through the operations of a choice. */
-  int entered_choice_thread = -1;
-
-  /** If in a choice, which member are we on */
   int choice_thread_index = 0;
 
   /** If this is present, do an exit */
@@ -797,7 +799,7 @@ private:
    *  sent directly to the client. */
   std::variant<Error, Notification> do_mutation(Mutation &mut);
 
-  std::variant<Response, NoOp> do_member(Member &mem);
+  std::optional<Response> do_member(Member &mem);
 
   /** Queues the member's conditional for processing. */
   void setup_block_member();

@@ -748,19 +748,19 @@ Response Engine::next() {
 
             // Execute choice if we made one
             if (cursor.choice_selection >= 0) {
+              assert(cursor.choice_selection < mem.choices.size());
+              Choice &choice = mem.choices[cursor.choice_selection];
 
-              // STUB: Handle choice member stepping here.
-              dbg_out("Processing choice " << cursor.choice_selection
-                                           << " and breaking");
-              auto &choice = mem.choices[cursor.choice_selection];
-              cursor.choice_selection = -1;
-              for (auto &op : choice.operations) {
-                auto e = do_operation(op);
-                if (e)
-                  return *e;
-              }
-              return std::nullopt;
+              // Automatically step through members as we hit this. Note that
+              // this means a transition will kick us fully out of this process.
+              assert(cursor.choice_thread_index < choice.members.size());
+              auto res = do_member(choice.members[cursor.choice_thread_index]);
+              cursor.choice_thread_index++;
+              return res;
             }
+            cursor.choice_selection = -1;
+            return std::nullopt;
+
             dbg_out("next(): hit a ChoiceGroup, returning OG");
             auto grp = OptionGroup{};
             for (auto &choice : mem.choices) {
@@ -946,20 +946,18 @@ void Engine::load(std::string path) {
         std::visit(
             [](const auto &member) {
               using T = std::decay_t<decltype(member)>;
-              if constexpr (std::is_same_v<T, Beat>) {
-                dbg_out("  - Beat: " << member.dbg_desc());
+              if constexpr (std::is_same_v<T, Member>) {
+                dbg_out("  - Member");
               } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
                 dbg_out("  - ChoiceGroup: ");
                 for (const auto &choice : member.choices) {
                   dbg_out("    > Choice: " << choice.dbg_desc());
-                  dbg_out(dbg_desc_ops(choice.operations));
                 }
-              } else if constexpr (std::is_same_v<T, LineOp>) {
-                dbg_out("  - LineOp: " << member.dbg_desc());
               }
             },
             mem);
       };
+
       for (const auto &mem : block.members) {
         std::visit(
             [&](const auto &m) {

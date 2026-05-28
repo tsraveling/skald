@@ -252,9 +252,6 @@ struct op_move : seq<move_marker, ws,
 struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
 struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
 
-/** Inline operations; part of blocks. */
-struct op_line : seq<opt<seq<conditional, ws>>, operation, functional_eol> {};
-
 // SECTION: BEATS
 
 /** The tag part of a block tag */
@@ -276,12 +273,24 @@ struct beat_attribution : seq<ws, identifier, one<':'>, ws> {};
  *
  *  - alice: Hey there!
  */
-struct beat : seq<not_at<seq<ws, eolf>>,     // Not at end of line or whitespace
-                  not_at<choice_prefix>,     // Not a choice
-                  not_at<block_tag_line>,    // Not at a new block
-                  opt<seq<conditional, ws>>, // Optional conditional
-                  opt<beat_attribution>,     // Optional attribution
-                  text_content, eolf> {};    // The text content
+struct beat : seq<opt<beat_attribution>,  // Optional attribution
+                  text_content, eolf> {}; // The text content
+
+/** Operation + optional line comment, to EOL|F */
+struct op_end : seq<operation, functional_eol> {};
+
+/** A member; of a block, or of a choice. */
+struct member : seq<not_at<seq<ws, eolf>>,  // Not at end of line or whitespace
+                    not_at<choice_prefix>,  // Not a choice
+                    not_at<block_tag_line>, // Not at a new block
+                    opt<seq<conditional, ws>>, // Optional conditional
+                    sor<beat, operation>> {};
+
+/** A non-indented member belongs to the block level. */
+struct base_member : seq<not_at<indent>, member> {};
+
+/** A choice member is like a normal member, but indented */
+struct choice_member : seq<indent, member> {};
 
 // SECTION: CHOICES
 
@@ -295,14 +304,14 @@ struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
 struct choice_subbeat : seq<indent, beat, eolf> {};
 
 /** Operations following a choice */
-struct op_choice : seq<indent, operation, functional_eol> {};
+struct choice_op : seq<indent, operation, functional_eol> {};
 
 /** The choice line with optional indented operation lines
  *
  *  - > Go left
  *  -   :do_operation()
  */
-struct choice_clause : seq<choice_line, star<op_choice>> {};
+struct choice_clause : seq<choice_line, star<choice_op>> {};
 
 /** A group of choices, corresponding to ChoiceGroup
  *
@@ -314,7 +323,7 @@ struct choice_block : plus<choice_clause> {};
 // SECTION: CONDITIONAL CHAINS
 
 using block_member =
-    seq<not_at<one<'@'>>, sor<ignored, op_line, choice_block, beat>>;
+    seq<not_at<one<'@'>>, sor<ignored, op_end, choice_block, beat>>;
 using block_members = star<block_member>;
 
 struct cond_chain_if
