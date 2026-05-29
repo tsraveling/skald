@@ -300,18 +300,12 @@ struct inline_choice_move : op_move {};
 struct choice_line : seq<choice_prefix, ws, opt<conditional>, ws, text_content,
                          opt<inline_choice_move>, eolf> {};
 
-/** Indented child beats that immediately follow a choice */
-struct choice_subbeat : seq<indent, beat, eolf> {};
-
-/** Operations following a choice */
-struct choice_op : seq<indent, operation, functional_eol> {};
-
-/** The choice line with optional indented operation lines
+/** The choice line with optional indented member lines, including child beats
  *
  *  - > Go left
  *  -   :do_operation()
  */
-struct choice_clause : seq<choice_line, star<choice_op>> {};
+struct choice_clause : seq<choice_line, star<choice_member>> {};
 
 /** A group of choices, corresponding to ChoiceGroup
  *

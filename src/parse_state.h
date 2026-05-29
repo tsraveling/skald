@@ -87,9 +87,6 @@ struct ParseState {
 
   // SECTION: CHOICES
 
-  /** Adds a choice */
-  Choice *add_choice();
-
   /** Consolidates a choice group */
   void add_choice_group(int line_number);
 
@@ -112,7 +109,8 @@ struct ParseState {
   std::optional<MemberBody> member_body_buffer;
 
   /** Current operations stack */
-  std::vector<Member> choice_member_queue;
+  // FIXME: just add to member directly
+  // std::vector<Member> choice_member_queue;
 
   // SECTION: TEXT
 

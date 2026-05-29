@@ -149,26 +149,27 @@ queries_for_attached_condition(const AttachedCondition &c) {
 
 // STUB: Update this with new approach
 /** Returns all queries needed to execute a given operation */
-std::vector<MethodCallPost> queries_for_op(const Operation &op) {
-  std::vector<MethodCallPost> ret;
-  auto *call = op_get_call(op);
-  if (call)
-    ret.push_back(MethodCallPost{.call = *call,
-                                 .expects_response = false,
-                                 .line_number = call->line_number});
-  return ret;
-}
-
-/** Returns all queries needed to execute a list of ops */
-std::vector<MethodCallPost>
-queries_for_operations(const std::vector<Operation> &ops) {
-  std::vector<MethodCallPost> ret;
-  for (auto &op : ops) {
-    auto q = queries_for_op(op);
-    ret.insert(ret.end(), q.begin(), q.end());
-  }
-  return ret;
-}
+// FIXME: Clear out after processing
+// std::vector<MethodCallPost> queries_for_op(const Operation &op) {
+//   std::vector<MethodCallPost> ret;
+//   auto *call = op_get_call(op);
+//   if (call)
+//     ret.push_back(MethodCallPost{.call = *call,
+//                                  .expects_response = false,
+//                                  .line_number = call->line_number});
+//   return ret;
+// }
+//
+// /** Returns all queries needed to execute a list of ops */
+// std::vector<MethodCallPost>
+// queries_for_operations(const std::vector<Operation> &ops) {
+//   std::vector<MethodCallPost> ret;
+//   for (auto &op : ops) {
+//     auto q = queries_for_op(op);
+//     ret.insert(ret.end(), q.begin(), q.end());
+//   }
+//   return ret;
+// }
 
 /** Returns all queries needed to display a list of choices. Ops are handled
  *  on player picking a choice, so aren't queried here. */
@@ -189,6 +190,7 @@ queries_for_member_conditional(const BlockMember &mem) {
       [](const auto &value) -> std::vector<MethodCallPost> {
         using T = std::decay_t<decltype(value)>;
         if constexpr (std::is_same_v<T, Beat>) {
+          // FIXME: Replace with member check -- basically just conditional
           return queries_for_attached_condition(value.condition);
         } else if constexpr (std::is_same_v<T, LineOp>) {
           auto v = queries_for_attached_condition(value.condition);

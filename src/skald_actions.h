@@ -362,7 +362,7 @@ template <> struct action<inline_text_segment> {
 template <> struct action<checkable_2f_operator> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    dbg_out("<.> stored comparitor for " << input.string());
+    dbg_out("<.> stored comparator for " << input.string());
     state.current_comparison =
         ConditionalAtom::comparison_for_operator(input.string());
   }
@@ -385,7 +385,7 @@ template <> struct action<checkable_base> {
     std::optional<RValue> right = {};
     if (state.current_comparison == ConditionalAtom::Comparison::TRUTHY ||
         state.current_comparison == ConditionalAtom::Comparison::NOT_TRUTHY) {
-      // These comparitor types only have the one rval
+      // These comparator types only have the one rval
       left = state.rval_buffer_pop();
     } else {
       // Grab the rvals in order, first right (most recent) then left
@@ -650,15 +650,19 @@ template <> struct action<inline_choice_move> {
 
     // This method adds the move directly to the member queue as the move is
     // never conditional.
-    state.choice_member_queue.push_back(
+    state.add_choice_member(
         Member{.body = Move{input.position().line, state.pop_id()}});
   }
 };
 
-template <> struct action<choice_clause> {
+template <> struct action<choice_line> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.add_choice();
+    Choice choice;
+    choice.content.parts = std::move(state.text_content_queue);
+    choice.condition.condition = state.conditional_buffer_pop();
+    choice.line_number = input.position().line;
+    state.choice_stack.push_back(choice);
   }
 };
 
@@ -686,13 +690,39 @@ template <> struct action<beat_attribution> {
   }
 };
 
-// FIXME: Glue these guys together
-
 template <> struct action<beat> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     const position p = input.position();
     state.add_beat(input.position().line);
+  }
+};
+
+// SECTION: MEMBERS
+
+// These two methods do exactly the same thing; base_member gets called for a
+// non-indented member, whereas choice_member is always indented. Could probably
+// condense this down but this feels clearer.
+
+template <> struct action<base_member> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    assert(state.member_body_buffer); // Must have member body stored
+    auto body = std::exchange(state.member_body_buffer, std::nullopt);
+    auto mem = Member{.body = std::move(*body)};
+    mem.ac.condition = state.conditional_buffer_pop();
+    state.add_member(std::move(mem));
+  }
+};
+
+template <> struct action<choice_member> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    assert(state.member_body_buffer); // Must have member body stored
+    auto body = std::exchange(state.member_body_buffer, std::nullopt);
+    auto mem = Member{.body = std::move(*body)};
+    mem.ac.condition = state.conditional_buffer_pop();
+    state.add_choice_member(std::move(mem));
   }
 };
 

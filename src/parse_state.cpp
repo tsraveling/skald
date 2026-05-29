@@ -45,6 +45,10 @@ void ParseState::start_block(const std::string &tag) {
 
   current_block = &module.blocks.back();
 }
+void ParseState::add_choice_member(Member mem) {
+  assert(choice_stack.size() > 0);
+  choice_stack.back().members.push_back(std::move(mem));
+}
 
 /** Adds a member either to the main thread, or the open conditional block */
 void ParseState::add_member(BlockMember mem) {
@@ -66,9 +70,6 @@ void ParseState::add_beat(int line_number) {
 
   Beat beat;
 
-  // Will consume a conditional if one is present
-  beat.condition.condition = conditional_buffer_pop();
-
   // Grab the text content
   beat.content.parts = std::move(text_content_queue);
 
@@ -76,39 +77,16 @@ void ParseState::add_beat(int line_number) {
   beat.attribution = current_attrib_tag;
   current_attrib_tag = "";
   beat.line_number = line_number;
-  add_member(beat);
+  member_body_buffer = beat;
 }
 
 // SECTION: CHOICES
-
-Choice *ParseState::add_choice() {
-  if (!current_block) {
-    Log::err("Found choice but there is no current block!");
-    return nullptr;
-  }
-  Log::verbose(" - Adding choice.");
-  Choice choice;
-  choice.content.parts = std::move(text_content_queue);
-  choice.operations = std::move(operation_queue);
-  choice.condition.condition = conditional_buffer_pop();
-  choice_stack.push_back(choice);
-  return &choice_stack.back();
-}
 
 void ParseState::add_choice_group(int line_number) {
   ChoiceGroup grp;
   grp.choices = std::move(choice_stack);
   grp.line_number = line_number;
   add_member(grp);
-}
-
-// SECTION: OPERATIONS
-
-Operation ParseState::operation_queue_pop() {
-  dbg_out(">>> operation_queue_pop: " << operation_queue.size() << " -1 ");
-  auto back = std::move(operation_queue.back());
-  operation_queue.pop_back();
-  return back;
 }
 
 // SECTION: TEXT
