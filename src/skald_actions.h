@@ -711,6 +711,7 @@ template <> struct action<base_member> {
     auto body = std::exchange(state.member_body_buffer, std::nullopt);
     auto mem = Member{.body = std::move(*body)};
     mem.ac.condition = state.conditional_buffer_pop();
+    mem.line_number = input.position().line;
     state.add_member(std::move(mem));
   }
 };
@@ -722,6 +723,7 @@ template <> struct action<choice_member> {
     auto body = std::exchange(state.member_body_buffer, std::nullopt);
     auto mem = Member{.body = std::move(*body)};
     mem.ac.condition = state.conditional_buffer_pop();
+    mem.line_number = input.position().line;
     state.add_choice_member(std::move(mem));
   }
 };

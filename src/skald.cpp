@@ -189,15 +189,12 @@ queries_for_member_conditional(const BlockMember &mem) {
   return std::visit(
       [](const auto &value) -> std::vector<MethodCallPost> {
         using T = std::decay_t<decltype(value)>;
-        if constexpr (std::is_same_v<T, Beat>) {
-          // FIXME: Replace with member check -- basically just conditional
+        if constexpr (std::is_same_v<T, Member()>) {
           return queries_for_attached_condition(value.condition);
-        } else if constexpr (std::is_same_v<T, LineOp>) {
-          auto v = queries_for_attached_condition(value.condition);
-          return v;
         } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
           return queries_for_choice_group(value);
         }
+        return {};
       },
       mem);
 }
@@ -803,18 +800,11 @@ Response Engine::act(int choice_index) {
   std::visit(
       [&](const auto &mem) {
         using T = std::decay_t<decltype(mem)>;
-        if constexpr (std::is_same_v<T, Beat>) {
+        if constexpr (std::is_same_v<T, Member>) {
 
           /// Act on a beat: CONTINUE ///
-
           err = advance_cursor(mem.line_number);
-        } else if constexpr (std::is_same_v<T, LineOp>) {
 
-          /// Act on a line op: ERROR ///
-
-          err = Error(ERROR_UNEXPECTED_ACT,
-                      "Got a user act input on a LineOp; state may be broken.",
-                      mem.line_number);
         } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
 
           /// Act on a choice group: CHOICE ///

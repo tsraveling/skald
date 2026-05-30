@@ -465,7 +465,7 @@ using MemberBody =
 
 /** A member of a block (excludes CGs) or choice. .body: MemberBody, and ac:
  *  AttachedCondition. */
-struct Member {
+struct Member : LineEntity {
   MemberBody body;
   AttachedCondition ac;
 
