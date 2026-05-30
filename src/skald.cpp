@@ -32,16 +32,19 @@ MainBlockMember &Engine::cursor_mbm(Block &block) {
 
 /** Gets current MainBlockMember (BM or CT) from scratch */
 MainBlockMember &Engine::cursor_mbm() {
-  auto block = cursor_block();
+  auto &block = cursor_block();
   return cursor_mbm(block);
 }
 
 /** Gets current BlockMember (Mem or CG), including in a CT, where we already
  * know the parent MBM (which either is this, or is the parent) */
 BlockMember &Engine::cursor_bm(MainBlockMember &mbm) {
-  if (auto *bm = std::get_if<BlockMember>(mbm)) {
+  // Return BM if that's what this is
+  if (auto *bm = std::get_if<BlockMember>(&mbm)) {
     return *bm;
   }
+
+  // Otherwise step into the CG
   assert(cursor.entered_thread_block); // Must have resolved a cond
   auto &chain = std::get<ConditionalChain>(mbm);
   auto &cb = chain.cond_blocks.at(cursor.thread_block);
@@ -50,26 +53,27 @@ BlockMember &Engine::cursor_bm(MainBlockMember &mbm) {
 
 /** Gets current BlockMember (Mem or CG), including in a CT, where we don't
  * know the parent MBM (which either is this, or is the parent) */
-BlockMember &Engine::cursor_bm() {}
+BlockMember &Engine::cursor_bm() {
+  auto &mbm = cursor_mbm();
+  return cursor_bm(mbm);
+}
 
 /** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
  * choice in a CG. In this case we know the parent / superclass BM. */
-Member &Engine::cursor_mem(BlockMember &bm) {}
+Member &Engine::cursor_mem(BlockMember &bm) {
+  if (auto *cg = std::get_if<ChoiceGroup>(&bm)) {
+    assert(cursor.choice_selection >= 0); // Must be in a choice
+    auto &choice = cg->choices.at(cursor.choice_selection); // get choice
+    return choice.members.at(cursor.choice_thread_index);
+  }
+  return std::get<Member>(bm);
+}
 
 /** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
  * choice in a CG. */
-Member &Engine::cursor_mem() {}
-
-ConditionalChain *Engine::get_current_conditional_chain() {
-  auto [block, main] = get_current_block_and_main_member();
-  return std::get_if<ConditionalChain>(&main);
-}
-
-std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
-  auto [block, main] = get_current_block_and_main_member();
-  if (auto *bm = std::get_if<BlockMember>(&main)) {
-    return {block, *bm};
-  }
+Member &Engine::cursor_mem() {
+  auto &bm = cursor_bm();
+  return cursor_mem(bm);
 }
 
 // SECTION: STATE
