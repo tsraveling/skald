@@ -646,8 +646,8 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
 
   // If we get here, that means the block has members.
 
-  dbg_out("CURSOR --> " << cursor.current_block_index << ", "
-                        << cursor.current_member_index);
+  dbg_out("   advanced cursor now = " << cursor.current_block_index << ", "
+                                      << cursor.current_member_index);
 
   // Queue up any conditional queries etc needed to run our next member
   setup_block_member();
@@ -668,16 +668,11 @@ Response Engine::next() {
   // This will loop forever until something returns. Basically steps through
   // the module until something happens, or until we need to return an error.
   while (true) {
-    dbg_out(">>> next looping " << debug_blocker);
 
     // Debug stopper; while developing, lock loop iterations to 50 to keep
     // from getting stuck in a permaloop.
     debug_blocker++;
-    if (debug_blocker > 50) {
-      dbg_out(">>> Engine::next infinite loop exception! breaking.");
-      return End("Exited due to infinite loop (50 iteration debug threshold "
-                 "reached)!");
-    }
+    assert(debug_blocker < 50);
 
     /// EXIT and GO ///
 
@@ -746,23 +741,34 @@ Response Engine::next() {
             return do_member(mem);
           } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
             /// CHOICE GROUPS ///
+            dbg_out(
+                "next -> visit ChoiceGroup. c_s=" << cursor.choice_selection);
 
             // Execute choice if we made one
             if (cursor.choice_selection >= 0) {
-              assert(cursor.choice_selection < mem.choices.size());
+              assert(mem.choices.size() >
+                     cursor.choice_selection); // Must be selectable
               Choice &choice = mem.choices[cursor.choice_selection];
+
+              if (cursor.choice_thread_index >= choice.members.size()) {
+                dbg_out("passed end of choice member list, resetting and "
+                        "moving on");
+                cursor.choice_selection = -1;
+                cursor.choice_thread_index = 0;
+                return std::nullopt;
+              }
 
               // Automatically step through members as we hit this. Note that
               // this means a transition will kick us fully out of this process.
               assert(cursor.choice_thread_index < choice.members.size());
+              dbg_out(">>> processing choice member at c_t_i:"
+                      << cursor.choice_thread_index);
               auto res = do_member(choice.members[cursor.choice_thread_index]);
               cursor.choice_thread_index++;
               return res;
             }
-            cursor.choice_selection = -1;
-            return std::nullopt;
 
-            dbg_out("next(): hit a ChoiceGroup, returning OG");
+            dbg_out("next(): hit a ChoiceGroup w/ sel = -1, returning OG");
             auto grp = OptionGroup{};
             for (auto &choice : mem.choices) {
               auto opt = Option{};
@@ -782,7 +788,7 @@ Response Engine::next() {
       return *response;
 
     // If no response, step forward
-    dbg_out(">>> advancing cursor ...");
+    dbg_out("----> advancing cursor ...");
     auto err = advance_cursor();
     if (err)
       return *err;
@@ -797,6 +803,7 @@ Response Engine::next() {
 
 /** Called by client on continue (`act(0)`) or choice (`act(n)`). */
 Response Engine::act(int choice_index) {
+  dbg_out("\n>! Engine::act(" << choice_index << ")");
   auto [block, member] = get_current_block_and_member();
   std::optional<Error> err;
   std::visit(

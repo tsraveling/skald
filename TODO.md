@@ -7,10 +7,11 @@ A: process choice
 - [ ] Ensure conditionals are being properly handled
 - [ ] When composing members, throw a warning if anything comes after a transition
 
-### NEXT:
+## Issues
 
-- [ ] Make var_set etc return notification
-- [ ] Chase that up the tree
+- [ ] Currently ChoiceGroups are not running at all
+- [ ] Mutations / Notifications etc are not being handled by Skalder
+- [ ] Mutations are also not processing at all now
 
 ## Methods
 
