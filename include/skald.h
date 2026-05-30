@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -517,6 +518,9 @@ struct ConditionalChain {
 };
 
 using MainBlockMember = std::variant<BlockMember, ConditionalChain>;
+inline bool mbm_is_chain(const MainBlockMember &m) {
+  return std::holds_alternative<ConditionalChain>(m);
+}
 
 struct Block : LineEntity {
   std::string tag;
@@ -778,14 +782,40 @@ private:
   void build_state(const Module &module);
 
   ///--  UTIL  --///
-  ConditionalChain *get_current_conditional_chain();
+  // ConditionalChain *get_current_conditional_chain();
 
+  /** Gets the current block for the cursor */
+  Block &cursor_block();
+
+  /** Gets current MainBlockMember (BM or CT) where we already know block */
+  MainBlockMember &cursor_mbm(Block &block);
+
+  /** Gets current MainBlockMember (BM or CT) from scratch */
+  MainBlockMember &cursor_mbm();
+
+  /** Gets current BlockMember (Mem or CG), including in a CT, where we already
+   * know the parent MBM (which either is this, or is the parent) */
+  BlockMember &cursor_bm(MainBlockMember &mbm);
+
+  /** Gets current BlockMember (Mem or CG), including in a CT, where we don't
+   * know the parent MBM (which either is this, or is the parent) */
+  BlockMember &cursor_bm();
+
+  /** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
+   * choice in a CG. In this case we know the parent / superclass BM. */
+  Member &cursor_mem(BlockMember &bm);
+
+  /** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
+   * choice in a CG. */
+  Member &cursor_mem();
+
+  // FIXME: Remove extras here
   /** This is either a BlockMember or conditional chain. */
-  std::pair<Block &, MainBlockMember &> get_current_block_and_main_member();
+  // std::pair<Block &, MainBlockMember &> get_current_block_and_main_member();
 
   /** Returns the BlockMember we are actually at, whether in a conditional chain
    * or not. */
-  std::pair<Block &, BlockMember &> get_current_block_and_member();
+  // std::pair<Block &, BlockMember &> get_current_block_and_member();
 
   /** This zeroes the state and drops us in at this beat index, e.g. from an
    *  external entry point. It also initializes Skald state, leaving extant

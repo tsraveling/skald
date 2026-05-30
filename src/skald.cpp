@@ -20,13 +20,45 @@ namespace Skald {
 
 // SECTION: UTIL
 
-std::pair<Block &, MainBlockMember &>
-Engine::get_current_block_and_main_member() {
-  assert(current->blocks.size() > cursor.current_block_index);
-  Block &block = current->blocks[cursor.current_block_index];
-  assert(block.members.size() > cursor.current_member_index);
-  return {block, block.members[cursor.current_member_index]};
+/** Gets the current block for the cursor */
+Block &Engine::cursor_block() {
+  return current->blocks.at(cursor.current_block_index);
 }
+
+/** Gets current MainBlockMember (BM or CT) where we already know block */
+MainBlockMember &Engine::cursor_mbm(Block &block) {
+  return block.members.at(cursor.current_member_index);
+}
+
+/** Gets current MainBlockMember (BM or CT) from scratch */
+MainBlockMember &Engine::cursor_mbm() {
+  auto block = cursor_block();
+  return cursor_mbm(block);
+}
+
+/** Gets current BlockMember (Mem or CG), including in a CT, where we already
+ * know the parent MBM (which either is this, or is the parent) */
+BlockMember &Engine::cursor_bm(MainBlockMember &mbm) {
+  if (auto *bm = std::get_if<BlockMember>(mbm)) {
+    return *bm;
+  }
+  assert(cursor.entered_thread_block); // Must have resolved a cond
+  auto &chain = std::get<ConditionalChain>(mbm);
+  auto &cb = chain.cond_blocks.at(cursor.thread_block);
+  return cb.members.at(cursor.thread_member);
+}
+
+/** Gets current BlockMember (Mem or CG), including in a CT, where we don't
+ * know the parent MBM (which either is this, or is the parent) */
+BlockMember &Engine::cursor_bm() {}
+
+/** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
+ * choice in a CG. In this case we know the parent / superclass BM. */
+Member &Engine::cursor_mem(BlockMember &bm) {}
+
+/** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
+ * choice in a CG. */
+Member &Engine::cursor_mem() {}
 
 ConditionalChain *Engine::get_current_conditional_chain() {
   auto [block, main] = get_current_block_and_main_member();
@@ -38,14 +70,6 @@ std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
   if (auto *bm = std::get_if<BlockMember>(&main)) {
     return {block, *bm};
   }
-  assert(cursor.entered_thread_block); // Must have resolved a cond
-  auto &chain = std::get<ConditionalChain>(main);
-  assert(chain.cond_blocks.size() > cursor.thread_block);
-  std::cout << ">>> cursor: thread=" << cursor.thread_block << ", "
-            << cursor.thread_member << "\n";
-  auto &cb = chain.cond_blocks[cursor.thread_block];
-  assert(cb.members.size() > cursor.thread_member);
-  return {block, cb.members[cursor.thread_member]};
 }
 
 // SECTION: STATE
@@ -646,8 +670,8 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
 
   // If we get here, that means the block has members.
 
-  dbg_out("   advanced cursor now = " << cursor.current_block_index << ", "
-                                      << cursor.current_member_index);
+  dbg_out("   +C => " << cursor.current_block_index << ", "
+                      << cursor.current_member_index);
 
   // Queue up any conditional queries etc needed to run our next member
   setup_block_member();
