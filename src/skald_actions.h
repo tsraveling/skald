@@ -694,6 +694,7 @@ template <> struct action<beat> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     const position p = input.position();
+    dbg_out(">>> BEAT: " << input.string());
     state.add_beat(input.position().line);
   }
 };
@@ -704,6 +705,10 @@ template <> struct action<beat> {
 // non-indented member, whereas choice_member is always indented. Could probably
 // condense this down but this feels clearer.
 
+template <> struct action<member> {
+  static void apply0(ParseState &state) { dbg_out("MMM member"); }
+};
+
 template <> struct action<base_member> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
@@ -712,6 +717,7 @@ template <> struct action<base_member> {
     auto mem = Member{.body = std::move(*body)};
     mem.ac.condition = state.conditional_buffer_pop();
     mem.line_number = input.position().line;
+    dbg_out("BASE MEMBER on " << mem.line_number);
     state.add_member(std::move(mem));
   }
 };
@@ -724,6 +730,7 @@ template <> struct action<choice_member> {
     auto mem = Member{.body = std::move(*body)};
     mem.ac.condition = state.conditional_buffer_pop();
     mem.line_number = input.position().line;
+    dbg_out("CHOICE MEMBER on " << mem.line_number);
     state.add_choice_member(std::move(mem));
   }
 };

@@ -14,9 +14,7 @@
 
 # start
 
-This is the first beat. My age is {age}.
-
-Another is here.
+Testing testing
 
 @if age > 30
 

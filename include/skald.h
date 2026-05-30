@@ -716,6 +716,7 @@ struct Cursor {
     choice_selection = -1;
     current_block_index = 0;
     current_member_index = 0;
+    entered_thread_block = false;
     is_preprocessed = false;
     // did_last_condition_pass = true;
   }
@@ -778,7 +779,12 @@ private:
 
   ///--  UTIL  --///
   ConditionalChain *get_current_conditional_chain();
+
+  /** This is either a BlockMember or conditional chain. */
   std::pair<Block &, MainBlockMember &> get_current_block_and_main_member();
+
+  /** Returns the BlockMember we are actually at, whether in a conditional chain
+   * or not. */
   std::pair<Block &, BlockMember &> get_current_block_and_member();
 
   /** This zeroes the state and drops us in at this beat index, e.g. from an

@@ -41,6 +41,8 @@ std::pair<Block &, BlockMember &> Engine::get_current_block_and_member() {
   assert(cursor.entered_thread_block); // Must have resolved a cond
   auto &chain = std::get<ConditionalChain>(main);
   assert(chain.cond_blocks.size() > cursor.thread_block);
+  std::cout << ">>> cursor: thread=" << cursor.thread_block << ", "
+            << cursor.thread_member << "\n";
   auto &cb = chain.cond_blocks[cursor.thread_block];
   assert(cb.members.size() > cursor.thread_member);
   return {block, cb.members[cursor.thread_member]};
