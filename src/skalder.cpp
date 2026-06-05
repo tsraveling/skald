@@ -57,7 +57,7 @@ public:
 
     // First eliminate autos
     for (;;) {
-      if (auto *q = std::get_if<MethodCallPost>(&resp)) {
+      if (auto *q = std::get_if<MethodCallGet>(&resp)) {
         if (!q->expects_response) {
           note_system(q->call.dbg_desc());
           dbg_log("Query w/ auto-response: " + q->call.dbg_desc());
@@ -91,6 +91,15 @@ public:
             }
             current_prompt = "Select an option";
           } else if constexpr (std::is_same_v<T, MethodCallPost>) {
+            dbg_log("Processing Post");
+            narrative.push_back(NarrativeItem{
+                .content = "MethodCallPost: " + value.call.dbg_desc(),
+                .type = NarrativeItemType::SYSTEM});
+            current_prompt = "Press spacebar to simulate concluding the "
+                             "MethodCallPost (still async even "
+                             "though no explicit response is expected)";
+            expected_input = InputType::CONTINUE;
+          } else if constexpr (std::is_same_v<T, MethodCallGet>) {
             dbg_log("Processing Query");
             current_prompt = value.call.dbg_desc();
             expected_input = InputType::TEXT;
@@ -153,7 +162,7 @@ public:
             return engine.act(0);
           } else if constexpr (std::is_same_v<T, Exit>) {
             return End{"Module EXIT."};
-          } else if constexpr (std::is_same_v<T, MethodCallPost>) {
+          } else if constexpr (std::is_same_v<T, MethodCallGet>) {
             return engine.answer(std::nullopt);
           } else {
             // TODO: Better error handling if this is a problem
@@ -192,27 +201,25 @@ public:
     return std::visit(
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, MethodCallPost>) {
-            if (value.expects_response) {
-              SimpleRValue parsed = false;
-              if (txt == "true") {
-                parsed = true;
-              } else if (txt == "false") {
-                parsed = false;
+          if constexpr (std::is_same_v<T, MethodCallGet>) {
+            SimpleRValue parsed = false;
+            if (txt == "true") {
+              parsed = true;
+            } else if (txt == "false") {
+              parsed = false;
+            } else {
+              // Try int first (more restrictive than float)
+              char *end;
+              long lval = std::strtol(txt.c_str(), &end, 10);
+              if (*end == '\0' && end != txt.c_str()) {
+                parsed = static_cast<int>(lval);
               } else {
-                // Try int first (more restrictive than float)
-                char *end;
-                long lval = std::strtol(txt.c_str(), &end, 10);
+                // Try float
+                float fval = std::strtof(txt.c_str(), &end);
                 if (*end == '\0' && end != txt.c_str()) {
-                  parsed = static_cast<int>(lval);
+                  parsed = fval;
                 } else {
-                  // Try float
-                  float fval = std::strtof(txt.c_str(), &end);
-                  if (*end == '\0' && end != txt.c_str()) {
-                    parsed = fval;
-                  } else {
-                    parsed = txt;
-                  }
+                  parsed = txt;
                 }
               }
               note_system(value.call.dbg_desc() + " <- " + txt);

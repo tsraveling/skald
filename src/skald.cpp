@@ -139,23 +139,23 @@ void Engine::warn(std::string tx, size_t ln) {
 }
 
 /** This extracts all queries needed to solve a Conditional. */
-std::vector<MethodCallPost>
+std::vector<MethodCallGet>
 method_posts_for_conditional(const Conditional &cond) {
 
-  std::vector<MethodCallPost> result;
+  std::vector<MethodCallGet> result;
 
   for (const auto &item : cond.items) {
     if (auto *atom = std::get_if<ConditionalAtom>(&item)) {
       const MethodCall *a = rval_get_call(atom->a);
       const MethodCall *b = atom->b ? rval_get_call(*atom->b) : nullptr;
       if (a)
-        result.push_back(MethodCallPost{.call = *a,
-                                        .expects_response = true,
-                                        .line_number = a->line_number});
+        result.push_back(MethodCallGet{.call = *a,
+                                       .expects_response = true,
+                                       .line_number = a->line_number});
       if (b)
-        result.push_back(MethodCallPost{.call = *b,
-                                        .expects_response = true,
-                                        .line_number = b->line_number});
+        result.push_back(MethodCallGet{.call = *b,
+                                       .expects_response = true,
+                                       .line_number = b->line_number});
 
     } else if (auto *nested =
                    std::get_if<std::shared_ptr<Conditional>>(&item)) {
@@ -168,7 +168,7 @@ method_posts_for_conditional(const Conditional &cond) {
 }
 
 /** This returns all the queries needed to resolve a given conditional */
-std::vector<MethodCallPost>
+std::vector<MethodCallGet>
 queries_for_attached_condition(const AttachedCondition &c) {
   if (c.condition) {
     return method_posts_for_conditional(*c.condition);
@@ -203,8 +203,8 @@ queries_for_attached_condition(const AttachedCondition &c) {
 
 /** Returns all queries needed to display a list of choices. Ops are handled
  *  on player picking a choice, so aren't queried here. */
-std::vector<MethodCallPost> queries_for_choice_group(const ChoiceGroup &group) {
-  std::vector<MethodCallPost> ret;
+std::vector<MethodCallGet> queries_for_choice_group(const ChoiceGroup &group) {
+  std::vector<MethodCallGet> ret;
   for (const auto &choice : group.choices) {
     auto q = queries_for_attached_condition(choice.condition);
     ret.insert(ret.end(), q.begin(), q.end());
@@ -214,10 +214,10 @@ std::vector<MethodCallPost> queries_for_choice_group(const ChoiceGroup &group) {
 
 /** This is called in the Conditional beat phase, to check if the beat should
  * be processed at all */
-std::vector<MethodCallPost>
+std::vector<MethodCallGet>
 queries_for_member_conditional(const BlockMember &mem) {
   return std::visit(
-      [](const auto &value) -> std::vector<MethodCallPost> {
+      [](const auto &value) -> std::vector<MethodCallGet> {
         using T = std::decay_t<decltype(value)>;
         if constexpr (std::is_same_v<T, Member()>) {
           return queries_for_attached_condition(value.condition);
@@ -227,16 +227,6 @@ queries_for_member_conditional(const BlockMember &mem) {
         return {};
       },
       mem);
-}
-
-// FIXME: Remove and do iteratively
-std::vector<MethodCallPost> queries_for_choice_exec(const Choice &choice) {
-  std::vector<MethodCallPost> ret;
-  // if (choice.operations.size() > 0) {
-  //   auto op = queries_for_operations(choice.operations);
-  //   ret.insert(ret.end(), op.begin(), op.end());
-  // }
-  return ret;
 }
 
 // SECTION: RESOLVERS AND STATE
@@ -555,23 +545,33 @@ std::optional<Response> Engine::do_member(Member &mem) {
       mem.body);
   return ret;
 }
-/** Sets up a member directly */
-void Engine::setup_member(BlockMember &member) {
+
+// FIXME: Separate setups reqed for Mems, MBMs, and CGs.
+
+void Engine::setup_member(Member &member) {
+  // STUB: Process AC
+  // STUB: handle rvalues for mutations
+  // STUB: handle args for method posts
+}
+
+/** Sets up a block member (CG or Mem) directly */
+void Engine::setup_bm(BlockMember &member) {
+  if (auto *cg = std::get_if<ChoiceGroup>(&member)) {
+    // STUB: Collect conditions for choice group
+  }
+
+  dbg_out("Engine::setup_bm");
   cursor.resolution_stack = queries_for_member_conditional(member);
   cursor.is_preprocessed = true;
 }
 
 /** Queues the member's conditional for processing. Called on cursor movement
  * and by the engine on first enter. */
-void Engine::setup_block_member() {
+void Engine::setup_mbm(MainBlockMember &mbm) {
+  dbg_out("Engine::setup_mbm");
 
-  dbg_out("Engine::setup_block_member");
-
-  auto [block, main] = get_current_block_and_main_member();
-
-  // If this is a chain, queue queries for the first cond block. The next()
-  // loop will iterate via thread_block until one resolves true.
-  if (auto *cc = std::get_if<ConditionalChain>(&main)) {
+  /// ENTER CONDITIONAL CHAIN ///
+  if (auto *cc = std::get_if<ConditionalChain>(&mbm)) {
     assert(!cursor.entered_thread_block); // must not already be in cond thread
     cursor.thread_block = 0;
     cursor.thread_member = 0;
@@ -583,8 +583,9 @@ void Engine::setup_block_member() {
     return;
   }
 
-  auto &member = std::get<BlockMember>(main);
-  setup_member(member);
+  /// OTHERWISE: BLOCK MEMBER ///
+  auto &bm = std::get<BlockMember>(mbm);
+  setup_bm(bm);
 }
 
 std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
@@ -615,9 +616,7 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
  *  - from_line_number is for error logging.
  */
 std::optional<Error> Engine::advance_cursor(int from_line_number) {
-
-  // If we have a queued transition, find the relevant block and jump there,
-  // consuming the queued transition tag as we do so.
+  /// HANDLE TRANSITIONS ///
   if (cursor.queued_transition.length() > 0) {
     auto new_index = current->get_block_index(cursor.queued_transition);
     if (new_index == -1)
@@ -636,7 +635,7 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     cursor.queued_transition = "";
   }
 
-  // Skip for post-transition state:
+  /// CONDITIONAL CHAINS ///
   if (cursor.current_member_index >= 0) {
     // Then advance through chain
     if (auto *cc = get_current_conditional_chain()) {
@@ -646,7 +645,7 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
       cursor.thread_member++;
       if (cb.members.size() > cursor.thread_member) {
         auto &mem = cb.members[cursor.thread_member];
-        setup_member(mem);
+        setup_bm(mem);
         return std::nullopt;
       } else {
         // End of block; we exit.
@@ -657,10 +656,10 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     }
   }
 
-  // Step forward one
+  /// NORMAL MEMBERS ///
   cursor.current_member_index++; // aka will -> 0 after a transition
 
-  // Account for end of block + empty blocks:
+  /// END OF BLOCKS ///
   Block &block = current->blocks[cursor.current_block_index];
   while (cursor.current_member_index >= block.members.size()) {
     cursor.current_block_index++;

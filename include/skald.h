@@ -565,11 +565,15 @@ struct OptionGroup {
 
 /** This posts the method out to the client, and is used to key the result back
  * into Skald state. */
-struct MethodCallPost {
+struct MethodCallGet {
   MethodCall call;
-  bool expects_response = false;
   size_t line_number = 0;
   std::string get_key() { return key_for_call(call); }
+};
+
+struct MethodCallPost {
+  MethodCall call;
+  size_t line_number = 0;
 };
 
 /** This carries error information for anything that goes so wrong that the
@@ -625,8 +629,8 @@ struct End {
 };
 
 /** Will contain either a Content struct or a Query */
-using Response = std::variant<Content, MethodCallPost, Exit, GoModule,
-                              OptionGroup, End, Error, Notification>;
+using Response = std::variant<Content, MethodCallGet, MethodCallPost, Exit,
+                              GoModule, OptionGroup, End, Error, Notification>;
 
 enum class ResponseType {
   CONTENT,
@@ -645,7 +649,7 @@ inline ResponseType get_response_type(Response &response) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Content>)
           return ResponseType::CONTENT;
-        else if constexpr (std::is_same_v<T, MethodCallPost>)
+        else if constexpr (std::is_same_v<T, MethodCallGet>)
           return ResponseType::QUERY;
         else if constexpr (std::is_same_v<T, Exit>)
           return ResponseType::EXIT;
@@ -709,7 +713,7 @@ struct Cursor {
   /** These track method calls etc. that require queries to the external client.
    *  These have to be resolved by the client via the answer() method before the
    *  engine will proceed. */
-  std::vector<MethodCallPost> resolution_stack;
+  std::vector<MethodCallGet> resolution_stack;
 
   /** This will reset the cursor to a "new" state */
   void reset() {
@@ -838,10 +842,13 @@ private:
   std::optional<Response> do_member(Member &mem);
 
   /** Queues the member's conditional for processing. */
-  void setup_block_member();
+  void setup_mbm(MainBlockMember &mbm);
 
-  /** Queues conditional for a child item */
-  void setup_member(BlockMember &member);
+  /** Queues conditional for a bock member */
+  void setup_bm(BlockMember &bm);
+
+  /** Queues conditional, rvalue methods, or arg menus */
+  void setup_member(Member &member);
 
   ///-- RESOLUTION --///
 
