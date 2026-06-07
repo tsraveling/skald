@@ -184,6 +184,7 @@ std::vector<MethodCallGet> queries_for_mutation(const Mutation &m) {
 }
 
 // TODO: Someday, support method calls as method args.
+// For now trying to add them will throw parse errors.
 
 // STUB: Update this with new approach
 /** Returns all queries needed to execute a given operation */
@@ -554,19 +555,20 @@ std::optional<Response> Engine::do_member(Member &mem) {
   return ret;
 }
 
-// FIXME: Separate setups reqed for Mems, MBMs, and CGs.
-
+/** Set up member (AC, mutation RValues. method args not supported yet) */
 void Engine::setup_member(Member &member) {
   cursor.add_to_res_stack(queries_for_attached_condition(member.ac));
-  // STUB: Process AC
-  // STUB: handle rvalues for mutations
-  // STUB: handle args for method posts
+  if (auto *mut = std::get_if<Mutation>(&member.body)) {
+    cursor.add_to_res_stack(queries_for_mutation(*mut));
+  }
+  dbg_out("Engine::setup_member");
+  cursor.is_preprocessed = true;
 }
 
 /** Sets up a block member (CG or Mem) directly */
 void Engine::setup_bm(BlockMember &member) {
   if (auto *cg = std::get_if<ChoiceGroup>(&member)) {
-    // STUB: Collect conditions for choice group
+    cursor.add_to_res_stack(queries_for_choice_group(*cg));
   }
 
   dbg_out("Engine::setup_bm");
@@ -643,6 +645,9 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     cursor.current_member_index = -1;
     cursor.queued_transition = "";
   }
+
+  // STUB: Build out the below using this new syntax
+  auto &mbm = cursor_mbm();
 
   /// CONDITIONAL CHAINS ///
   if (cursor.current_member_index >= 0) {
