@@ -282,6 +282,7 @@ template <> struct action<r_method> {
   static void apply(const ActionInput &input, ParseState &state) {
     auto method_call = std::make_shared<MethodCall>(MethodCall{
         .method = state.pop_id(), .args = std::move(state.argument_queue)});
+    state.validate_method(method_call, input.position());
     state.rval_buffer.push_back(method_call);
   }
 };
@@ -585,6 +586,7 @@ template <> struct action<op_method> {
   static void apply(const ActionInput &input, ParseState &state) {
     state.member_body_buffer = MethodCall{input.position().line, state.pop_id(),
                                           std::move(state.argument_queue)};
+    state.validate_method(state.member_body_buffer, input.position());
     dbg_out(">>> op_method: " << input.string());
   }
 };

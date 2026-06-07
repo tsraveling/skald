@@ -139,8 +139,7 @@ void Engine::warn(std::string tx, size_t ln) {
 }
 
 /** This extracts all queries needed to solve a Conditional. */
-std::vector<MethodCallGet>
-method_posts_for_conditional(const Conditional &cond) {
+std::vector<MethodCallGet> queries_for_conditional(const Conditional &cond) {
 
   std::vector<MethodCallGet> result;
 
@@ -149,17 +148,15 @@ method_posts_for_conditional(const Conditional &cond) {
       const MethodCall *a = rval_get_call(atom->a);
       const MethodCall *b = atom->b ? rval_get_call(*atom->b) : nullptr;
       if (a)
-        result.push_back(MethodCallGet{.call = *a,
-                                       .expects_response = true,
-                                       .line_number = a->line_number});
+        result.push_back(
+            MethodCallGet{.call = *a, .line_number = a->line_number});
       if (b)
-        result.push_back(MethodCallGet{.call = *b,
-                                       .expects_response = true,
-                                       .line_number = b->line_number});
+        result.push_back(
+            MethodCallGet{.call = *b, .line_number = b->line_number});
 
     } else if (auto *nested =
                    std::get_if<std::shared_ptr<Conditional>>(&item)) {
-      auto queries = method_posts_for_conditional(**nested);
+      auto queries = queries_for_conditional(**nested);
       result.insert(result.end(), queries.begin(), queries.end());
     }
   }
@@ -167,15 +164,26 @@ method_posts_for_conditional(const Conditional &cond) {
   return result;
 }
 
-/** This returns all the queries needed to resolve a given conditional */
+/** This returns all the queries needed to resolve an AC (handles null case) */
 std::vector<MethodCallGet>
 queries_for_attached_condition(const AttachedCondition &c) {
   if (c.condition) {
-    return method_posts_for_conditional(*c.condition);
+    return queries_for_conditional(*c.condition);
   } else {
     return {};
   }
 }
+
+std::vector<MethodCallGet> queries_for_mutation(const Mutation &m) {
+  if (m.rvalue) {
+    if (const MethodCall *call = rval_get_call(*m.rvalue)) {
+      return {MethodCallGet{.call = *call, .line_number = call->line_number}};
+    }
+  }
+  return {};
+}
+
+// TODO: Someday, support method calls as method args.
 
 // STUB: Update this with new approach
 /** Returns all queries needed to execute a given operation */
@@ -549,6 +557,7 @@ std::optional<Response> Engine::do_member(Member &mem) {
 // FIXME: Separate setups reqed for Mems, MBMs, and CGs.
 
 void Engine::setup_member(Member &member) {
+  cursor.add_to_res_stack(queries_for_attached_condition(member.ac));
   // STUB: Process AC
   // STUB: handle rvalues for mutations
   // STUB: handle args for method posts

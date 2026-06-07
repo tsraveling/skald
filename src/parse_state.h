@@ -108,6 +108,9 @@ struct ParseState {
   /** Stores the raw member body until we can assemble it */
   std::optional<MemberBody> member_body_buffer;
 
+  /** Validates a method and adds errors to the stack if any are found */
+  void validate_method(const MethodCall &m, const tao::pegtl::position pos);
+
   /** Current operations stack */
   // FIXME: just add to member directly
   // std::vector<Member> choice_member_queue;

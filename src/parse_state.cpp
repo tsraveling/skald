@@ -148,6 +148,14 @@ void ParseState::add_conditional_atom(const ConditionalAtom &atom) {
 }
 
 // SECTION: METHODS
+void ParseState::validate_method(const MethodCall &m,
+                                 const tao::pegtl::position pos) {
+  for (auto &arg : m.args) {
+    if (rval_get_call(arg)) {
+      err(pos, "Methods are not yet supported as arguments of other methods");
+    }
+  }
+}
 
 // SECTION: GO
 

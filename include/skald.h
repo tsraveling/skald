@@ -715,6 +715,11 @@ struct Cursor {
    *  engine will proceed. */
   std::vector<MethodCallGet> resolution_stack;
 
+  /** Adds more MethodCallGets to the resolution stack. */
+  void add_to_res_stack(std::vector<MethodCallGet> res) {
+    resolution_stack.insert(resolution_stack.end(), res.begin(), res.end());
+  }
+
   /** This will reset the cursor to a "new" state */
   void reset() {
     resolution_stack.clear();
