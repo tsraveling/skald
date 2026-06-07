@@ -535,12 +535,13 @@ std::optional<Response> Engine::do_member(Member &mem) {
           cursor.queued_transition = m.target_tag;
         } else if constexpr (std::is_same_v<T, MethodCall>) {
           /// METHOD ///
-          dbg_out("   (already called)");
-          // STUB: MethodCallPost here
+          dbg_out("   -()() METHOD CALL POST");
+          ret = MethodCallPost{.call = m, .line_number = m.line_number};
         } else if constexpr (std::is_same_v<T, Mutation>) {
           /// MUTATION ///
           auto mres = do_mutation(m);
           std::visit([&](auto &v) { ret = v; }, mres);
+          dbg_out("    -o-o MUTATION");
         } else if constexpr (std::is_same_v<T, GoModule>) {
           /// GO ///
           dbg_out("    --->> CHANGING MODULE");

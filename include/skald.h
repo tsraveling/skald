@@ -617,6 +617,12 @@ struct Notification {
   Mutation::Type mut_type;
   std::optional<SimpleRValue> rval; // Real value, resolved out
   VarScope scope;
+  // FIXME: Remove this later
+  // Notification(const Mutation &m) {
+  //   var_name = m.lvalue;
+  //   mut_type = m.type;
+  //   rval
+  // }
 };
 
 /** Empty struct signifying that the script is concluded. */
