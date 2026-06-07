@@ -646,28 +646,28 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     cursor.queued_transition = "";
   }
 
+  // CHECK: Does a CC work if it's the first child following a transition?
+
   /// CONDITIONAL CHAINS ///
   if (cursor.current_member_index >= 0) {
-
-    // Make sure we get a CC
+    //
     auto &cc_mbm = cursor_mbm();
-    auto *cc = std::get_if<ConditionalChain>(&cc_mbm);
-    assert(cc);
-
-    // Then advance through chain
-    assert(cc->cond_blocks.size() > cursor.thread_block);
-    auto &cb = cc->cond_blocks[cursor.thread_block];
-    assert(cb.members.size() > cursor.thread_member); // must start in bounds
-    cursor.thread_member++;
-    if (cb.members.size() > cursor.thread_member) {
-      auto &mem = cb.members[cursor.thread_member];
-      setup_bm(mem);
-      return std::nullopt;
-    } else {
-      // End of block; we exit.
-      cursor.entered_thread_block = false;
-      cursor.thread_member = 0;
-      cursor.thread_block = 0;
+    if (auto *cc = std::get_if<ConditionalChain>(&cc_mbm)) {
+      // Then advance through chain
+      assert(cc->cond_blocks.size() > cursor.thread_block);
+      auto &cb = cc->cond_blocks[cursor.thread_block];
+      assert(cb.members.size() > cursor.thread_member); // must start in bounds
+      cursor.thread_member++;
+      if (cb.members.size() > cursor.thread_member) {
+        auto &mem = cb.members[cursor.thread_member];
+        setup_bm(mem);
+        return std::nullopt;
+      } else {
+        // End of block; we exit.
+        cursor.entered_thread_block = false;
+        cursor.thread_member = 0;
+        cursor.thread_block = 0;
+      }
     }
   }
 
@@ -736,8 +736,8 @@ Response Engine::next() {
 
     /// Conditional Chains ///
 
-    auto [block, main] = get_current_block_and_main_member();
-    if (auto *cc = std::get_if<ConditionalChain>(&main)) {
+    auto &mbm = cursor_mbm();
+    if (auto *cc = std::get_if<ConditionalChain>(&mbm)) {
       // Get current cond block
       assert(cc->cond_blocks.size() > cursor.thread_block);
       auto &cb = cc->cond_blocks[cursor.thread_block];
@@ -774,7 +774,7 @@ Response Engine::next() {
 
     /// Block Logic and Interaction ///
 
-    auto [_, member] = get_current_block_and_member();
+    auto &bm = cursor_bm(mbm);
 
     std::optional<Response> response = std::visit(
         [&](auto &mem) -> std::optional<Response> {
@@ -823,7 +823,7 @@ Response Engine::next() {
           }
           return std::nullopt;
         },
-        member);
+        bm);
 
     // If we got something out of the member, return it; otherwise loop de
     // loop.
@@ -847,7 +847,7 @@ Response Engine::next() {
 /** Called by client on continue (`act(0)`) or choice (`act(n)`). */
 Response Engine::act(int choice_index) {
   dbg_out("\n>! Engine::act(" << choice_index << ")");
-  auto [block, member] = get_current_block_and_member();
+  auto &bm = cursor_bm();
   std::optional<Error> err;
   std::visit(
       [&](const auto &mem) {
@@ -885,10 +885,9 @@ Response Engine::act(int choice_index) {
 
           // Process any queries that are needed
           cursor.choice_selection = choice_index;
-          cursor.resolution_stack = queries_for_choice_exec(choice);
         }
       },
-      member);
+      bm);
 
   // Handle any errors thrown by the members
   if (err)
@@ -904,20 +903,18 @@ Response Engine::answer(std::optional<QueryAnswer> answer) {
                  0); // TODO: add a "last at" line number and use it here
   }
   auto &answering = cursor.resolution_stack.back();
-  if (answering.expects_response) {
-    if (!answer) {
-      return Error(ERROR_EXPECTED_ANSWER,
-                   "Expected an answer for " + answering.get_key() +
-                       ", but received none.",
-                   answering.line_number);
-    }
-    auto key = answering.get_key();
-    auto a = *answer;
-    if (a.val) {
-      query_cache.insert_or_assign(key, *a.val);
-    } else {
-      query_cache.erase(key);
-    }
+  if (!answer) {
+    return Error(ERROR_EXPECTED_ANSWER,
+                 "Expected an answer for " + answering.get_key() +
+                     ", but received none.",
+                 answering.line_number);
+  }
+  auto key = answering.get_key();
+  auto a = *answer;
+  if (a.val) {
+    query_cache.insert_or_assign(key, *a.val);
+  } else {
+    query_cache.erase(key);
   }
   cursor.resolution_stack.pop_back();
   return next();
@@ -949,7 +946,7 @@ Response Engine::enter(int block, int index) {
   build_state(*current);
   cursor.current_block_index = block;
   cursor.current_member_index = 0;
-  setup_block_member();
+  setup_mbm(cursor_mbm());
   return next();
 }
 

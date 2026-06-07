@@ -55,19 +55,6 @@ public:
 
     Response &resp = response;
 
-    // First eliminate autos
-    for (;;) {
-      if (auto *q = std::get_if<MethodCallGet>(&resp)) {
-        if (!q->expects_response) {
-          note_system(q->call.dbg_desc());
-          dbg_log("Query w/ auto-response: " + q->call.dbg_desc());
-          resp = engine.answer(std::nullopt);
-          continue;
-        }
-      }
-      break;
-    }
-
     current_response = &resp;
     current_options.clear();
 
