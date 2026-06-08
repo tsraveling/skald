@@ -235,6 +235,24 @@ A **transition** will finish the other operations in its group, then immediately
 -> some_block
 ```
 
+NOTE: A transition will *immediately* redirect -- anything that follows it will not be activated!
+
+So in this case, the score will never increment:
+
+```
+> Going somewhere
+    -> somewhere
+    ~ score += 100
+```
+
+And in this case, the score will only implement if `going` is false.
+
+```
+> Going somewhere
+    (? going) -> somewhere
+    ~ score += 100
+```
+
 #### 3.1.1.1 Relative Transitions
 
 Suppose a structure like this:
