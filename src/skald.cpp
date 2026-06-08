@@ -640,6 +640,8 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     cursor.entered_thread_block = false;
     cursor.thread_block = 0;
     cursor.thread_member = 0;
+    cursor.choice_selection = -1; // Drop out of choice as well
+    cursor.choice_thread_index = 0;
 
     // Start "above the top" of the next block in order to handle empty
     // blocks where we immediately move to the next one.
@@ -886,6 +888,7 @@ Response Engine::act(int choice_index) {
 
           // Process any queries that are needed
           cursor.choice_selection = choice_index;
+          cursor.choice_thread_index = 0;
         }
       },
       bm);

@@ -16,6 +16,10 @@
 
 This is the first beat. My age is {age}. Now we mutate ...
 
+> Loop
+  -> start
+> Continue
+
 ~ age += 1
 
 A mutation should have just happened, and age is now {age}.

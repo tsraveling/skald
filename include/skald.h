@@ -498,13 +498,13 @@ struct Member : LineEntity {
   bool is_beat() const { return std::holds_alternative<Beat>(body); }
 
   std::string dbg_desc() const {
-    std::string type = is_move()       ? "Move"
-                       : is_call()     ? "MethodCall"
-                       : is_mutation() ? "Mutation"
+    std::string type = is_move()        ? "Move"
+                       : is_call()      ? "MethodCall"
+                       : is_mutation()  ? "Mutation"
                        : is_go_module() ? "GoModule"
-                       : is_exit()     ? "Exit"
-                       : is_beat()     ? "Beat"
-                                       : "Unknown";
+                       : is_exit()      ? "Exit"
+                       : is_beat()      ? "Beat"
+                                        : "Unknown";
     return type + " " + ac.dbg_desc();
   }
 };
@@ -749,13 +749,15 @@ struct Cursor {
     resolution_stack.insert(resolution_stack.end(), res.begin(), res.end());
   }
 
-  /** This will reset the cursor to a "new" state */
+  /** This will reset the cursor to a "new" state. Currently only called on
+   *  module entry. */
   void reset() {
     resolution_stack.clear();
     queued_exit = NULL;
     queued_go = NULL;
     queued_transition = "";
     choice_selection = -1;
+    choice_thread_index = 0;
     current_block_index = 0;
     current_member_index = 0;
     entered_thread_block = false;
