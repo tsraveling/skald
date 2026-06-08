@@ -79,12 +79,16 @@ public:
             current_prompt = "Select an option";
           } else if constexpr (std::is_same_v<T, MethodCallPost>) {
             dbg_log("Processing Post");
-            narrative.push_back(NarrativeItem{
-                .content = "MethodCallPost: " + value.call.dbg_desc(),
-                .type = NarrativeItemType::SYSTEM});
+            note_system("MethodCallPost: " + value.call.dbg_desc());
             current_prompt = "Press spacebar to simulate concluding the "
                              "MethodCallPost (still async even "
                              "though no explicit response is expected)";
+            expected_input = InputType::CONTINUE;
+          } else if constexpr (std::is_same_v<T, Notification>) {
+            dbg_log("Processing Notification");
+            note_system("Notification: " + value.dbg_desc());
+            current_prompt = "Mutation! Could auto-skip, silently if desired. "
+                             "Here in Skalder, press space to continue.";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, MethodCallGet>) {
             dbg_log("Processing Query");
@@ -149,6 +153,10 @@ public:
             return engine.act(0);
           } else if constexpr (std::is_same_v<T, Exit>) {
             return End{"Module EXIT."};
+          } else if constexpr (std::is_same_v<T, MethodCallPost>) {
+            return engine.act(0);
+          } else if constexpr (std::is_same_v<T, Notification>) {
+            return engine.act(0);
           } else if constexpr (std::is_same_v<T, MethodCallGet>) {
             return engine.answer(std::nullopt);
           } else {

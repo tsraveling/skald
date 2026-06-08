@@ -984,16 +984,20 @@ void Engine::load(std::string path) {
     for (const auto &block : pstate.module.blocks) {
       dbg_out("\n- Block '" << block.tag << "': " << block.members.size()
                             << " members");
-      auto print_bm = [](const BlockMember &mem) {
+      auto print_bm = [](const BlockMember &mem, std::string prefix = "") {
         std::visit(
-            [](const auto &member) {
+            [&](const auto &member) {
               using T = std::decay_t<decltype(member)>;
               if constexpr (std::is_same_v<T, Member>) {
-                dbg_out("  - Member");
+                dbg_out(prefix << "  - Member: " << member.dbg_desc());
               } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
-                dbg_out("  - ChoiceGroup: ");
+                dbg_out(prefix << "  - ChoiceGroup: ");
                 for (const auto &choice : member.choices) {
-                  dbg_out("    > Choice: " << choice.dbg_desc());
+                  dbg_out(prefix << "    > Choice: " << choice.dbg_desc());
+                  for (const auto &cm : choice.members) {
+                    dbg_out(prefix << "    >> Choice Member: "
+                                   << cm.dbg_desc());
+                  }
                 }
               }
             },
@@ -1007,12 +1011,12 @@ void Engine::load(std::string path) {
               if constexpr (std::is_same_v<T, BlockMember>) {
                 print_bm(m);
               } else if constexpr (std::is_same_v<T, ConditionalChain>) {
-                dbg_out("  - ConditionalChain: " << m.cond_blocks.size()
-                                                 << " blocks");
+                dbg_out("  ?? ConditionalChain: " << m.cond_blocks.size()
+                                                  << " blocks");
                 for (const auto &cb : m.cond_blocks) {
-                  dbg_out("    > CondBlock: " << cb.cond.dbg_desc());
+                  dbg_out("  ?? CondBlock: " << cb.cond.dbg_desc());
                   for (const auto &inner : cb.members) {
-                    print_bm(inner);
+                    print_bm(inner, "    ?| ");
                   }
                 }
               }

@@ -14,9 +14,11 @@
 
 # start
 
-This is the first beat. My age is {age}.
+This is the first beat. My age is {age}. Now we mutate ...
 
-Another is here.
+~ age += 1
+
+A mutation should have just happened, and age is now {age}.
 
 @if age > 30
 

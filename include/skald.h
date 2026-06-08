@@ -23,6 +23,17 @@ struct LineEntity {
 /** Used for strong typing declarations and methods */
 enum ValueType { STRING, BOOL, INT, FLOAT };
 enum class VarScope { GLOBAL, MODULE, LOCAL };
+inline std::string scope_to_str(VarScope s) {
+  switch (s) {
+  case VarScope::GLOBAL:
+    return "global";
+  case VarScope::MODULE:
+    return "module";
+  case VarScope::LOCAL:
+    return "local";
+  }
+  return "error";
+}
 
 struct Variable {
   std::string name;
@@ -306,22 +317,24 @@ struct Mutation : LineEntity {
   std::string lvalue;
   Type type;
   std::optional<RValue> rvalue;
-  std::string dbg_desc() const {
-    std::string ret = "<" + lvalue + " ";
-    switch (type) {
+  static std::string label_for_type(Type t) {
+    switch (t) {
     case EQUATE:
-      ret += "EQUALS";
+      return "EQUALS";
       break;
     case SWITCH:
-      ret += "SWITCH";
+      return "SWITCH";
       break;
     case ADD:
-      ret += "ADD";
+      return "ADD";
       break;
     case SUBTRACT:
-      ret += "SUBTRACT";
+      return "SUBTRACT";
       break;
     }
+  }
+  std::string dbg_desc() const {
+    std::string ret = "<" + lvalue + " " + label_for_type(type);
     if (rvalue) {
       ret += " " + rval_to_string(*rvalue);
     }
@@ -483,6 +496,17 @@ struct Member : LineEntity {
   bool is_go_module() const { return std::holds_alternative<GoModule>(body); }
   bool is_exit() const { return std::holds_alternative<Exit>(body); }
   bool is_beat() const { return std::holds_alternative<Beat>(body); }
+
+  std::string dbg_desc() const {
+    std::string type = is_move()       ? "Move"
+                       : is_call()     ? "MethodCall"
+                       : is_mutation() ? "Mutation"
+                       : is_go_module() ? "GoModule"
+                       : is_exit()     ? "Exit"
+                       : is_beat()     ? "Beat"
+                                       : "Unknown";
+    return type + " " + ac.dbg_desc();
+  }
 };
 
 struct Choice : LineEntity {
@@ -617,12 +641,11 @@ struct Notification {
   Mutation::Type mut_type;
   std::optional<SimpleRValue> rval; // Real value, resolved out
   VarScope scope;
-  // FIXME: Remove this later
-  // Notification(const Mutation &m) {
-  //   var_name = m.lvalue;
-  //   mut_type = m.type;
-  //   rval
-  // }
+  std::string dbg_desc() const {
+    std::string v = rval ? rval_to_string(*rval) : "<no rvalue>";
+    return var_name + " " + Mutation::label_for_type(mut_type) + " " + v +
+           " (" + scope_to_str(scope) + ")";
+  }
 };
 
 /** Empty struct signifying that the script is concluded. */
