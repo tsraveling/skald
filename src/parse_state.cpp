@@ -55,8 +55,10 @@ void ParseState::add_member(BlockMember mem) {
   if (open_chain != nullptr) {
     assert(open_chain->cond_blocks.size() > 0); // must have members
     open_chain->cond_blocks.back().members.push_back(std::move(mem));
+    dbg_out("   ... added member to open conditional block.\n");
   } else {
     current_block->members.push_back(MainBlockMember{std::move(mem)});
+    dbg_out("   ... added member to base stack.\n");
   }
 }
 

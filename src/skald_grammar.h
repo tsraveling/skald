@@ -284,7 +284,7 @@ struct member : seq<not_at<seq<ws, eolf>>,  // Not at end of line or whitespace
                     not_at<choice_prefix>,  // Not a choice
                     not_at<block_tag_line>, // Not at a new block
                     opt<seq<conditional, ws>>, // Optional conditional
-                    sor<beat, op_end>> {};
+                    sor<op_end, beat>> {};
 
 /** A non-indented member belongs to the block level. */
 struct base_member : seq<not_at<indent>, member> {};
@@ -317,7 +317,7 @@ struct choice_block : plus<choice_clause> {};
 // SECTION: CONDITIONAL CHAINS
 
 using block_member =
-    seq<not_at<one<'@'>>, sor<ignored, op_end, choice_block, base_member>>;
+    seq<not_at<one<'@'>>, sor<ignored, choice_block, base_member>>;
 using block_members = star<block_member>;
 
 struct cond_chain_if
