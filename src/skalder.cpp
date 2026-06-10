@@ -263,9 +263,7 @@ int main(int argc, char *argv[]) {
     tester.engine.setup(*codex_path);
     auto project_root = tester.engine.get_project_root();
     assert(project_root); // setup must actually work given detection
-    dbg_out(">>> project_root=" + *project_root);
     module_path = files.loc_to_proj(*project_root, module_path);
-    dbg_out(">>> module_path=" + module_path);
   } else if (auto *err = std::get_if<FileManager::FileError>(&project_root)) {
     // If error, return
     tester.note_error(err->msg);
