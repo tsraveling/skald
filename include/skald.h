@@ -551,15 +551,23 @@ struct Block : LineEntity {
   std::vector<MainBlockMember> members{};
 };
 
-class Module {
-public:
+/** The Codex defines globals, methods, and project root. Only one codex is
+ * active on the engine at a time. Resetting codex resets state. */
+struct Codex {
+  std::string filename;
+};
+
+/** A Module is a single Skald file. Only one module is loaded at a time, but
+ *  global state persists between modules, and module vars get pushed on GO
+ *  transitions. */
+struct Module {
   std::string filename;
   std::vector<ModuleVar> module_vars;
   std::vector<Testbed> testbeds;
   std::vector<Block> blocks;
   std::unordered_map<std::string, size_t> block_lookup;
 
-  size_t get_block_index(std::string tag) {
+  int get_block_index(const std::string &tag) {
     auto it = block_lookup.find(tag);
     return it != block_lookup.end() ? it->second : -1;
   }
@@ -772,6 +780,7 @@ enum ProgressResult { OK, END_OF_FILE, MODULE_NOT_FOUND };
 
 class Engine {
 public:
+  void setup(std::string path);
   void load(std::string path);
   void trace(std::string path);
 
@@ -806,6 +815,11 @@ public:
 private:
   ///--  MODULE AND STATE  --///
 
+  /** If codex is not present, globals and methods will not be available, and GO
+   *  subfolder paths will not resolve properly. */
+  std::unique_ptr<Codex> codex;
+
+  /** The currently loaded module */
   std::unique_ptr<Module> current;
 
   /** Not cleared */

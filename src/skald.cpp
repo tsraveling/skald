@@ -1,4 +1,7 @@
 #include "../include/skald.h"
+#include "codex_actions.h"
+#include "codex_grammar.h"
+#include "codex_parse_state.h"
 #include "debug.h"
 #include "parse_state.h"
 #include "skald_actions.h"
@@ -955,6 +958,44 @@ Response Engine::enter(int block, int index) {
 }
 
 // SECTION: FILE LOADING AND PARSING
+
+// STUB: Initialize with module.
+
+// TODO: Serialize
+
+void Engine::setup(std::string path) {
+  try {
+    pegtl::file_input in(path);
+    CodexParseState pstate(path);
+
+    if (pegtl::parse<codex_grammar, codex_action>(in, pstate)) {
+      dbg_out("Codex parse successful!");
+    } else {
+      dbg_out("Codex parse failed!");
+    }
+
+    dbg_out(">>> Parse results:\n");
+
+    // dbg_out("MODULE VARS:");
+    // for (const auto &dec : pstate.module.module_vars) {
+    //   dbg_out(" - " << dec.var.dbg_desc() << " = "
+    //                 << rval_to_string(dec.initial_value));
+    // }
+
+    // dbg_out("TESTBEDS:");
+    // for (const auto &testbed : pstate.module.testbeds) {
+    //   dbg_out(testbed.dbg_desc());
+    // }
+
+    // Grab the finished module from the parse state
+    codex = std::make_unique<Codex>(std::move(pstate.codex));
+
+  } catch (const pegtl::parse_error &e) {
+    dbg_out("Codex parse error: " << e.what());
+  } catch (const std::exception &e) {
+    dbg_out("Codex error: " << e.what());
+  }
+}
 
 void Engine::load(std::string path) {
   try {
