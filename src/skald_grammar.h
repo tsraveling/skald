@@ -8,50 +8,10 @@ using namespace tao::pegtl;
 
 namespace Skald {
 
-// SECTION: ABSTRACT STRUCTURE
-
-// Parentheses
-template <typename ParenContent>
-struct paren : seq<one<'('>, ParenContent, one<')'>> {};
-
-// Indentation
-using two_or_more_spaces = seq<space, space, star<space>>;
-using one_or_more_tabs = plus<one<'\t'>>;
-using indent = sor<two_or_more_spaces, one_or_more_tabs>;
-
 // SECTION: PREFIXES
 
 struct choice_prefix : seq<ws, one<'>'>> {};
 
-// SECTION: BASIC VALUE TYPES
-
-struct escaped_char : seq<one<'\\'>, one<'"', '\\', 'n'>> {};
-struct string_content : star<not_one<'"'>> {};
-struct val_string : seq<one<'"'>, string_content, one<'"'>> {};
-struct val_bool_true : keyword<'t', 'r', 'u', 'e'> {};
-struct val_bool_false : keyword<'f', 'a', 'l', 's', 'e'> {};
-struct val_bool : sor<val_bool_true, val_bool_false> {};
-struct identifier : seq<identifier_first, star<identifier_other>> {};
-struct move_marker : seq<ws, string<'-', '>'>> {};
-struct sign_indicator : opt<one<'+', '-'>> {};
-struct signed_float
-    : seq<opt<sign_indicator>, plus<digit>, one<'.'>, plus<digit>> {};
-struct signed_int : seq<sign_indicator, plus<digit>> {};
-struct val_int : signed_int {};
-struct val_float : signed_float {};
-
-// SECTION: LOGIC FUNDAMENTALS
-
-struct variable_name : identifier {};
-
-/** A variable name used as an rvalue */
-struct arg_list;
-struct r_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
-struct r_variable : variable_name {};
-struct rvalue
-    : sor<val_bool, val_string, val_float, val_int, r_variable, r_method> {};
-struct rvalue_simple : sor<val_bool, val_string, val_float, val_int> {};
-struct arg_separator : seq<ws, one<','>, ws> {};
 struct argument : rvalue {};
 struct arg_list : list<argument, arg_separator> {};
 
@@ -84,17 +44,11 @@ using block_prefix = sor<block3_prefix, block2_prefix, block1_prefix>;
 
 struct keyword_testbed : keyword<'@', 't', 'e', 's', 't', 'b', 'e', 'd'> {};
 struct keyword_let : keyword<'@', 'l', 'e', 't'> {};
-struct keyword_end : keyword<'@', 'e', 'n', 'd'> {};
 struct keyword_if : keyword<'@', 'i', 'f'> {};
 struct keyword_elseif : keyword<'@', 'e', 'l', 's', 'e', 'i', 'f'> {};
 struct keyword_else : keyword<'@', 'e', 'l', 's', 'e'> {};
 struct keyword_endif : keyword<'@', 'e', 'n', 'd', 'i', 'f'> {};
 struct keyword_receive : keyword<'@', 'r', 'e', 'c', 'e', 'i', 'v', 'e'> {};
-
-struct type_int : keyword<'i', 'n', 't'> {};
-struct type_float : keyword<'f', 'l', 'o', 'a', 't'> {};
-struct type_string : keyword<'s', 't', 'r', 'i', 'n', 'g'> {};
-struct type_bool : keyword<'b', 'o', 'o', 'l'> {};
 
 // SECTION: TOP MATTER
 
@@ -102,16 +56,6 @@ struct type_bool : keyword<'b', 'o', 'o', 'l'> {};
 struct testbed_set
     : seq<indent, identifier, sp, one<'='>, ws, rvalue_simple, functional_eol> {
 };
-
-/** Used to define a value type for methods or variables */
-using value_type = sor<type_int, type_float, type_string, type_bool>;
-
-/// Declarations, used for module sets and globals in codex files. ///
-/// bob string = "bob" ///
-struct declaration_type : seq<sp, value_type> {};
-struct declaration_default : seq<ws, one<'='>, ws, rvalue_simple> {};
-struct declaration : seq<indent, identifier, opt<declaration_type>,
-                         opt<declaration_default>, functional_eol> {};
 
 // Testbeds
 struct testbed_open

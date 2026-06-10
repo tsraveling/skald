@@ -1,1 +1,15 @@
 --- This is a codex!
+
+@methods
+  simple() action
+  simple_args(a int, b string) action
+  returns_something() int
+  returns_w_args(a int, b string) string
+@end
+
+@globals
+  age int
+  name string
+  gender = "?"
+  alive bool = true
+@end

@@ -968,9 +968,12 @@ void Engine::setup(std::string path) {
     pegtl::file_input in(path);
     CodexParseState pstate(path);
 
+    dbg_out("------- CODEX PARSING ------");
     if (pegtl::parse<codex_grammar, codex_action>(in, pstate)) {
+      dbg_out("----------------------------");
       dbg_out("Codex parse successful!");
     } else {
+      dbg_out("----------------------------");
       dbg_out("Codex parse failed!");
     }
 
