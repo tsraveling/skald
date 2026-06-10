@@ -23,11 +23,11 @@ struct arg_def_list : list<arg_def, arg_separator> {};
 struct method_def : seq<indent, identifier, paren<opt<arg_def_list>>, sp,
                         method_signature, functional_eol> {};
 struct methods
-    : seq<methods_open, star<sor<ignored, declaration>>, methods_close> {};
+    : seq<methods_open, star<sor<ignored, method_def>>, methods_close> {};
 
 // SECTION: GLOBALS
 
-struct globals_open : seq<keyword_methods, functional_eol> {};
+struct globals_open : seq<keyword_globals, functional_eol> {};
 struct globals_close : seq<keyword_end, functional_eol> {};
 struct globals
     : seq<globals_open, star<sor<ignored, declaration>>, globals_close> {};
