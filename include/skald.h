@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -554,7 +555,19 @@ struct Block : LineEntity {
 /** The Codex defines globals, methods, and project root. Only one codex is
  * active on the engine at a time. Resetting codex resets state. */
 struct Codex {
+  std::string path;
   std::string filename;
+
+  /** Full path to the codex file itself. */
+  std::string codex_path() {
+    return (std::filesystem::path(path) / filename).string();
+  }
+
+  /** Resolves a module path relative to the codex's directory: with a codex
+   *  at ~/project/example.codex, "a/b/c.ska" -> "~/project/a/b/c.ska". */
+  std::string resolve_path(const std::string &rel_path) {
+    return (std::filesystem::path(path) / rel_path).string();
+  }
 };
 
 /** A Module is a single Skald file. Only one module is loaded at a time, but
@@ -804,6 +817,11 @@ public:
    * returned if a return is expected, or null if not. */
   Response answer(std::optional<QueryAnswer> answer);
 
+  /// PROJECT STUFF ///
+  std::optional<std::string> get_project_root();
+  std::optional<std::string> get_codex_name();
+
+  /// DEBUG STUFF ///
   std::string dbg_print_cache() {
     std::string ret;
     for (const auto &[key, value] : query_cache) {

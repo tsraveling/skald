@@ -989,7 +989,7 @@ void Engine::setup(std::string path) {
 
     // Grab the finished module from the parse state
     codex = std::make_unique<Codex>(std::move(pstate.codex));
-
+    dbg_out(">>> codex_path() = " << codex->codex_path());
   } catch (const pegtl::parse_error &e) {
     dbg_out("Codex parse error: " << e.what());
   } catch (const std::exception &e) {
@@ -999,8 +999,11 @@ void Engine::setup(std::string path) {
 
 void Engine::load(std::string path) {
   try {
-    pegtl::file_input in(path);
-    dbg_out("Loaded file: " << path);
+    // Resolve project paths against the codex root: "alice.ska" with codex
+    // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
+    std::string file_path = codex ? codex->resolve_path(path) : path;
+    pegtl::file_input in(file_path);
+    dbg_out("Loaded file: " << file_path);
 
     ParseState pstate(path);
 
@@ -1084,6 +1087,19 @@ void Engine::trace(std::string path) {
   dbg_out("Loaded file: " << path << "\n");
 
   pegtl::standard_trace<grammar>(in);
+}
+
+std::optional<std::string> Engine::get_project_root() {
+  if (codex) {
+    return codex->path;
+  }
+  return std::nullopt;
+}
+std::optional<std::string> Engine::get_codex_name() {
+  if (codex) {
+    return codex->filename;
+  }
+  return std::nullopt;
 }
 
 } // namespace Skald

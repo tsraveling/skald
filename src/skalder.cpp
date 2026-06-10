@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "skald.h"
+#include "skalder_fs.h"
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -247,10 +248,41 @@ int main(int argc, char *argv[]) {
   std::string path = (argc < 2) ? "../test/test.ska" : argv[1];
 
   SkaldTester tester{};
-  tester.engine.load(path);
-  tester.note_system("STARTING MODULE: " + path);
-  dbg_log("STARTING MODULE: " + path);
+  FileManager files{};
 
+  // This is the path to the module (.ska file)
+  std::string module_path = path;
+
+  // This is the path to the project (.codex file)
+  auto project_root = files.find_project_root(path);
+
+  // If string, we have a codex file.
+  if (auto *codex_path = std::get_if<std::string>(&project_root)) {
+    tester.note_system("CODEX: " + *codex_path);
+    dbg_out("CODEX: " + *codex_path);
+    tester.engine.setup(*codex_path);
+    auto project_root = tester.engine.get_project_root();
+    assert(project_root); // setup must actually work given detection
+    dbg_out(">>> project_root=" + *project_root);
+    module_path = files.loc_to_proj(*project_root, module_path);
+    dbg_out(">>> module_path=" + module_path);
+  } else if (auto *err = std::get_if<FileManager::FileError>(&project_root)) {
+    // If error, return
+    tester.note_error(err->msg);
+    dbg_log(err->msg, LogSeverity::ERROR);
+    return 0;
+  } else {
+    // If NoOp, that means it's an orphan
+    tester.note_system("Not in a Skald codex; loading as orphan (no globals or "
+                       "methods available).");
+  }
+
+  // Now load the module (.ska file)
+  tester.engine.load(module_path);
+  tester.note_system("STARTING MODULE: " + module_path);
+  dbg_log("STARTING MODULE: " + module_path);
+
+  // Start the loaded module
   Response response;
   response = tester.engine.start();
   tester.process(response);
