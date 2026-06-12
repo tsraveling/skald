@@ -6,8 +6,9 @@
 
 namespace Skald {
 
-ParseState::ParseState(const std::string &filename) {
+ParseState::ParseState(const std::string &filename, const Codex *c) {
   module.filename = filename;
+  codex = c;
 }
 
 // SECTION: MODULE LEVEL
@@ -152,8 +153,35 @@ void ParseState::add_conditional_atom(const ConditionalAtom &atom) {
 // SECTION: METHODS
 void ParseState::validate_method(const MethodCall &m,
                                  const tao::pegtl::position pos) {
-  for (auto &arg : m.args) {
-    if (rval_get_call(arg)) {
+  // 1. There must be a codex
+  if (!codex) {
+    err(pos, "Method calls require a Codex!");
+    return;
+  }
+
+  // 2. Is method in codex?
+  const MethodDef *def = nullptr;
+  for (size_t i = 0; i < codex->method_defs.size(); i++) {
+    if (codex->method_defs[i].name == m.method) {
+      def = &codex->method_defs[i];
+      break;
+    }
+  }
+  if (!def) {
+    err(pos, "No method by that name is in the Codex.");
+    return;
+  }
+
+  // 3. Does arg signature match?
+  for (size_t i = 0; i < m.args.size(); i++) {
+
+    if (i >= def->args.size()) {
+      err(pos, "Method in codex has {n} arguments; this one has {n}.");
+      return;
+    }
+
+    // Must be normal RValue (not method call)
+    if (rval_get_call(m.args[i])) {
       err(pos, "Methods are not yet supported as arguments of other methods");
     }
   }
@@ -203,6 +231,64 @@ std::string ParseState::pop_id() {
   auto r = last_identifier;
   last_identifier = "";
   return r;
+}
+
+void ParseState::do_dbg_desc() {
+  dbg_out("MODULE VARS:");
+  for (const auto &dec : module.module_vars) {
+    dbg_out(" - " << dec.var.dbg_desc() << " = "
+                  << rval_to_string(dec.initial_value));
+  }
+
+  dbg_out("TESTBEDS:");
+  for (const auto &testbed : module.testbeds) {
+    dbg_out(testbed.dbg_desc());
+  }
+
+  dbg_out("\nSTRUCTURE:");
+  // Print details about each block
+  for (const auto &block : module.blocks) {
+    dbg_out("\n- Block '" << block.tag << "': " << block.members.size()
+                          << " members");
+    auto print_bm = [](const BlockMember &mem, std::string prefix = "") {
+      std::visit(
+          [&](const auto &member) {
+            using T = std::decay_t<decltype(member)>;
+            if constexpr (std::is_same_v<T, Member>) {
+              dbg_out(prefix << "  - Member: " << member.dbg_desc());
+            } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
+              dbg_out(prefix << "  - ChoiceGroup: ");
+              for (const auto &choice : member.choices) {
+                dbg_out(prefix << "    > Choice: " << choice.dbg_desc());
+                for (const auto &cm : choice.members) {
+                  dbg_out(prefix << "    >> Choice Member: " << cm.dbg_desc());
+                }
+              }
+            }
+          },
+          mem);
+    };
+
+    for (const auto &mem : block.members) {
+      std::visit(
+          [&](const auto &m) {
+            using T = std::decay_t<decltype(m)>;
+            if constexpr (std::is_same_v<T, BlockMember>) {
+              print_bm(m);
+            } else if constexpr (std::is_same_v<T, ConditionalChain>) {
+              dbg_out("  ?? ConditionalChain: " << m.cond_blocks.size()
+                                                << " blocks");
+              for (const auto &cb : m.cond_blocks) {
+                dbg_out("  ?? CondBlock: " << cb.cond.dbg_desc());
+                for (const auto &inner : cb.members) {
+                  print_bm(inner, "    ?| ");
+                }
+              }
+            }
+          },
+          mem);
+    }
+  }
 }
 
 } // namespace Skald

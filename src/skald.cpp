@@ -1007,72 +1007,19 @@ void Engine::load(std::string path) {
     pegtl::file_input in(file_path);
     dbg_out("Loaded file: " << file_path);
 
+    /// PARSING ///
+
     ParseState pstate(path);
 
     if (pegtl::parse<grammar, action>(in, pstate)) {
       dbg_out("Parse successful!");
+      pstate.do_dbg_desc();
     } else {
       dbg_out("Parse failed!");
+      return;
     }
 
-    dbg_out(">>> Parse results:\n");
-
-    dbg_out("MODULE VARS:");
-    for (const auto &dec : pstate.module.module_vars) {
-      dbg_out(" - " << dec.var.dbg_desc() << " = "
-                    << rval_to_string(dec.initial_value));
-    }
-
-    dbg_out("TESTBEDS:");
-    for (const auto &testbed : pstate.module.testbeds) {
-      dbg_out(testbed.dbg_desc());
-    }
-
-    dbg_out("\nSTRUCTURE:");
-    // Print details about each block
-    for (const auto &block : pstate.module.blocks) {
-      dbg_out("\n- Block '" << block.tag << "': " << block.members.size()
-                            << " members");
-      auto print_bm = [](const BlockMember &mem, std::string prefix = "") {
-        std::visit(
-            [&](const auto &member) {
-              using T = std::decay_t<decltype(member)>;
-              if constexpr (std::is_same_v<T, Member>) {
-                dbg_out(prefix << "  - Member: " << member.dbg_desc());
-              } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
-                dbg_out(prefix << "  - ChoiceGroup: ");
-                for (const auto &choice : member.choices) {
-                  dbg_out(prefix << "    > Choice: " << choice.dbg_desc());
-                  for (const auto &cm : choice.members) {
-                    dbg_out(prefix << "    >> Choice Member: "
-                                   << cm.dbg_desc());
-                  }
-                }
-              }
-            },
-            mem);
-      };
-
-      for (const auto &mem : block.members) {
-        std::visit(
-            [&](const auto &m) {
-              using T = std::decay_t<decltype(m)>;
-              if constexpr (std::is_same_v<T, BlockMember>) {
-                print_bm(m);
-              } else if constexpr (std::is_same_v<T, ConditionalChain>) {
-                dbg_out("  ?? ConditionalChain: " << m.cond_blocks.size()
-                                                  << " blocks");
-                for (const auto &cb : m.cond_blocks) {
-                  dbg_out("  ?? CondBlock: " << cb.cond.dbg_desc());
-                  for (const auto &inner : cb.members) {
-                    print_bm(inner, "    ?| ");
-                  }
-                }
-              }
-            },
-            mem);
-      }
-    }
+    /// VALIDATION ///
 
     // Grab the finished module from the parse state
     current = std::make_unique<Module>(std::move(pstate.module));

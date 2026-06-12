@@ -17,9 +17,12 @@ struct ParseError {
 struct ParseState {
 
   /** Constructor with filename */
-  ParseState(const std::string &filename);
+  ParseState(const std::string &filename, const Codex *c);
 
   // SECTION: MODULE LEVEL
+
+  /** Pointer to the codex if there is one -- used for validation. */
+  const Codex *codex;
 
   /** The module attached to the parsed file */
   Module module;
@@ -111,10 +114,6 @@ struct ParseState {
   /** Validates a method and adds errors to the stack if any are found */
   void validate_method(const MethodCall &m, const tao::pegtl::position pos);
 
-  /** Current operations stack */
-  // FIXME: just add to member directly
-  // std::vector<Member> choice_member_queue;
-
   // SECTION: TEXT
 
   /** The current text stack */
@@ -203,6 +202,9 @@ struct ParseState {
    *  empty string.
    */
   std::string pop_id();
+
+  /** Prints out result of parsing */
+  void do_dbg_desc();
 };
 
 } // namespace Skald

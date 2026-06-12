@@ -866,6 +866,9 @@ public:
   }
 
 private:
+  /** Main loop processor */
+  Response next();
+
   ///--  MODULE AND STATE  --///
 
   /** If codex is not present, globals and methods will not be available, and GO
@@ -1002,14 +1005,11 @@ private:
   bool resolve_condition(const std::optional<Conditional> &cond);
   bool resolve_condition(const Conditional &cond);
   bool resolve_condition(const AttachedCondition &cond);
-  // STUB: Add a perform_operation() method
   std::string resolve_simple(const SimpleInsertion &ins);
   std::string resolve_tern(const TernaryInsertion &tern);
   std::vector<Chunk> resolve_text(const TextContent &text_content);
 
   Cursor cursor;
-  // STUB: Next: see TODO>CURRENT
-  Response next();
 };
 
 } // namespace Skald
