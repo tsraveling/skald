@@ -235,7 +235,7 @@ template <> struct action<declaration> {
 
     // Add to stack
     state.module_vars_stack.push_back(
-        ModuleVar{.initial_value = v, .var = var});
+        DeclaredVar{.initial_value = v, .var = var});
 
     // Cleanup
     state.declaration_was_typed = false;

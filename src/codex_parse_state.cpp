@@ -1,0 +1,53 @@
+#include "codex_parse_state.h"
+#include "debug.h"
+
+namespace Skald {
+
+// SECTION: ABSTRACTION
+
+std::string CodexParseState::pop_id() {
+  auto r = last_identifier;
+  last_identifier = "";
+  return r;
+}
+
+// SECTION: RVALUES
+
+// FIXME: handle errors correctly
+SimpleRValue CodexParseState::simple_rval_buffer_pop() {
+  // dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+  auto back = rval_buffer.back();
+  rval_buffer.pop_back();
+
+  return std::visit(
+      [](auto &&val) -> SimpleRValue {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::string> ||
+                      std::is_same_v<T, bool> || std::is_same_v<T, int> ||
+                      std::is_same_v<T, float>) {
+          return val;
+        } else {
+          throw std::runtime_error("Expected simple RValue, got complex type");
+        }
+      },
+      back);
+}
+
+// SECTION: ERROR HANDLING
+
+void CodexParseState::err(const tao::pegtl::position pos, std::string msg) {
+  errors.push_back(ParseError{
+      .pos = pos, .msg = msg, .severity = ParseError::Severity::ERROR});
+
+  dbg_out("XXX CPS ERR: " << msg);
+}
+void CodexParseState::warn(const tao::pegtl::position pos, std::string msg) {
+  errors.push_back(ParseError{
+      .pos = pos, .msg = msg, .severity = ParseError::Severity::WARNING});
+}
+void CodexParseState::fail(const tao::pegtl::position pos, std::string msg) {
+  errors.push_back(ParseError{
+      .pos = pos, .msg = msg, .severity = ParseError::Severity::FATAL});
+}
+
+} // namespace Skald

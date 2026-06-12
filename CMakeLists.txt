@@ -25,6 +25,7 @@ add_subdirectory(deps/pegtl)
 set(SKALD_CORE_SOURCES
     src/debug.cpp
     src/parse_state.cpp
+    src/codex_parse_state.cpp
     src/skald.cpp
 )
 
@@ -109,6 +110,7 @@ if(SKALD_BUILD_TESTS)
     add_executable(skald_grammar_tests
         test/grammar/test_grammar.cpp
         src/parse_state.cpp
+        src/codex_parse_state.cpp
     )
     target_include_directories(skald_grammar_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src

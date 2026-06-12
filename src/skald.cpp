@@ -979,11 +979,11 @@ void Engine::setup(std::string path) {
 
     dbg_out(">>> Parse results:\n");
 
-    // dbg_out("MODULE VARS:");
-    // for (const auto &dec : pstate.module.module_vars) {
-    //   dbg_out(" - " << dec.var.dbg_desc() << " = "
-    //                 << rval_to_string(dec.initial_value));
-    // }
+    dbg_out("GLOBAL VARS:");
+    for (const auto &dec : pstate.codex.global_vars) {
+      dbg_out(" - " << dec.var.dbg_desc() << " = "
+                    << rval_to_string(dec.initial_value));
+    }
 
     // dbg_out("TESTBEDS:");
     // for (const auto &testbed : pstate.module.testbeds) {

@@ -21,8 +21,9 @@ struct LineEntity {
   size_t line_number = 0;
 };
 
-/** Used for strong typing declarations and methods */
-enum ValueType { STRING, BOOL, INT, FLOAT };
+/** Used for strong typing declarations and methods. Only method definitions
+ *  will ever be ACTION. */
+enum ValueType { STRING, BOOL, INT, FLOAT, ACTION };
 enum class VarScope { GLOBAL, MODULE, LOCAL };
 inline std::string scope_to_str(VarScope s) {
   switch (s) {
@@ -54,6 +55,9 @@ struct Variable {
       break;
     case FLOAT:
       ret += "float";
+      break;
+    case ACTION:
+      ret += "action";
       break;
     }
     ret += ")";
@@ -150,9 +154,20 @@ inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
       rval);
 }
 
-struct ModuleVar : LineEntity {
+struct DeclaredVar : LineEntity {
   SimpleRValue initial_value;
   Variable var;
+};
+
+struct ArgDef {
+  std::string name;
+  ValueType type;
+};
+
+struct MethodDef : LineEntity {
+  std::string name;
+  ValueType return_type;
+  std::vector<ArgDef> args;
 };
 
 struct MethodCall : LineEntity {
@@ -558,6 +573,12 @@ struct Codex {
   std::string path;
   std::string filename;
 
+  /** Global-scoped variables */
+  std::vector<DeclaredVar> global_vars;
+
+  /** Method definitions */
+  std::vector<MethodDef> method_defs;
+
   /** Full path to the codex file itself. */
   std::string codex_path() {
     return (std::filesystem::path(path) / filename).string();
@@ -575,7 +596,7 @@ struct Codex {
  *  transitions. */
 struct Module {
   std::string filename;
-  std::vector<ModuleVar> module_vars;
+  std::vector<DeclaredVar> module_vars;
   std::vector<Testbed> testbeds;
   std::vector<Block> blocks;
   std::unordered_map<std::string, size_t> block_lookup;

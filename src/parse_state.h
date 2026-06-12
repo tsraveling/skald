@@ -36,7 +36,7 @@ struct ParseState {
   ValueType last_type;
   bool declaration_was_typed;
   bool declaration_was_valued;
-  std::vector<ModuleVar> module_vars_stack;
+  std::vector<DeclaredVar> module_vars_stack;
 
   // SECTION: TOP MATTER
 
