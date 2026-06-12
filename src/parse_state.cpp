@@ -172,12 +172,25 @@ void ParseState::validate_method(const MethodCall &m,
     return;
   }
 
-  // 3. Does arg signature match?
+  // 3. Arg count match
+  if (m.args.size() != def->args.size()) {
+    err(pos, "Method in codex has " + std::to_string(def->args.size()) +
+                 " arguments; this one has " + std::to_string(m.args.size()) +
+                 ".");
+    return;
+  }
+
+  // 4. Arg validation
   for (size_t i = 0; i < m.args.size(); i++) {
 
-    if (i >= def->args.size()) {
-      err(pos, "Method in codex has {n} arguments; this one has {n}.");
-      return;
+    // We check explicit arg values at parse time; methods and vars are checked
+    // at runtime.
+    if (auto srval = cast_rval_to_simple(m.args[i])) {
+      auto t = srval_get_type(*srval);
+      if (t != def->args[i].type) {
+        err(pos, "Type value mismatch; " + val_type_to_str(def->args[i].type) +
+                     " was expected, " + val_type_to_str(t) + " was found.");
+      }
     }
 
     // Must be normal RValue (not method call)

@@ -1009,7 +1009,7 @@ void Engine::load(std::string path) {
 
     /// PARSING ///
 
-    ParseState pstate(path);
+    ParseState pstate(path, codex.get());
 
     if (pegtl::parse<grammar, action>(in, pstate)) {
       dbg_out("Parse successful!");

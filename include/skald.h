@@ -187,7 +187,6 @@ struct MethodDef : LineEntity {
 struct MethodCall : LineEntity {
   std::string method;
   std::vector<RValue> args;
-  std::optional<ValueType> return_type;
   std::string dbg_desc() const; // Declare only for circular dep reasons
 };
 
