@@ -984,11 +984,10 @@ void Engine::setup(std::string path) {
       dbg_out(" - " << dec.var.dbg_desc() << " = "
                     << rval_to_string(dec.initial_value));
     }
-
-    // dbg_out("TESTBEDS:");
-    // for (const auto &testbed : pstate.module.testbeds) {
-    //   dbg_out(testbed.dbg_desc());
-    // }
+    dbg_out("METHOD DEFS:");
+    for (const auto &def : pstate.codex.method_defs) {
+      dbg_out(" - " << def.dbg_desc());
+    }
 
     // Grab the finished module from the parse state
     codex = std::make_unique<Codex>(std::move(pstate.codex));

@@ -24,6 +24,27 @@ struct LineEntity {
 /** Used for strong typing declarations and methods. Only method definitions
  *  will ever be ACTION. */
 enum ValueType { STRING, BOOL, INT, FLOAT, ACTION };
+inline static std::string val_type_to_str(const ValueType &type) {
+  switch (type) {
+  case STRING:
+    return "string";
+    break;
+  case BOOL:
+    return "bool";
+    break;
+  case INT:
+    return "int";
+    break;
+  case FLOAT:
+    return "float";
+    break;
+  case ACTION:
+    return "action";
+    break;
+  }
+  return "!!INVALID!!";
+}
+
 enum class VarScope { GLOBAL, MODULE, LOCAL };
 inline std::string scope_to_str(VarScope s) {
   switch (s) {
@@ -42,25 +63,7 @@ struct Variable {
   ValueType type;
 
   std::string dbg_desc() const {
-    std::string ret = name + " (";
-    switch (type) {
-    case STRING:
-      ret += "string";
-      break;
-    case BOOL:
-      ret += "bool";
-      break;
-    case INT:
-      ret += "int";
-      break;
-    case FLOAT:
-      ret += "float";
-      break;
-    case ACTION:
-      ret += "action";
-      break;
-    }
-    ret += ")";
+    std::string ret = name + " (" + val_type_to_str(type) + +")";
     return ret;
   }
 };
@@ -162,12 +165,23 @@ struct DeclaredVar : LineEntity {
 struct ArgDef {
   std::string name;
   ValueType type;
+  std::string dbg_desc() const { return name + ": " + val_type_to_str(type); }
 };
 
 struct MethodDef : LineEntity {
   std::string name;
   ValueType return_type;
   std::vector<ArgDef> args;
+  std::string dbg_desc() const {
+    auto ret = name + "(";
+    auto i = 0;
+    for (auto &arg : args) {
+      ret += (i > 0 ? ", " : "") + arg.dbg_desc();
+      i++;
+    }
+    ret += ") -> " + val_type_to_str(return_type);
+    return ret;
+  }
 };
 
 struct MethodCall : LineEntity {

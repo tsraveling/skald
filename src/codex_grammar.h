@@ -20,7 +20,8 @@ struct methods_open : seq<keyword_methods, functional_eol> {};
 struct methods_close : seq<keyword_end, functional_eol> {};
 struct arg_def : seq<identifier, sp, value_type> {};
 struct arg_def_list : list<arg_def, arg_separator> {};
-struct method_def : seq<indent, identifier, paren<opt<arg_def_list>>, sp,
+struct method_id : identifier {};
+struct method_def : seq<indent, method_id, paren<opt<arg_def_list>>, sp,
                         method_signature, functional_eol> {};
 struct methods
     : seq<methods_open, star<sor<ignored, method_def>>, methods_close> {};

@@ -43,6 +43,11 @@ struct CodexParseState {
   bool declaration_was_typed;
   bool declaration_was_valued;
 
+  // SECTION: METHODS
+
+  std::vector<ArgDef> arg_buffer;
+  std::string method_id_buffer;
+
   // SECTION: CONSTRUCTION
 
   /** Constructor with filename. Splits the given path (which may be

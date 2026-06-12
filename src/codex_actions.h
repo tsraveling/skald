@@ -14,6 +14,7 @@ template <> struct codex_action<identifier> {
   template <typename CodexActionInput>
   static void apply(const CodexActionInput &input, CodexParseState &state) {
     auto text = input.string();
+    dbg_out("-- identifier: " + text);
     state.last_identifier = text;
   }
 };
@@ -38,6 +39,11 @@ template <> struct codex_action<type_bool> {
 template <> struct codex_action<type_string> {
   static void apply0(CodexParseState &state) {
     state.last_type = ValueType::STRING;
+  }
+};
+template <> struct codex_action<type_action> {
+  static void apply0(CodexParseState &state) {
+    state.last_type = ValueType::ACTION;
   }
 };
 
@@ -76,29 +82,7 @@ template <> struct codex_action<val_string> {
   }
 };
 
-template <> struct codex_action<globals> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, CodexParseState &state) {
-    auto text = input.string();
-    dbg_out("GLOBALS:\n" << text);
-  }
-};
-template <> struct codex_action<methods> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, CodexParseState &state) {
-    auto text = input.string();
-    dbg_out("METHODS:\n" << text);
-  }
-};
-template <> struct codex_action<method_def> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, CodexParseState &state) {
-    auto text = input.string();
-    dbg_out("- method_def:\n" << text);
-  }
-};
-
-/// Declarations ///
+// SECTION: GLOBAL DECLARATIONS
 
 template <> struct codex_action<declaration_default> {
   static void apply0(CodexParseState &state) {
@@ -147,6 +131,36 @@ template <> struct codex_action<declaration> {
     // Cleanup
     state.declaration_was_typed = false;
     state.declaration_was_valued = false;
+  }
+};
+
+// SECTION: METHOD DEFINITIONS
+
+// Grabs id at start of method def for method name
+template <> struct codex_action<method_id> {
+  template <typename CodexActionInput>
+  static void apply(const CodexActionInput &input, CodexParseState &state) {
+    dbg_out("-- method_id: " + input.string());
+    state.method_id_buffer = input.string();
+  }
+};
+
+template <> struct codex_action<arg_def> {
+  static void apply0(CodexParseState &state) {
+    state.arg_buffer.push_back(
+        ArgDef{.name = state.pop_id(), .type = state.last_type});
+  }
+};
+
+template <> struct codex_action<method_def> {
+  template <typename CodexActionInput>
+  static void apply(const CodexActionInput &input, CodexParseState &state) {
+    MethodDef def = MethodDef{};
+    def.line_number = input.position().line;
+    def.name = std::move(state.method_id_buffer);
+    def.args = std::move(state.arg_buffer);
+    def.return_type = state.last_type;
+    state.codex.method_defs.push_back(std::move(def));
   }
 };
 
