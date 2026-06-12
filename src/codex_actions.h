@@ -3,6 +3,7 @@
 #include "codex_grammar.h"
 #include "codex_parse_state.h"
 #include "debug.h"
+#include "skald.h"
 
 namespace Skald {
 
@@ -108,6 +109,9 @@ template <> struct codex_action<declaration> {
 
     ValueType t;
     SimpleRValue v;
+    if (state.declaration_was_typed) {
+      t = state.last_type; // grab strong type
+    }
     if (state.declaration_was_valued) {
       v = state.simple_rval_buffer_pop(); // grab default and get value from it
       t = srval_get_type(v);
@@ -117,9 +121,8 @@ template <> struct codex_action<declaration> {
           return;
         }
       }
-    }
-    if (state.declaration_was_typed) {
-      t = state.last_type; // grab strong type
+    } else {
+      v = get_zero(t);
     }
     auto n = state.pop_id(); // grab var name
     auto var = Variable{.name = n, .type = t};

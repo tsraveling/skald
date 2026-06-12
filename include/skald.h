@@ -7,11 +7,29 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
 namespace Skald {
+
+/** References a position in a codex or Skald module */
+struct ParsePosition {
+  size_t line;
+  size_t column;
+  std::string source;
+};
+
+/** Exception class for Skald parse errors */
+struct ParseError {
+  ParsePosition pos;
+  std::string msg;
+  enum Severity { WARNING, ERROR } severity = ERROR;
+  static ParseError file_error(std::string msg) {
+    return ParseError{.pos = ParsePosition{}, .msg = msg, .severity = ERROR};
+  }
+};
 
 enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE, OFF };
 inline static SkaldLogLevel log_level = SkaldLogLevel::NORMAL;
@@ -97,6 +115,21 @@ inline const MethodCall *rval_get_call(const RValue &val) {
 }
 
 using SimpleRValue = std::variant<std::string, bool, int, float>;
+
+inline SimpleRValue get_zero(ValueType t) {
+  switch (t) {
+  case INT:
+    return 0;
+  case FLOAT:
+    return 0.0f;
+  case STRING:
+    return "";
+  case BOOL:
+    return false;
+  default:
+    return false;
+  }
+}
 
 // Simple RVal helper functions
 inline const ValueType srval_get_type(const SimpleRValue &val) {
@@ -823,12 +856,31 @@ struct Cursor {
 
 enum ProgressResult { OK, END_OF_FILE, MODULE_NOT_FOUND };
 
+struct ParseResult {
+  bool ok;
+  std::vector<ParseError> exceptions;
+  static ParseResult with(std::vector<ParseError> exceptions) {
+    bool ok = true;
+    for (auto &ex : exceptions) {
+      if (ex.severity == ParseError::ERROR) {
+        ok = false;
+        break;
+      }
+    }
+    return ParseResult{.ok = ok, .exceptions = exceptions};
+  }
+  static ParseResult fail(std::string msg) {
+    auto errors = {ParseError::file_error(msg)};
+    return ParseResult{.ok = false, .exceptions = errors};
+  }
+};
+
 // SECTION: Main Engine
 
 class Engine {
 public:
-  void setup(std::string path);
-  void load(std::string path);
+  ParseResult setup(std::string path);
+  ParseResult load(std::string path);
   void trace(std::string path);
 
   // Actions
@@ -888,6 +940,8 @@ private:
 
   std::unordered_map<std::string, SimpleRValue> query_cache;
 
+  /** Initializes state after a codex is loaded */
+  void init_state();
   void build_state(const Module &module);
 
   ///--  UTIL  --///

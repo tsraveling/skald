@@ -64,7 +64,6 @@ struct CodexParseState {
   std::vector<ParseError> errors;
   void err(const tao::pegtl::position pos, std::string msg);
   void warn(const tao::pegtl::position pos, std::string msg);
-  void fail(const tao::pegtl::position pos, std::string msg);
 };
 
 } // namespace Skald

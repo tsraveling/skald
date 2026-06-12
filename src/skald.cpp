@@ -80,6 +80,16 @@ Member &Engine::cursor_mem() {
 }
 
 // SECTION: STATE
+void Engine::init_state() {
+  local_state.clear();
+  module_state.clear();
+  global_state.clear();
+  if (codex) {
+    for (auto &var : codex->global_vars) {
+      global_state[var.var.name] = var.initial_value;
+    }
+  }
+}
 
 void Engine::build_state(const Module &module) {
   local_state.clear();
@@ -963,7 +973,7 @@ Response Engine::enter(int block, int index) {
 
 // TODO: Serialize
 
-void Engine::setup(std::string path) {
+ParseResult Engine::setup(std::string path) {
   try {
     pegtl::file_input in(path);
     CodexParseState pstate(path);
@@ -975,6 +985,7 @@ void Engine::setup(std::string path) {
     } else {
       dbg_out("----------------------------");
       dbg_out("Codex parse failed!");
+      return ParseResult::fail("Codex parse failed!");
     }
 
     dbg_out(">>> Parse results:\n");
@@ -991,15 +1002,21 @@ void Engine::setup(std::string path) {
 
     // Grab the finished module from the parse state
     codex = std::make_unique<Codex>(std::move(pstate.codex));
+
+    // Initialize state with the new codex (wipes prior state)
+    init_state();
+    return ParseResult::with(std::move(pstate.errors));
     dbg_out(">>> codex_path() = " << codex->codex_path());
   } catch (const pegtl::parse_error &e) {
     dbg_out("Codex parse error: " << e.what());
+    return ParseResult::fail(e.what());
   } catch (const std::exception &e) {
     dbg_out("Codex error: " << e.what());
+    return ParseResult::fail(e.what());
   }
 }
 
-void Engine::load(std::string path) {
+ParseResult Engine::load(std::string path) {
   try {
     // Resolve project paths against the codex root: "alice.ska" with codex
     // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
@@ -1016,18 +1033,18 @@ void Engine::load(std::string path) {
       pstate.do_dbg_desc();
     } else {
       dbg_out("Parse failed!");
-      return;
+      return ParseResult::fail("Module parse failed!");
     }
-
-    /// VALIDATION ///
 
     // Grab the finished module from the parse state
     current = std::make_unique<Module>(std::move(pstate.module));
-
+    return ParseResult::with(pstate.errors);
   } catch (const pegtl::parse_error &e) {
     dbg_out("Parse error: " << e.what());
+    return ParseResult::fail(e.what());
   } catch (const std::exception &e) {
     dbg_out("Error: " << e.what());
+    return ParseResult::fail(e.what());
   }
 }
 

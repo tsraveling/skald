@@ -7,12 +7,10 @@
 
 namespace Skald {
 
-/** Exception class for Skald parse errors */
-struct ParseError {
-  tao::pegtl::position pos;
-  std::string msg;
-  enum Severity { WARNING, ERROR, FATAL } severity = ERROR;
-};
+inline ParsePosition from_pos(tao::pegtl::position pos) {
+  return ParsePosition{
+      .line = pos.line, .column = pos.column, .source = pos.source};
+}
 
 struct ParseState {
 
@@ -32,7 +30,6 @@ struct ParseState {
   std::vector<ParseError> errors;
   void err(const tao::pegtl::position pos, std::string msg);
   void warn(const tao::pegtl::position pos, std::string msg);
-  void fail(const tao::pegtl::position pos, std::string msg);
 
   // SECTION: DECLARATIONS AND MODULE VARS
 

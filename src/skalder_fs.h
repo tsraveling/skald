@@ -23,8 +23,6 @@ public:
    *  either path can't be resolved or the file lives outside the project. */
   std::string loc_to_proj(const std::string &project_path,
                           const std::string &loc_path) {
-    dbg_out("FileManager::loc_to_proj project_path=" + project_path +
-            ", loc_path=" + loc_path);
     namespace fs = std::filesystem;
     std::error_code ec;
 

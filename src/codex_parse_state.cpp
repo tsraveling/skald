@@ -1,5 +1,7 @@
 #include "codex_parse_state.h"
 #include "debug.h"
+#include "skald.h"
+#include "tao/pegtl/position.hpp"
 
 namespace Skald {
 
@@ -36,18 +38,16 @@ SimpleRValue CodexParseState::simple_rval_buffer_pop() {
 // SECTION: ERROR HANDLING
 
 void CodexParseState::err(const tao::pegtl::position pos, std::string msg) {
-  errors.push_back(ParseError{
-      .pos = pos, .msg = msg, .severity = ParseError::Severity::ERROR});
+  errors.push_back(ParseError{.pos = from_pos(pos),
+                              .msg = msg,
+                              .severity = ParseError::Severity::ERROR});
 
   dbg_out("XXX CPS ERR: " << msg);
 }
 void CodexParseState::warn(const tao::pegtl::position pos, std::string msg) {
-  errors.push_back(ParseError{
-      .pos = pos, .msg = msg, .severity = ParseError::Severity::WARNING});
-}
-void CodexParseState::fail(const tao::pegtl::position pos, std::string msg) {
-  errors.push_back(ParseError{
-      .pos = pos, .msg = msg, .severity = ParseError::Severity::FATAL});
+  errors.push_back(ParseError{.pos = from_pos(pos),
+                              .msg = msg,
+                              .severity = ParseError::Severity::WARNING});
 }
 
 } // namespace Skald

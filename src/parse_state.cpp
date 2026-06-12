@@ -16,18 +16,16 @@ ParseState::ParseState(const std::string &filename, const Codex *c) {
 // SECTION: ERROR HANDLING
 
 void ParseState::err(const tao::pegtl::position pos, std::string msg) {
-  errors.push_back(ParseError{
-      .pos = pos, .msg = msg, .severity = ParseError::Severity::ERROR});
+  errors.push_back(ParseError{.pos = from_pos(pos),
+                              .msg = msg,
+                              .severity = ParseError::Severity::ERROR});
 
   dbg_out("XXX ERR: " << msg);
 }
 void ParseState::warn(const tao::pegtl::position pos, std::string msg) {
-  errors.push_back(ParseError{
-      .pos = pos, .msg = msg, .severity = ParseError::Severity::WARNING});
-}
-void ParseState::fail(const tao::pegtl::position pos, std::string msg) {
-  errors.push_back(ParseError{
-      .pos = pos, .msg = msg, .severity = ParseError::Severity::FATAL});
+  errors.push_back(ParseError{.pos = from_pos(pos),
+                              .msg = msg,
+                              .severity = ParseError::Severity::WARNING});
 }
 
 // SECTION: TOP MATTER

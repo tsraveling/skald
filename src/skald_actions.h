@@ -217,6 +217,9 @@ template <> struct action<declaration> {
 
     ValueType t;
     SimpleRValue v;
+    if (state.declaration_was_typed) {
+      t = state.last_type; // grab strong type
+    }
     if (state.declaration_was_valued) {
       v = state.simple_rval_buffer_pop(); // grab default and get value from it
       t = srval_get_type(v);
@@ -226,9 +229,8 @@ template <> struct action<declaration> {
           return;
         }
       }
-    }
-    if (state.declaration_was_typed) {
-      t = state.last_type; // grab strong type
+    } else {
+      v = get_zero(t);
     }
     auto n = state.pop_id(); // grab var name
     auto var = Variable{.name = n, .type = t};

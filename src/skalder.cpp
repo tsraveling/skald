@@ -4,6 +4,7 @@
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -238,6 +239,21 @@ public:
   Engine engine;
 };
 
+void print_parse_errors(std::vector<ParseError> &errs) {
+  if (errs.size() == 0) {
+    std::cout << "0 parse errors found.\n";
+  };
+  for (auto &err : errs) {
+    bool is_error = err.severity == ParseError::ERROR;
+    std::cerr << (is_error ? "\033[31merror" : "\033[33mwarning") << "\033[0m";
+    if (!err.pos.source.empty()) {
+      std::cerr << " " << err.pos.source << ":" << err.pos.line << ":"
+                << err.pos.column;
+    }
+    std::cerr << ": " << err.msg << "\n";
+  }
+}
+
 int main(int argc, char *argv[]) {
   dbg_out_on = true;
   dbg_sink = [](const std::string &s) { dbg_log(s); };
@@ -260,7 +276,11 @@ int main(int argc, char *argv[]) {
   if (auto *codex_path = std::get_if<std::string>(&project_root)) {
     tester.note_system("CODEX: " + *codex_path);
     dbg_out("CODEX: " + *codex_path);
-    tester.engine.setup(*codex_path);
+    auto res = tester.engine.setup(*codex_path);
+    print_parse_errors(res.exceptions);
+    if (!res.ok) {
+      return 0;
+    }
     auto project_root = tester.engine.get_project_root();
     assert(project_root); // setup must actually work given detection
     module_path = files.loc_to_proj(*project_root, module_path);
@@ -276,7 +296,11 @@ int main(int argc, char *argv[]) {
   }
 
   // Now load the module (.ska file)
-  tester.engine.load(module_path);
+  auto res = tester.engine.load(module_path);
+  print_parse_errors(res.exceptions);
+  if (!res.ok) {
+    return 0;
+  }
   tester.note_system("STARTING MODULE: " + module_path);
   dbg_log("STARTING MODULE: " + module_path);
 
