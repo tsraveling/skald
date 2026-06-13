@@ -702,6 +702,7 @@ const uint ERROR_TYPE_MISMATCH = 8;
 const uint ERROR_UNEXPECTED_NULL = 9;
 const uint ERROR_VAR_UNDEFINED = 10;
 const uint ERROR_UNEXPECTED_ACT = 11;
+const uint ERROR_LOADING_MODULE = 12;
 struct Error {
   uint code = 0;
   std::string message;

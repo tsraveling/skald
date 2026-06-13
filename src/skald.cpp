@@ -8,6 +8,7 @@
 #include "skald_grammar.h"
 #include "tao/pegtl/parse.hpp"
 #include <cstdio>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -739,6 +740,26 @@ Response Engine::next() {
       return *cursor.queued_exit;
     }
     if (cursor.queued_go) {
+      auto res = load(cursor.queued_go->module_path);
+      if (!res.ok) {
+        // Just use first error; that's what failed it
+        for (auto &ex : res.exceptions) {
+          if (ex.severity == ParseError::ERROR) {
+            return Error(ERROR_LOADING_MODULE, ex.msg, ex.pos.line);
+          }
+        }
+        return Error(ERROR_LOADING_MODULE,
+                     "Unknown error loading module: " +
+                         cursor.queued_go->module_path,
+                     0);
+        // STUB: Move this to act()
+        auto tag = cursor.queued_go->start_in_tag;
+        if (tag.length() > 0) {
+          start_at(tag);
+        } else {
+          start();
+        }
+      }
       return *cursor.queued_go;
     }
 
@@ -908,7 +929,6 @@ Response Engine::act(int choice_index) {
 
           // Process any queries that are needed
           cursor.choice_selection = choice_index;
-          dbg_out("000 setting c_t_i = 0");
           cursor.choice_thread_index = 0;
         }
       },
@@ -1029,6 +1049,9 @@ ParseResult Engine::load(std::string path) {
     // Resolve project paths against the codex root: "alice.ska" with codex
     // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
     std::string file_path = codex ? codex->resolve_path(path) : path;
+    if (!std::filesystem::exists(file_path)) {
+      return ParseResult::fail("File not found: " + file_path);
+    }
     pegtl::file_input in(file_path);
     dbg_out("Loaded file: " << file_path);
 
