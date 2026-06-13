@@ -811,7 +811,7 @@ Response Engine::next() {
 
               if (cursor.choice_thread_index >= choice.members.size()) {
                 dbg_out("passed end of choice member list, resetting and "
-                        "moving on");
+                        "moving on (c_t_i = 0)");
                 cursor.choice_selection = -1;
                 cursor.choice_thread_index = 0;
                 return std::nullopt;
@@ -875,6 +875,13 @@ Response Engine::act(int choice_index) {
 
         } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
 
+          // If choice_selection is already made, this is stepping through.
+          if (cursor.choice_selection >= 0) {
+            // TODO: Consider turning this into an actual error
+            assert(choice_index == 0); // No choices available in a choice block
+            return;
+          }
+
           /// Act on a choice group: CHOICE ///
 
           if (choice_index >= mem.choices.size()) {
@@ -901,6 +908,7 @@ Response Engine::act(int choice_index) {
 
           // Process any queries that are needed
           cursor.choice_selection = choice_index;
+          dbg_out("000 setting c_t_i = 0");
           cursor.choice_thread_index = 0;
         }
       },

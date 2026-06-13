@@ -1,0 +1,101 @@
+@let
+  age int = 30
+  name string
+  gender = "f"
+  alive = true
+  progress float
+@end
+
+@testbed alpha
+  age = 50
+  name = "Bob"
+  gender = "m"
+@end
+
+# start
+
+This is the first beat. My age is {age}. Now we mutate ...
+
+> Loop
+  -> start
+> Continue
+
+~ age += 1
+
+A mutation should have just happened, and age is now {age}.
+
+@if age > 30
+
+I'm over 30!
+
+@elseif age > 10
+
+I'm over 10!
+
+Like really though, over ten.
+
+:simple()
+
+~ age += 10
+
+And that's it for the rest of that stuff.
+
+@else
+
+I'm 10 or under!
+
+@endif
+
+Coming out of the cond my age is {age}.
+
+~ age += 1  --- inline mutation
+
+Another year! Now my age is {age}.
+
+> Again!
+  -> start
+> Bye
+
+:simple_args(5, "bob")
+
+(? gender = "m") ~ age += 2 --- conditional operation
+
+
+tester: This is an attributed beat.
+
+> This choice will continue
+> Goes to grandchild b
+  -> .alice.b
+> Goes to child2
+  -> .bob
+
+This is the continuation beat.
+
+## alice
+
+This is first child block. And here we do some conditionals:
+
+This comes after the conditional blocks.
+
+### a
+
+This is grandchild a
+
+> Up to parent
+  -> ^^
+> To sib
+  -> -b
+
+### b
+
+This is grandchild b
+
+## bob
+
+This is second child block
+
+And this is the end.
+
+EXIT
+
+
