@@ -150,6 +150,8 @@ public:
           using T = std::decay_t<decltype(value)>;
           if constexpr (std::is_same_v<T, Content>) {
             return engine.act(0);
+          } else if constexpr (std::is_same_v<T, GoModule>) {
+            return engine.act(0);
           } else if constexpr (std::is_same_v<T, OptionGroup>) {
             // TODO: Consider erroring out here if we require a choice
             return engine.act(0);

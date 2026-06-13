@@ -560,6 +560,7 @@ std::optional<Response> Engine::do_member(Member &mem) {
           /// GO ///
           dbg_out("    --->> CHANGING MODULE");
           cursor.queued_go = &m;
+          ret = *cursor.queued_go;
         } else if constexpr (std::is_same_v<T, Exit>) {
           /// EXIT ///
           dbg_out("    ---X EXITING");
@@ -642,7 +643,9 @@ std::vector<Chunk> Engine::resolve_text(const TextContent &text_content) {
  *  - from_line_number is for error logging.
  */
 std::optional<Error> Engine::advance_cursor(int from_line_number) {
+
   /// HANDLE TRANSITIONS ///
+
   if (cursor.queued_transition.length() > 0) {
     auto new_index = current->get_block_index(cursor.queued_transition);
     if (new_index == -1)
@@ -661,6 +664,30 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
     // blocks where we immediately move to the next one.
     cursor.current_member_index = -1;
     cursor.queued_transition = "";
+  }
+
+  /// GO TO MODULE ///
+
+  if (cursor.queued_go) {
+    auto res = load(cursor.queued_go->module_path);
+    if (!res.ok) {
+      // Just use first error; that's what failed it
+      for (auto &ex : res.exceptions) {
+        if (ex.severity == ParseError::ERROR) {
+          return Error(ERROR_LOADING_MODULE, ex.msg, ex.pos.line);
+        }
+      }
+      return Error(
+          ERROR_LOADING_MODULE,
+          "Unknown error loading module: " + cursor.queued_go->module_path, 0);
+    }
+    auto tag = cursor.queued_go->start_in_tag;
+    if (tag.length() > 0) {
+      start_at(tag);
+    } else {
+      start();
+    }
+    cursor.current_member_index = -1;
   }
 
   // CHECK: Does a CC work if it's the first child following a transition?
@@ -740,26 +767,7 @@ Response Engine::next() {
       return *cursor.queued_exit;
     }
     if (cursor.queued_go) {
-      auto res = load(cursor.queued_go->module_path);
-      if (!res.ok) {
-        // Just use first error; that's what failed it
-        for (auto &ex : res.exceptions) {
-          if (ex.severity == ParseError::ERROR) {
-            return Error(ERROR_LOADING_MODULE, ex.msg, ex.pos.line);
-          }
-        }
-        return Error(ERROR_LOADING_MODULE,
-                     "Unknown error loading module: " +
-                         cursor.queued_go->module_path,
-                     0);
-        // STUB: Move this to act()
-        auto tag = cursor.queued_go->start_in_tag;
-        if (tag.length() > 0) {
-          start_at(tag);
-        } else {
-          start();
-        }
-      }
+      dbg_out(">>> next: queued_go!");
       return *cursor.queued_go;
     }
 
@@ -1046,6 +1054,7 @@ ParseResult Engine::setup(std::string path) {
 
 ParseResult Engine::load(std::string path) {
   try {
+    dbg_out_on = false;
     // Resolve project paths against the codex root: "alice.ska" with codex
     // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
     std::string file_path = codex ? codex->resolve_path(path) : path;
@@ -1053,6 +1062,7 @@ ParseResult Engine::load(std::string path) {
       return ParseResult::fail("File not found: " + file_path);
     }
     pegtl::file_input in(file_path);
+    dbg_out_on = false;
     dbg_out("Loaded file: " << file_path);
 
     /// PARSING ///
@@ -1069,6 +1079,7 @@ ParseResult Engine::load(std::string path) {
 
     // Grab the finished module from the parse state
     current = std::make_unique<Module>(std::move(pstate.module));
+    dbg_out_on = true;
     return ParseResult::with(pstate.errors);
   } catch (const pegtl::parse_error &e) {
     dbg_out("Parse error: " << e.what());
