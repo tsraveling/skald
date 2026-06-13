@@ -565,6 +565,7 @@ std::optional<Response> Engine::do_member(Member &mem) {
           /// EXIT ///
           dbg_out("    ---X EXITING");
           cursor.queued_exit = &m;
+          ret = *cursor.queued_exit;
         }
       },
       mem.body);

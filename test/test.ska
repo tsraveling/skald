@@ -2,17 +2,12 @@
 
 First we test the exit:
 
-> Leave
-  EXIT
-> Continue
-
 And then we test a special sub beat
 
-> Extra things
-  bob: sure! this is extra!
-  and so is this!
-> Nothing extra
+Exiting now.
+
+And we're out?
 
 And then we go:
 
-GO test2.ska
+EXIT
