@@ -2,6 +2,48 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.5.2 - 2026-06-14
+#### Bug Fixes
+- end of file EXIT now works. - (bb2c7d7) - Tim Raveling
+- fixes action on go module - (37b994a) - Tim Raveling
+- fixed stepping through choice members - (af68970) - Tim Raveling
+- transitions now properly drop out of choice blocks - (ce608c7) - Tim Raveling
+- parsing out ops again - (7bb9b24) - Tim Raveling
+- set up for skalder fixes - (d5552e9) - Tim Raveling
+- first redirect working, still failing on repeat - (0fe9499) - Tim Raveling
+- fixed crash on transition bug - (e241032) - Tim Raveling
+- added test loop - (a0d8201) - Tim Raveling
+- fixed conditional capture - (bfe8b62) - Tim Raveling
+- thread prep - (d991593) - Tim Raveling
+- correctly detecting child and gc blocks - (4508077) - Tim Raveling
+- type fix on process (from phone!) - (883e79a) - Tim Raveling
+- started stubbing out choice sel again - (2fc84ae) - Tim Raveling
+- state now being set up correctly - (29f26d6) - Tim Raveling
+- error messages flowing properly - (3d5cc53) - Tim Raveling
+- piped debug logging into skalder debug panel - (55e8cca) - Tim Raveling
+- added some debug logs - (ea68d98) - Tim Raveling
+- skalder build fixed and partially running - (61dae90) - Tim Raveling
+- built out a lot of tests and expanded parsing - (10d65a6) - Tim Raveling
+- started building out typing - (48ca8f1) - Tim Raveling
+- mostly built out let and testbed clauses - (1be2e39) - Tim Raveling
+- added error system - (0c7a4d8) - Tim Raveling
+- started modularizing top matter sections - (7d184e3) - Tim Raveling
+- more cleanup and refactor prep - (a9534cd) - Tim Raveling
+- initial refactor of parser object - (8a1b432) - Tim Raveling
+- started rebuilding schema - (0db73b6) - Tim Raveling
+- submodule update - (f31e674) - Tim Raveling
+#### Documentation
+- updated Syntax with transition rules - (860670d) - Tim Raveling
+- planning update - (f01d39d) - Tim Raveling
+- syntax updates - (209c348) - Tim Raveling
+- Syntax.md updates - (8d44e2b) - Tim Raveling
+#### Refactoring
+- renamed Query -> MethodCallPost - (896b762) - Tim Raveling
+#### Miscellaneous Chores
+- removed some logs - (7afc4a2) - Tim Raveling
+
+- - -
+
 ## 0.5.1 - 2026-02-13
 #### Bug Fixes
 - adds preceding and same-line comments to hover output in LSP - (f9d8426) - Tim Raveling
