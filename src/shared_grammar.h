@@ -18,13 +18,14 @@ using indent = sor<two_or_more_spaces, one_or_more_tabs>;
 // End of line / file
 using eolf = sor<eol, eof>;
 
+using ws = star<blank>;
+
 // Line comment using the same comment marker style
-struct line_comment : seq<string<'-', '-', '-'>, until<eolf>> {};
+struct line_comment : seq<ws, string<'-', '-', '-'>, until<eolf>> {};
 struct end_line_comment
     : seq<string<'-', '-', '-'>, star<not_one<'\r', '\n'>>> {};
 
 /** Whitespace means 0-n whitespace characters */
-using ws = star<blank>;
 using sp = plus<blank>;
 struct blank_line : seq<ws, eol> {};
 struct ignored : sor<line_comment, blank_line> {};
