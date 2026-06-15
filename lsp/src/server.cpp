@@ -202,14 +202,31 @@ json Server::handle_definition(const json &id, const json &params) {
         return Transport::make_response(id, loc);
     }
 
-    // Cross-file variable resolution: codex global or thread var from a
-    // predecessor module in the GO graph.
+    // Methods are defined in the codex.
+    if (sym->kind == SymbolKind::Method) {
+        if (auto md = project_index_.resolve_method(sym->name)) {
+            LspTypes::Location loc;
+            loc.uri = md->uri;
+            loc.range = {{md->line, md->col}, {md->line, md->end_col}};
+            return Transport::make_response(id, loc);
+        }
+    }
+
     if (sym->kind == SymbolKind::Variable) {
+        // Cross-file: codex global or thread var from a predecessor module.
         std::string rel = rel_path_for(tdp.textDocument.uri, doc.codex());
         if (auto vd = project_index_.resolve_external_var(sym->name, rel)) {
             LspTypes::Location loc;
             loc.uri = vd->uri;
             loc.range = {{vd->line, vd->col}, {vd->line, vd->end_col}};
+            return Transport::make_response(id, loc);
+        }
+        // Local/ad-hoc variable: jump to the topmost place it's set.
+        if (auto a = doc.find_first_assignment(sym->name)) {
+            LspTypes::Location loc;
+            loc.uri = tdp.textDocument.uri;
+            loc.range = {{a->range.line, a->range.col},
+                         {a->range.line, a->range.end_col}};
             return Transport::make_response(id, loc);
         }
     }

@@ -25,6 +25,7 @@ public:
     const std::string &text() const { return text_; }
     const Skald::Module &module() const { return module_; }
     const Skald::Codex *codex() const { return codex_; }
+    const ProjectIndex *project() const { return project_; }
     const std::vector<SymbolOccurrence> &symbols() const { return symbols_; }
     const std::vector<LspTypes::Diagnostic> &diagnostics() const {
         return diagnostics_;
@@ -41,6 +42,11 @@ public:
     // Find all references of a symbol by name and kind
     std::vector<SymbolOccurrence> find_references(const std::string &name,
                                                    SymbolKind kind) const;
+
+    // Topmost assignment (`~ name = …`) of a variable in this file. Used as the
+    // "definition" of a local/ad-hoc variable that has no @let or global decl.
+    std::optional<SymbolOccurrence>
+    find_first_assignment(const std::string &name) const;
 
     // Get the line of text at 0-based line index
     std::string get_line(int line) const;

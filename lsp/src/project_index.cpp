@@ -86,25 +86,102 @@ static bool find_decl_position(const std::string &text, const std::string &name,
     return false;
 }
 
+static std::vector<std::string> split_lines(const std::string &text) {
+    std::vector<std::string> lines;
+    std::istringstream stream(text);
+    std::string line;
+    while (std::getline(stream, line)) {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        lines.push_back(line);
+    }
+    return lines;
+}
+
+// Hover doc for a codex symbol defined at `def_line`: the trailing `---`
+// comment on that line, plus the contiguous block of `---` comment lines
+// immediately above it (a blank line breaks the chain).
+static std::string extract_doc(const std::vector<std::string> &lines,
+                               int def_line) {
+    auto strip_marker = [](const std::string &trimmed) {
+        auto content = trimmed.substr(3);
+        auto cs = content.find_first_not_of(" \t");
+        return cs != std::string::npos ? content.substr(cs) : std::string{};
+    };
+
+    std::string trailing;
+    if (def_line >= 0 && def_line < static_cast<int>(lines.size())) {
+        auto pos = lines[def_line].find("---");
+        if (pos != std::string::npos)
+            trailing = strip_marker(lines[def_line].substr(pos));
+    }
+
+    std::vector<std::string> preceding;
+    bool found = false;
+    for (int i = def_line - 1; i >= 0; --i) {
+        const std::string &prev = lines[i];
+        auto s = prev.find_first_not_of(" \t");
+        if (s == std::string::npos) {
+            if (found)
+                break;
+            continue;
+        }
+        auto trimmed = prev.substr(s);
+        if (trimmed.rfind("---", 0) == 0) {
+            found = true;
+            preceding.push_back(strip_marker(trimmed));
+        } else {
+            break;
+        }
+    }
+    std::string result;
+    for (auto it = preceding.rbegin(); it != preceding.rend(); ++it) {
+        if (!result.empty())
+            result += "\n";
+        result += *it;
+    }
+    if (!trailing.empty()) {
+        if (!result.empty())
+            result += "\n";
+        result += trailing;
+    }
+    return result;
+}
+
 void ProjectIndex::build(const Skald::Codex *codex) {
     modules_.clear();
     globals_.clear();
+    methods_.clear();
     if (!codex)
         return;
 
     const std::string root = codex->path;
 
-    // Codex globals: locate each in the codex file text for jump targets.
     std::string codex_full = (fs::path(root) / codex->filename).string();
     std::string codex_uri = "file://" + codex_full;
     std::string codex_text = read_file(codex_full);
+    std::vector<std::string> codex_lines = split_lines(codex_text);
+
+    // Codex globals: locate each in the codex file text for jump targets, and
+    // grab any preceding/trailing `---` comments as hover doc.
     for (const auto &g : codex->global_vars) {
         VarDef def;
         def.uri = codex_uri;
         def.type = g.var.type;
-        find_decl_position(codex_text, g.var.name, def.line, def.col,
-                           def.end_col);
+        if (find_decl_position(codex_text, g.var.name, def.line, def.col,
+                               def.end_col))
+            def.doc = extract_doc(codex_lines, def.line);
         globals_[g.var.name] = def;
+    }
+
+    // Codex methods: same treatment (jump target + hover doc).
+    for (const auto &m : codex->method_defs) {
+        VarDef def;
+        def.uri = codex_uri;
+        if (find_decl_position(codex_text, m.name, def.line, def.col,
+                               def.end_col))
+            def.doc = extract_doc(codex_lines, def.line);
+        methods_[m.name] = def;
     }
 
     FileManager fm;
@@ -204,6 +281,22 @@ ProjectIndex::resolve_external_var(const std::string &name,
         if (v != it->second.vars.end())
             return v->second;
     }
+    return std::nullopt;
+}
+
+std::optional<VarDef>
+ProjectIndex::resolve_method(const std::string &name) const {
+    auto it = methods_.find(name);
+    if (it != methods_.end())
+        return it->second;
+    return std::nullopt;
+}
+
+std::optional<VarDef>
+ProjectIndex::resolve_global(const std::string &name) const {
+    auto it = globals_.find(name);
+    if (it != globals_.end())
+        return it->second;
     return std::nullopt;
 }
 

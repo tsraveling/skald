@@ -24,6 +24,9 @@ struct SymbolOccurrence {
     // (true) or inline as a bare operation (false). Used to flag action-typed
     // methods used where a value is expected.
     bool is_rvalue = false;
+    // For variables only: is this occurrence an assignment target (a mutation
+    // lvalue, `~ name = …`)? The topmost assignment defines a local variable.
+    bool is_assignment = false;
 };
 
 struct LspParseState : public Skald::ParseState {
@@ -45,8 +48,9 @@ struct LspParseState : public Skald::ParseState {
 
     void record_symbol(const std::string &name, SymbolKind kind,
                        bool is_definition, const SourceRange &range,
-                       bool is_rvalue = false) {
-        symbols.push_back({name, kind, is_definition, range, is_rvalue});
+                       bool is_rvalue = false, bool is_assignment = false) {
+        symbols.push_back(
+            {name, kind, is_definition, range, is_rvalue, is_assignment});
     }
 };
 

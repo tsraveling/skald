@@ -8,13 +8,14 @@
 
 namespace SkaldLsp {
 
-// A cross-file definition site for a variable.
+// A cross-file definition site for a variable or method.
 struct VarDef {
     std::string uri;
     int line = 0;
     int col = 0;
     int end_col = 0;
     Skald::ValueType type = Skald::ValueType::STRING;
+    std::string doc; // preceding + trailing `---` comments (hover text)
 };
 
 // Whole-project model: every .ska under the codex root, its @let module vars,
@@ -38,6 +39,12 @@ public:
     std::optional<VarDef> resolve_external_var(const std::string &name,
                                                const std::string &rel_path) const;
 
+    // Resolve a codex method to its definition site (with hover doc).
+    std::optional<VarDef> resolve_method(const std::string &name) const;
+
+    // Codex global definition site (with hover doc), if `name` is a global.
+    std::optional<VarDef> resolve_global(const std::string &name) const;
+
 private:
     struct ModuleEntry {
         std::string uri;
@@ -50,6 +57,7 @@ private:
 
     std::unordered_map<std::string, ModuleEntry> modules_; // by rel path
     std::unordered_map<std::string, VarDef> globals_;      // codex globals
+    std::unordered_map<std::string, VarDef> methods_;      // codex methods
 };
 
 } // namespace SkaldLsp

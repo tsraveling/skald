@@ -282,6 +282,21 @@ std::vector<SymbolOccurrence> Document::find_references(const std::string &name,
   return refs;
 }
 
+std::optional<SymbolOccurrence>
+Document::find_first_assignment(const std::string &name) const {
+    const SymbolOccurrence *best = nullptr;
+    for (auto &sym : symbols_) {
+        if (sym.kind == SymbolKind::Variable && sym.is_assignment &&
+            sym.name == name) {
+            if (!best || sym.range.line < best->range.line)
+                best = &sym;
+        }
+    }
+    if (best)
+        return *best;
+    return std::nullopt;
+}
+
 std::string Document::get_line(int line) const {
   std::istringstream stream(text_);
   std::string result;

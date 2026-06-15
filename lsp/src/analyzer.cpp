@@ -1,4 +1,5 @@
 #include "analyzer.h"
+#include "project_index.h"
 #include "skald.h"
 #include <algorithm>
 #include <cctype>
@@ -321,9 +322,15 @@ std::optional<std::string> get_hover(const Document &doc, int line,
         // Determine scope: global (codex), then module (@let), else local.
         if (codex)
             for (auto &g : codex->global_vars)
-                if (g.var.name == sym->name)
-                    return "Variable `" + sym->name + "` (global) = " +
-                           Skald::rval_to_string(g.initial_value);
+                if (g.var.name == sym->name) {
+                    std::string hover = "Variable `" + sym->name + "` (global) = " +
+                                        Skald::rval_to_string(g.initial_value);
+                    if (doc.project())
+                        if (auto vd = doc.project()->resolve_global(sym->name))
+                            if (!vd->doc.empty())
+                                hover += "\n\n---\n\n" + vd->doc;
+                    return hover;
+                }
         for (auto &mv : doc.module().module_vars)
             if (mv.var.name == sym->name) {
                 std::string hover = "Variable `" + sym->name + "` (module) = " +
@@ -341,8 +348,14 @@ std::optional<std::string> get_hover(const Document &doc, int line,
     case SymbolKind::Method: {
         if (codex)
             for (auto &def : codex->method_defs)
-                if (def.name == sym->name)
-                    return "Method `:" + def.dbg_desc() + "`";
+                if (def.name == sym->name) {
+                    std::string hover = "Method `:" + def.dbg_desc() + "`";
+                    if (doc.project())
+                        if (auto md = doc.project()->resolve_method(sym->name))
+                            if (!md->doc.empty())
+                                hover += "\n\n---\n\n" + md->doc;
+                    return hover;
+                }
         return "Method `:" + sym->name + "()` (not defined in codex)";
     }
     case SymbolKind::FileRef:

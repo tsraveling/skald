@@ -151,12 +151,14 @@ template <> struct lsp_action<Skald::op_mutate_start> {
   }
 };
 
-// op_mutate_*: variable mutation target reference
+// op_mutate_*: variable mutation target reference. A mutation is also an
+// assignment (it sets the variable), so flag it — the topmost assignment is
+// treated as a local variable's definition.
 template <> struct lsp_action<Skald::op_mutate_equate> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
-                        state.mutate_target_range);
+                        state.mutate_target_range, false, /*is_assignment=*/true);
     Skald::action<Skald::op_mutate_equate>::apply(input, state);
   }
 };
@@ -164,7 +166,7 @@ template <> struct lsp_action<Skald::op_mutate_switch> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
-                        state.mutate_target_range);
+                        state.mutate_target_range, false, /*is_assignment=*/true);
     Skald::action<Skald::op_mutate_switch>::apply(input, state);
   }
 };
@@ -172,7 +174,7 @@ template <> struct lsp_action<Skald::op_mutate_add> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
-                        state.mutate_target_range);
+                        state.mutate_target_range, false, /*is_assignment=*/true);
     Skald::action<Skald::op_mutate_add>::apply(input, state);
   }
 };
@@ -180,7 +182,7 @@ template <> struct lsp_action<Skald::op_mutate_subtract> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
-                        state.mutate_target_range);
+                        state.mutate_target_range, false, /*is_assignment=*/true);
     Skald::action<Skald::op_mutate_subtract>::apply(input, state);
   }
 };
