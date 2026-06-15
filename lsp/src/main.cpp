@@ -18,7 +18,13 @@ int main() {
       // stdin closed or read error
       break;
     }
-    server.handle_message(*msg);
+    // A malformed document or request must never take down the server.
+    try {
+      server.handle_message(*msg);
+    } catch (const std::exception &) {
+      // swallow: keep serving subsequent messages
+    } catch (...) {
+    }
   }
 
   return 0;

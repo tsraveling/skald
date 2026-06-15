@@ -2,6 +2,7 @@
 #include "lsp_actions.h"
 #include "lsp_parse_state.h"
 #include "move_resolver.h"
+#include "parse_guard.h"
 #include "project_index.h"
 #include "skald_grammar.h"
 #include <filesystem>
@@ -51,6 +52,28 @@ void Document::parse() {
     if (pos != std::string::npos)
         filename = filename.substr(pos + 1);
 
+    // Guard against the non-terminating top_matter rule (see parse_guard.h).
+    {
+        bool has_stray = false;
+        int sl = 0, sc = 0, slen = 0;
+        if (!top_matter_safe(text_, has_stray, sl, sc, slen)) {
+            parse_ok_ = false;
+            if (has_stray) {
+                LspTypes::Diagnostic diag;
+                diag.range.start = {sl, sc};
+                diag.range.end = {sl, sc + slen};
+                diag.severity = LspTypes::DiagnosticSeverity::Error;
+                diag.message =
+                    "Unexpected content before the first '# ' block. Only "
+                    "@let / @testbed / @receive blocks and '---' comments may "
+                    "appear here.";
+                diagnostics_.push_back(diag);
+            }
+            // No usable module; skip parsing to avoid a hang.
+            return;
+        }
+    }
+
     LspParseState state(filename, codex_);
 
     // Ensure text ends with newline (PEGTL grammar expects it)
@@ -73,6 +96,14 @@ void Document::parse() {
         diag.range.end.character = static_cast<int>(p.column);
         diag.severity = LspTypes::DiagnosticSeverity::Error;
         diag.message = std::string(e.message());
+        diagnostics_.push_back(diag);
+    } catch (const std::exception &e) {
+        // The library can throw std::runtime_error mid-parse (e.g. empty rvalue
+        // buffers). Surface it instead of letting it crash the server.
+        parse_ok_ = false;
+        LspTypes::Diagnostic diag;
+        diag.severity = LspTypes::DiagnosticSeverity::Error;
+        diag.message = std::string("Parse error: ") + e.what();
         diagnostics_.push_back(diag);
     }
 
