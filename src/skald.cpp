@@ -1055,7 +1055,6 @@ ParseResult Engine::setup(std::string path) {
 
 ParseResult Engine::load(std::string path) {
   try {
-    dbg_out_on = false;
     // Resolve project paths against the codex root: "alice.ska" with codex
     // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
     std::string file_path = codex ? codex->resolve_path(path) : path;
@@ -1080,7 +1079,6 @@ ParseResult Engine::load(std::string path) {
 
     // Grab the finished module from the parse state
     current = std::make_unique<Module>(std::move(pstate.module));
-    dbg_out_on = true;
     return ParseResult::with(pstate.errors);
   } catch (const pegtl::parse_error &e) {
     dbg_out("Parse error: " << e.what());

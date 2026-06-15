@@ -160,6 +160,9 @@ if(SKALD_BUILD_LSP)
         lsp/src/analyzer.cpp
         lsp/src/document.cpp
         lsp/src/workspace.cpp
+        lsp/src/codex_cache.cpp
+        lsp/src/move_resolver.cpp
+        lsp/src/project_index.cpp
     )
     target_link_libraries(skald_lsp PRIVATE skald_static nlohmann_json::nlohmann_json)
     target_include_directories(skald_lsp PRIVATE

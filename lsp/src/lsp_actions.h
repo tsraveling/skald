@@ -3,6 +3,7 @@
 #include "lsp_parse_state.h"
 #include "skald_actions.h"
 #include "skald_grammar.h"
+#include <cctype>
 
 namespace SkaldLsp {
 
@@ -15,12 +16,32 @@ SourceRange range_from_input(const ActionInput &input) {
           static_cast<int>(pos.column) - 1 + static_cast<int>(input.size())};
 }
 
+// Helper: a line-level rule (declaration, testbed_set) begins with optional
+// indent then an identifier. Pull out that leading identifier's name and a
+// tight range over it.
+template <typename ActionInput>
+static std::pair<std::string, SourceRange>
+leading_identifier(const ActionInput &input) {
+  std::string s = input.string();
+  auto pos = input.position();
+  size_t i = 0;
+  while (i < s.size() && (s[i] == ' ' || s[i] == '\t'))
+    ++i;
+  size_t start = i;
+  while (i < s.size() &&
+         (std::isalnum(static_cast<unsigned char>(s[i])) || s[i] == '_'))
+    ++i;
+  std::string name = s.substr(start, i - start);
+  SourceRange range{static_cast<int>(pos.line) - 1,
+                    static_cast<int>(pos.column) - 1 + static_cast<int>(start),
+                    static_cast<int>(pos.column) - 1 + static_cast<int>(i)};
+  return {name, range};
+}
+
 // Default: inherit base action (does nothing if base has no specialization)
 template <typename Rule> struct lsp_action : Skald::action<Rule> {};
 
 // identifier: save position on every fire
-// NOTE: This fires for direct `identifier` matches but NOT when matched
-// through inheriting rules like block_tag_name, variable_name, etc.
 template <> struct lsp_action<Skald::identifier> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
@@ -29,56 +50,64 @@ template <> struct lsp_action<Skald::identifier> {
   }
 };
 
-// variable_name: alias for identifier, also set last_identifier_range
+// variable_name: alias for identifier; base action<identifier> won't fire.
 template <> struct lsp_action<Skald::variable_name> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    // variable_name inherits from identifier but action<identifier> won't fire.
-    // We need to manually set last_identifier and last_identifier_range.
     state.last_identifier_range = range_from_input(input);
     state.last_identifier = input.string();
   }
 };
 
-// block_tag_name: definition of a block tag (#tag)
+// block_tag_name: definition of a block tag. The library builds the full
+// dotted path (parent.child.grandchild) and pushes the block; we record the
+// dotted name with a range over just the leaf identifier.
 template <> struct lsp_action<Skald::block_tag_name> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = input.string();
     auto range = range_from_input(input);
     state.last_identifier_range = range;
-    state.record_symbol(name, SymbolKind::BlockTag, true, range);
+    size_t before = state.module.blocks.size();
     Skald::action<Skald::block_tag_name>::apply(input, state);
+    // Only record if the library actually started a block (no error).
+    if (state.module.blocks.size() > before) {
+      state.record_symbol(state.module.blocks.back().tag, SymbolKind::BlockTag,
+                          true, range);
+    }
   }
 };
 
-// op_move: reference to a block tag (-> tag)
-// The identifier inside op_move is matched directly as `identifier`, so
-// last_identifier_range is set by lsp_action<identifier>.
+// move_identifier_full / move_identifier_short: capture the range of the whole
+// move expression. The library resolves it into an absolute dotted tag stored
+// in state.move_identifier_store.
+template <> struct lsp_action<Skald::move_identifier_full> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, LspParseState &state) {
+    state.move_expr_range = range_from_input(input);
+    Skald::action<Skald::move_identifier_full>::apply(input, state);
+  }
+};
+template <> struct lsp_action<Skald::move_identifier_short> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, LspParseState &state) {
+    state.move_expr_range = range_from_input(input);
+    Skald::action<Skald::move_identifier_short>::apply(input, state);
+  }
+};
+
+// op_move: reference to a block tag (-> target). Records the resolved absolute
+// dotted tag the library computed. Fires for inline_choice_move too (it is an
+// op_move), so we do not specialize that separately.
 template <> struct lsp_action<Skald::op_move> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.last_identifier;
-    state.record_symbol(name, SymbolKind::BlockTag, false,
-                        state.last_identifier_range);
     Skald::action<Skald::op_move>::apply(input, state);
+    state.record_symbol(state.move_identifier_store, SymbolKind::BlockTag, false,
+                        state.move_expr_range);
   }
 };
 
-// inline_choice_move: reference to a block tag in choice (-> tag)
-template <> struct lsp_action<Skald::inline_choice_move> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.last_identifier;
-    state.record_symbol(name, SymbolKind::BlockTag, false,
-                        state.last_identifier_range);
-    Skald::action<Skald::inline_choice_move>::apply(input, state);
-  }
-};
-
-// r_variable: variable reference (inherits from variable_name : identifier)
-// PEGTL fires action<r_variable> but NOT action<variable_name> or
-// action<identifier>.
+// r_variable: variable reference (rvalue / conditional / injection)
 template <> struct lsp_action<Skald::r_variable> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
@@ -87,6 +116,28 @@ template <> struct lsp_action<Skald::r_variable> {
     state.last_identifier_range = range;
     state.record_symbol(name, SymbolKind::Variable, false, range);
     Skald::action<Skald::r_variable>::apply(input, state);
+  }
+};
+
+// declaration: a module var definition inside an @let block.
+template <> struct lsp_action<Skald::declaration> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, LspParseState &state) {
+    Skald::action<Skald::declaration>::apply(input, state);
+    auto [name, range] = leading_identifier(input);
+    if (!name.empty())
+      state.record_symbol(name, SymbolKind::Variable, true, range);
+  }
+};
+
+// testbed_set: an `identifier = value` line inside a @testbed block.
+template <> struct lsp_action<Skald::testbed_set> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, LspParseState &state) {
+    Skald::action<Skald::testbed_set>::apply(input, state);
+    auto [name, range] = leading_identifier(input);
+    if (!name.empty())
+      state.record_symbol(name, SymbolKind::TestbedSet, false, range);
   }
 };
 
@@ -100,69 +151,58 @@ template <> struct lsp_action<Skald::op_mutate_start> {
   }
 };
 
-// op_mutate_equate: variable mutation target (~ var = ...)
+// op_mutate_*: variable mutation target reference
 template <> struct lsp_action<Skald::op_mutate_equate> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.mutate_target_name;
-    state.record_symbol(name, SymbolKind::Variable, false,
+    state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
                         state.mutate_target_range);
     Skald::action<Skald::op_mutate_equate>::apply(input, state);
   }
 };
-
-// op_mutate_switch: variable mutation (~ var =!)
 template <> struct lsp_action<Skald::op_mutate_switch> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.mutate_target_name;
-    state.record_symbol(name, SymbolKind::Variable, false,
+    state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
                         state.mutate_target_range);
     Skald::action<Skald::op_mutate_switch>::apply(input, state);
   }
 };
-
-// op_mutate_add: variable mutation (~ var += ...)
 template <> struct lsp_action<Skald::op_mutate_add> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.mutate_target_name;
-    state.record_symbol(name, SymbolKind::Variable, false,
+    state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
                         state.mutate_target_range);
     Skald::action<Skald::op_mutate_add>::apply(input, state);
   }
 };
-
-// op_mutate_subtract: variable mutation (~ var -= ...)
 template <> struct lsp_action<Skald::op_mutate_subtract> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.mutate_target_name;
-    state.record_symbol(name, SymbolKind::Variable, false,
+    state.record_symbol(state.mutate_target_name, SymbolKind::Variable, false,
                         state.mutate_target_range);
     Skald::action<Skald::op_mutate_subtract>::apply(input, state);
   }
 };
 
-// op_method: method call as operation (:method(...))
-// The identifier inside is matched directly.
+// op_method: method call as an inline operation (:method(...))
 template <> struct lsp_action<Skald::op_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     auto name = state.last_identifier;
     state.record_symbol(name, SymbolKind::Method, false,
-                        state.last_identifier_range);
+                        state.last_identifier_range, /*is_rvalue=*/false);
     Skald::action<Skald::op_method>::apply(input, state);
   }
 };
 
-// r_method: method call as rvalue (:method(...))
+// r_method: method call used as an rvalue / conditional (:method(...))
 template <> struct lsp_action<Skald::r_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     auto name = state.last_identifier;
     state.record_symbol(name, SymbolKind::Method, false,
-                        state.last_identifier_range);
+                        state.last_identifier_range, /*is_rvalue=*/true);
     Skald::action<Skald::r_method>::apply(input, state);
   }
 };
@@ -182,15 +222,6 @@ template <> struct lsp_action<Skald::module_path> {
         static_cast<int>(pos.column) - 1 + static_cast<int>(name.size())};
     state.record_symbol(name, SymbolKind::FileRef, false, range);
     Skald::action<Skald::module_path>::apply(input, state);
-  }
-};
-
-// skip_line: error recovery — record skipped lines for diagnostics
-template <> struct lsp_action<Skald::skip_line> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, LspParseState &state) {
-    auto range = range_from_input(input);
-    state.skipped_lines.push_back(range);
   }
 };
 
