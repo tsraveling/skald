@@ -1,9 +1,7 @@
 #include "document.h"
-#include "lints.h"
 #include "lsp_actions.h"
 #include "lsp_parse_state.h"
 #include "move_resolver.h"
-#include "parse_guard.h"
 #include "project_index.h"
 #include "skald_grammar.h"
 #include <filesystem>
@@ -53,36 +51,6 @@ void Document::parse() {
   if (pos != std::string::npos)
     filename = filename.substr(pos + 1);
 
-  // Whole-file lints that run even when parsing halts/skips, so every
-  // offending line is flagged in one pass — not just the first one the
-  // parser trips over.
-  for (auto &d : lint_deprecated_comments(text_))
-    diagnostics_.push_back(d);
-  for (auto &d : lint_indentation(text_))
-    diagnostics_.push_back(d);
-
-  // Guard against the non-terminating top_matter rule (see parse_guard.h).
-  {
-    bool has_stray = false;
-    int sl = 0, sc = 0, slen = 0;
-    if (!top_matter_safe(text_, has_stray, sl, sc, slen)) {
-      parse_ok_ = false;
-      if (has_stray) {
-        LspTypes::Diagnostic diag;
-        diag.range.start = {sl, sc};
-        diag.range.end = {sl, sc + slen};
-        diag.severity = LspTypes::DiagnosticSeverity::Error;
-        diag.message =
-            "Unexpected content before the first '# ' block. Only "
-            "@let / @testbed / @receive blocks and '---' comments may "
-            "appear here.";
-        diagnostics_.push_back(diag);
-      }
-      // No usable module; skip parsing to avoid a hang.
-      return;
-    }
-  }
-
   LspParseState state(filename, codex_);
 
   // Ensure text ends with newline (PEGTL grammar expects it)
@@ -96,11 +64,9 @@ void Document::parse() {
     tao::pegtl::parse<Skald::grammar, lsp_action>(input, state);
     parse_ok_ = true;
 
-    // The grammar ends in `opt<eof>`, so a syntax error that halts block
-    // consumption still "succeeds" with the remainder of the file left
-    // unparsed (and invisible to every feature). Detect leftover input and
-    // flag exactly where parsing stopped, instead of silently dropping the
-    // rest of the file.
+    // The grammar recovers from malformed lines and consumes the whole file,
+    // so leftover input is not expected. If any remains (an unrecovered
+    // grammar gap), flag where it stopped rather than silently dropping it.
     if (!input.empty()) {
       const char *p = input.current();
       size_t n = input.size();
@@ -116,24 +82,8 @@ void Document::parse() {
         diag.range.end.line = static_cast<int>(pos.line) - 1;
         diag.range.end.character = static_cast<int>(pos.column);
         diag.severity = LspTypes::DiagnosticSeverity::Error;
-
-        // Try to explain *why* it stopped by inspecting the halt line.
-        std::string halt = get_line(static_cast<int>(pos.line) - 1);
-        size_t ind = indent_width(halt);
-        std::string body = halt.substr(std::min(ind, halt.size()));
-        size_t op_at = 0;
-        if (find_two_hyphen_comment(halt, ind) >= 0) {
-          diag.message = "Comment designation requires three hyphens.";
-        } else if (ind > 0 && looks_like_operation(body, op_at)) {
-          diag.message =
-              "Parsing stopped here. This line looks like an "
-              "operation but is indented; operations must be at block "
-              "level (no indent) or indented under a '>' choice. The "
-              "rest of the file was not analyzed.";
-        } else {
-          diag.message = "Parsing stopped here; the rest of the file was not "
-                         "analyzed. Check this line for a syntax error.";
-        }
+        diag.message = "Parsing stopped here; the rest of the file was not "
+                       "analyzed.";
         diagnostics_.push_back(diag);
       }
     }

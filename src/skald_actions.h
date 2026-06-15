@@ -838,6 +838,15 @@ template <> struct action<cond_chain_endif> {
   static void apply0(ParseState &state) { dbg_out("@endif"); }
 };
 
+// Error recovery: emit a ParseError for a line nothing else could consume, and
+// let parsing continue (instead of silently dropping the rest of the file).
+template <> struct action<malformed_line> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.err(input.position(), "Malformed line: could not be parsed.");
+  }
+};
+
 template <> struct action<cond_chain> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {

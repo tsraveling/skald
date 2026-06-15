@@ -52,6 +52,10 @@ struct keyword_receive : keyword<'@', 'r', 'e', 'c', 'e', 'i', 'v', 'e'> {};
 
 // SECTION: TOP MATTER
 
+/** Error-recovery rule (defined after block_tag_line). Forward-declared so top
+ *  matter can use it too. */
+struct malformed_line;
+
 /** Simple `value = 3` kind of set for testbeds. */
 struct testbed_set
     : seq<indent, identifier, sp, one<'='>, ws, rvalue_simple, functional_eol> {
@@ -73,8 +77,8 @@ struct let : seq<let_open, star<sor<ignored, declaration>>, let_close> {};
 struct receive : seq<keyword_receive, ws, module_path, functional_eol> {};
 
 /** The whole top matter section */
-struct top_matter : star<sor<testbed, let, receive, ignored,
-                             seq<not_at<block_prefix>, not_at<eof>, any>>> {};
+struct top_matter
+    : star<sor<testbed, let, receive, ignored, malformed_line>> {};
 
 // SECTION: CONDITIONALS
 
@@ -262,9 +266,20 @@ struct cond_chain : seq<cond_chain_if_block, star<cond_chain_elseif_block>,
 
 // SECTION: BLOCKS
 
+/** Error recovery: a non-empty line that no real member rule could consume
+ *  (e.g. an old `--` comment after an operation, or a stray indented line).
+ *  Used in both top matter and blocks; tried only after every real rule fails,
+ *  and never swallows a valid block tag line. An action emits a ParseError so
+ *  callers (skalder, LSP) can surface it, and parsing continues instead of
+ *  silently abandoning the rest of the file. */
+struct malformed_line : seq<not_at<block_tag_line>, not_at<eolf>, until<eolf>> {
+};
+
 /** A `block` starts with a tag line, then has beats, comments/blank,
  * operations, choice blocks until the next block starts. */
-struct block : seq<block_tag_line, star<sor<cond_chain, block_member>>> {};
+struct block
+    : seq<block_tag_line,
+          star<sor<cond_chain, block_member, malformed_line>>> {};
 
 // SECTION: FULL GRAMMAR
 

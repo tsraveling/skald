@@ -1,7 +1,6 @@
 #include "project_index.h"
 #include "lsp_actions.h"
 #include "lsp_parse_state.h"
-#include "parse_guard.h"
 #include "skald_grammar.h"
 #include "skalder_fs.h"
 #include <deque>
@@ -117,15 +116,6 @@ void ProjectIndex::build(const Skald::Codex *codex) {
             continue;
         if (text.back() != '\n')
             text += '\n';
-
-        // Skip files the grammar would hang on (see parse_guard.h); a single
-        // bad module must not freeze the whole project scan.
-        {
-            bool hs = false;
-            int a = 0, b = 0, c = 0;
-            if (!top_matter_safe(text, hs, a, b, c))
-                continue;
-        }
 
         LspParseState state(rel, codex);
         try {

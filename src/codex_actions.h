@@ -9,6 +9,15 @@ namespace Skald {
 
 template <typename Rule> struct codex_action {};
 
+// Error recovery: emit a ParseError for a line nothing else could consume, and
+// let parsing continue (instead of silently dropping the rest of the codex).
+template <> struct codex_action<codex_malformed_line> {
+  template <typename CodexActionInput>
+  static void apply(const CodexActionInput &input, CodexParseState &state) {
+    state.err(input.position(), "Malformed line: could not be parsed.");
+  }
+};
+
 // SECTION: ABSTRACTION
 
 template <> struct codex_action<identifier> {
