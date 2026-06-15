@@ -86,6 +86,34 @@ void Document::parse() {
         tao::pegtl::memory_input input(source, filename);
         tao::pegtl::parse<Skald::grammar, lsp_action>(input, state);
         parse_ok_ = true;
+
+        // The grammar ends in `opt<eof>`, so a syntax error that halts block
+        // consumption still "succeeds" with the remainder of the file left
+        // unparsed (and invisible to every feature). Detect leftover input and
+        // flag exactly where parsing stopped, instead of silently dropping the
+        // rest of the file.
+        if (!input.empty()) {
+            const char *p = input.current();
+            size_t n = input.size();
+            size_t i = 0;
+            while (i < n &&
+                   (p[i] == ' ' || p[i] == '\t' || p[i] == '\r' || p[i] == '\n'))
+                ++i;
+            if (i < n) {
+                auto pos = input.position();
+                LspTypes::Diagnostic diag;
+                diag.range.start.line = static_cast<int>(pos.line) - 1;
+                diag.range.start.character = static_cast<int>(pos.column) - 1;
+                diag.range.end.line = static_cast<int>(pos.line) - 1;
+                diag.range.end.character = static_cast<int>(pos.column);
+                diag.severity = LspTypes::DiagnosticSeverity::Error;
+                diag.message =
+                    "Parsing stopped here; the rest of the file was not "
+                    "analyzed. Check this line for a syntax error (e.g. a '--' "
+                    "comment that should be '---', or stray text).";
+                diagnostics_.push_back(diag);
+            }
+        }
     } catch (const tao::pegtl::parse_error &e) {
         parse_ok_ = false;
         const auto &p = e.position_object();
