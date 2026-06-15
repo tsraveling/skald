@@ -73,8 +73,8 @@ struct let : seq<let_open, star<sor<ignored, declaration>>, let_close> {};
 struct receive : seq<keyword_receive, ws, module_path, functional_eol> {};
 
 /** The whole top matter section */
-struct top_matter
-    : star<sor<testbed, let, receive, ignored, not_at<block_prefix>>> {};
+struct top_matter : star<sor<testbed, let, receive, ignored,
+                             seq<not_at<block_prefix>, not_at<eof>, any>>> {};
 
 // SECTION: CONDITIONALS
 
