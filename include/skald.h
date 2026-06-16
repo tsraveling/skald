@@ -982,14 +982,6 @@ private:
    * choice in a CG. */
   Member &cursor_mem();
 
-  // FIXME: Remove extras here
-  /** This is either a BlockMember or conditional chain. */
-  // std::pair<Block &, MainBlockMember &> get_current_block_and_main_member();
-
-  /** Returns the BlockMember we are actually at, whether in a conditional chain
-   * or not. */
-  // std::pair<Block &, BlockMember &> get_current_block_and_member();
-
   /** This zeroes the state and drops us in at this beat index, e.g. from an
    *  external entry point. It also initializes Skald state, leaving extant
    *  state intact. */

@@ -122,7 +122,8 @@ template <> struct codex_action<declaration> {
       t = state.last_type; // grab strong type
     }
     if (state.declaration_was_valued) {
-      v = state.simple_rval_buffer_pop(); // grab default and get value from it
+      v = state.simple_rval_buffer_pop(
+          input.position()); // grab default and get value from it
       t = srval_get_type(v);
       if (state.declaration_was_typed) {
         if (t != state.last_type) {

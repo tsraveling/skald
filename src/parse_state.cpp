@@ -203,27 +203,26 @@ void ParseState::validate_method(const MethodCall &m,
 // SECTION: RVALUES
 
 RValue ParseState::rval_buffer_pop() {
-  // dbg_out(">>> rval_buffer_pop: " << rval_buffer.size() << " -1 ");
   auto back = rval_buffer.back();
   rval_buffer.pop_back();
   return back;
 }
 
-// FIXME: handle errors correctly
-SimpleRValue ParseState::simple_rval_buffer_pop() {
-  // dbg_out(">>> simple_rval_buffer_pop: " << rval_buffer.size() << " -1 ");
+SimpleRValue ParseState::simple_rval_buffer_pop(tao::pegtl::position pos) {
   auto back = rval_buffer.back();
   rval_buffer.pop_back();
 
   return std::visit(
-      [](auto &&val) -> SimpleRValue {
+      [&](auto &&val) -> SimpleRValue {
         using T = std::decay_t<decltype(val)>;
         if constexpr (std::is_same_v<T, std::string> ||
                       std::is_same_v<T, bool> || std::is_same_v<T, int> ||
                       std::is_same_v<T, float>) {
           return val;
         } else {
-          throw std::runtime_error("Expected simple RValue, got complex type");
+          err(pos, "Tried to pop a simple value (int, bool, string, float) but "
+                   "got a complex value (variable, method) instead!");
+          return false;
         }
       },
       back);

@@ -197,33 +197,6 @@ std::vector<MethodCallGet> queries_for_mutation(const Mutation &m) {
   return {};
 }
 
-// TODO: Someday, support method calls as method args.
-// For now trying to add them will throw parse errors.
-
-// STUB: Update this with new approach
-/** Returns all queries needed to execute a given operation */
-// FIXME: Clear out after processing
-// std::vector<MethodCallPost> queries_for_op(const Operation &op) {
-//   std::vector<MethodCallPost> ret;
-//   auto *call = op_get_call(op);
-//   if (call)
-//     ret.push_back(MethodCallPost{.call = *call,
-//                                  .expects_response = false,
-//                                  .line_number = call->line_number});
-//   return ret;
-// }
-//
-// /** Returns all queries needed to execute a list of ops */
-// std::vector<MethodCallPost>
-// queries_for_operations(const std::vector<Operation> &ops) {
-//   std::vector<MethodCallPost> ret;
-//   for (auto &op : ops) {
-//     auto q = queries_for_op(op);
-//     ret.insert(ret.end(), q.begin(), q.end());
-//   }
-//   return ret;
-// }
-
 /** Returns all queries needed to display a list of choices. Ops are handled
  *  on player picking a choice, so aren't queried here. */
 std::vector<MethodCallGet> queries_for_choice_group(const ChoiceGroup &group) {

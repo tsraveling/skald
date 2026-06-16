@@ -205,8 +205,6 @@ template <> struct action<declaration> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
 
-    // FIXME: declaration_was valued and _was_typed are not being set!
-
     // Rule: Must *either* be typed or valued (or both)
     if (!state.declaration_was_valued && !state.declaration_was_typed) {
       state.err(
@@ -221,7 +219,8 @@ template <> struct action<declaration> {
       t = state.last_type; // grab strong type
     }
     if (state.declaration_was_valued) {
-      v = state.simple_rval_buffer_pop(); // grab default and get value from it
+      v = state.simple_rval_buffer_pop(
+          input.position()); // grab default and get value from it
       t = srval_get_type(v);
       if (state.declaration_was_typed) {
         if (t != state.last_type) {
@@ -632,20 +631,6 @@ template <> struct action<op_mutate_switch> {
 
 /// OPERATION CORE ///
 
-// FIXME: Remove this once the member consumption works
-// template <> struct action<op_end> {
-//   template <typename ActionInput>
-//   static void apply(const ActionInput &input, ParseState &state) {
-//     auto text = input.string();
-//     dbg_out(">>> op_line: " << text);
-//     LineOp lo;
-//     lo.line_number = input.position().line;
-//     lo.op = state.operation_queue_pop();
-//     lo.condition.condition = state.conditional_buffer_pop();
-//     state.add_member(lo);
-//   }
-// };
-
 // SECTION: CHOICES
 
 template <> struct action<inline_choice_move> {
@@ -831,11 +816,6 @@ template <> struct action<cond_chain_else> {
     cb.line_number = input.position().line;
     state.open_chain->cond_blocks.push_back(cb);
   }
-};
-
-// FIXME: delete later
-template <> struct action<cond_chain_endif> {
-  static void apply0(ParseState &state) { dbg_out("@endif"); }
 };
 
 // Error recovery: emit a ParseError for a line nothing else could consume, and

@@ -178,7 +178,7 @@ struct ParseState {
   RValue rval_buffer_pop();
 
   /** Returns a value off of the rval buffer and panics if it's not simple. */
-  SimpleRValue simple_rval_buffer_pop();
+  SimpleRValue simple_rval_buffer_pop(tao::pegtl::position pos);
 
   // SECTION: ATOMS
 

@@ -31,8 +31,9 @@ struct CodexParseState {
   /** Returns the last buffered RValue, and pop it out of the buffer */
   RValue rval_buffer_pop();
 
-  /** Returns a value off of the rval buffer and panics if it's not simple. */
-  SimpleRValue simple_rval_buffer_pop();
+  /** Returns a value off of the rval buffer. If it's not simple, records a
+   *  parse error at `pos` and returns a false default. */
+  SimpleRValue simple_rval_buffer_pop(tao::pegtl::position pos);
 
   // SECTION: TYPING
 
