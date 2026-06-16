@@ -1,5 +1,6 @@
 #include "document.h"
 #include "lsp_actions.h"
+#include "lsp_doc_util.h"
 #include "lsp_parse_state.h"
 #include "move_resolver.h"
 #include "project_index.h"
@@ -28,21 +29,8 @@ void Document::update(const std::string &text) {
   parse();
 }
 
-// Map a library ParseError (1-based position) to an LSP diagnostic.
-static LspTypes::Diagnostic to_diagnostic(const Skald::ParseError &err) {
-  LspTypes::Diagnostic diag;
-  int line = err.pos.line > 0 ? static_cast<int>(err.pos.line) - 1 : 0;
-  int col = err.pos.column > 0 ? static_cast<int>(err.pos.column) - 1 : 0;
-  diag.range.start.line = line;
-  diag.range.start.character = col;
-  diag.range.end.line = line;
-  diag.range.end.character = col + 1;
-  diag.severity = err.severity == Skald::ParseError::WARNING
-                      ? LspTypes::DiagnosticSeverity::Warning
-                      : LspTypes::DiagnosticSeverity::Error;
-  diag.message = err.msg;
-  return diag;
-}
+// ParseError -> Diagnostic conversion lives in lsp_doc_util.h (shared with
+// codex_cache.cpp via SkaldLsp::to_diagnostic).
 
 void Document::parse() {
   // Extract a simple filename from the URI for ParseState

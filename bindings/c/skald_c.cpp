@@ -102,10 +102,11 @@ SkaldEngine *skald_engine_new(void) { return new (std::nothrow) SkaldEngine; }
 
 void skald_engine_free(SkaldEngine *engine) { delete engine; }
 
-void skald_engine_load(SkaldEngine *engine, const char *path) {
-  if (engine && path) {
-    engine->engine.load(path);
-  }
+SkaldErrorCode skald_engine_load(SkaldEngine *engine, const char *path) {
+  if (!engine || !path)
+    return SKALD_ERR_UNEXPECTED_NULL;
+  Skald::ParseResult result = engine->engine.load(path);
+  return result.ok ? SKALD_OK : SKALD_ERR_LOADING_MODULE;
 }
 
 // -----------------------------------------------------------------------------
@@ -410,6 +411,32 @@ const char *skald_go_module_get_tag(const SkaldResponse *response) {
 // Exit Accessors
 // -----------------------------------------------------------------------------
 
+// Unwrap an Exit response's argument into a SimpleRValue, or nullopt if this is
+// not an Exit, carries no argument, or the argument is not simple-castable.
+static std::optional<Skald::SimpleRValue>
+exit_simple(const SkaldResponse *response) {
+  if (!response)
+    return std::nullopt;
+  if (auto *e = std::get_if<Skald::Exit>(&response->response)) {
+    if (e->argument)
+      return Skald::cast_rval_to_simple(*e->argument);
+  }
+  return std::nullopt;
+}
+
+// Borrow the SimpleRValue carried by a Notification response, or nullptr if
+// this is not a Notification or it has no value. The pointer is valid for the
+// lifetime of the response.
+static const Skald::SimpleRValue *notif_simple(const SkaldResponse *response) {
+  if (!response)
+    return nullptr;
+  if (auto *n = std::get_if<Skald::Notification>(&response->response)) {
+    if (n->rval)
+      return &*n->rval;
+  }
+  return nullptr;
+}
+
 bool skald_exit_has_value(const SkaldResponse *response) {
   if (!response)
     return false;
@@ -426,60 +453,32 @@ const char *skald_exit_get_string(const SkaldResponse *response) {
 }
 
 int skald_exit_get_int(const SkaldResponse *response) {
-  if (!response)
-    return 0;
-  if (auto *e = std::get_if<Skald::Exit>(&response->response)) {
-    if (e->argument) {
-      if (auto simple = Skald::cast_rval_to_simple(*e->argument)) {
-        if (auto *i = Skald::srval_get_int(*simple)) {
-          return *i;
-        }
-      }
-    }
+  if (auto simple = exit_simple(response)) {
+    if (auto *i = Skald::srval_get_int(*simple))
+      return *i;
   }
   return 0;
 }
 
 bool skald_exit_get_bool(const SkaldResponse *response) {
-  if (!response)
-    return false;
-  if (auto *e = std::get_if<Skald::Exit>(&response->response)) {
-    if (e->argument) {
-      if (auto simple = Skald::cast_rval_to_simple(*e->argument)) {
-        if (auto *b = Skald::srval_get_bool(*simple)) {
-          return *b;
-        }
-      }
-    }
+  if (auto simple = exit_simple(response)) {
+    if (auto *b = Skald::srval_get_bool(*simple))
+      return *b;
   }
   return false;
 }
 
 float skald_exit_get_float(const SkaldResponse *response) {
-  if (!response)
-    return 0.0f;
-  if (auto *e = std::get_if<Skald::Exit>(&response->response)) {
-    if (e->argument) {
-      if (auto simple = Skald::cast_rval_to_simple(*e->argument)) {
-        if (auto *f = Skald::srval_get_float(*simple)) {
-          return *f;
-        }
-      }
-    }
+  if (auto simple = exit_simple(response)) {
+    if (auto *f = Skald::srval_get_float(*simple))
+      return *f;
   }
   return 0.0f;
 }
 
 SkaldValueType skald_exit_get_type(const SkaldResponse *response) {
-  if (!response)
-    return SKALD_VALUE_STRING;
-  if (auto *e = std::get_if<Skald::Exit>(&response->response)) {
-    if (e->argument) {
-      if (auto simple = Skald::cast_rval_to_simple(*e->argument)) {
-        return static_cast<SkaldValueType>(Skald::srval_get_type(*simple));
-      }
-    }
-  }
+  if (auto simple = exit_simple(response))
+    return static_cast<SkaldValueType>(Skald::srval_get_type(*simple));
   return SKALD_VALUE_STRING;
 }
 
@@ -506,13 +505,8 @@ bool skald_notification_has_value(const SkaldResponse *response) {
 }
 
 SkaldValueType skald_notification_get_type(const SkaldResponse *response) {
-  if (!response)
-    return SKALD_VALUE_STRING;
-  if (auto *n = std::get_if<Skald::Notification>(&response->response)) {
-    if (n->rval) {
-      return static_cast<SkaldValueType>(Skald::srval_get_type(*n->rval));
-    }
-  }
+  if (auto *rval = notif_simple(response))
+    return static_cast<SkaldValueType>(Skald::srval_get_type(*rval));
   return SKALD_VALUE_STRING;
 }
 
@@ -523,37 +517,25 @@ const char *skald_notification_get_string(const SkaldResponse *response) {
 }
 
 bool skald_notification_get_bool(const SkaldResponse *response) {
-  if (!response)
-    return false;
-  if (auto *n = std::get_if<Skald::Notification>(&response->response)) {
-    if (n->rval) {
-      if (auto *b = Skald::srval_get_bool(*n->rval))
-        return *b;
-    }
+  if (auto *rval = notif_simple(response)) {
+    if (auto *b = Skald::srval_get_bool(*rval))
+      return *b;
   }
   return false;
 }
 
 int skald_notification_get_int(const SkaldResponse *response) {
-  if (!response)
-    return 0;
-  if (auto *n = std::get_if<Skald::Notification>(&response->response)) {
-    if (n->rval) {
-      if (auto *i = Skald::srval_get_int(*n->rval))
-        return *i;
-    }
+  if (auto *rval = notif_simple(response)) {
+    if (auto *i = Skald::srval_get_int(*rval))
+      return *i;
   }
   return 0;
 }
 
 float skald_notification_get_float(const SkaldResponse *response) {
-  if (!response)
-    return 0.0f;
-  if (auto *n = std::get_if<Skald::Notification>(&response->response)) {
-    if (n->rval) {
-      if (auto *f = Skald::srval_get_float(*n->rval))
-        return *f;
-    }
+  if (auto *rval = notif_simple(response)) {
+    if (auto *f = Skald::srval_get_float(*rval))
+      return *f;
   }
   return 0.0f;
 }

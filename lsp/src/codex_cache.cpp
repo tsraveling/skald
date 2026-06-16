@@ -2,6 +2,7 @@
 #include "codex_actions.h"
 #include "codex_grammar.h"
 #include "codex_parse_state.h"
+#include "lsp_doc_util.h"
 #include "skalder_fs.h"
 #include <tao/pegtl.hpp>
 
@@ -60,19 +61,9 @@ CodexCache::Entry &CodexCache::load(const std::string &codex_fs_path) {
         entry.diagnostics.push_back(diag);
     }
 
-    // Surface structured codex parse errors (1-based -> 0-based).
-    for (const auto &err : pstate.errors) {
-        LspTypes::Diagnostic diag;
-        diag.range.start.line = static_cast<int>(err.pos.line) - 1;
-        diag.range.start.character = static_cast<int>(err.pos.column) - 1;
-        diag.range.end.line = static_cast<int>(err.pos.line) - 1;
-        diag.range.end.character = static_cast<int>(err.pos.column);
-        diag.severity = err.severity == Skald::ParseError::WARNING
-                            ? LspTypes::DiagnosticSeverity::Warning
-                            : LspTypes::DiagnosticSeverity::Error;
-        diag.message = err.msg;
-        entry.diagnostics.push_back(diag);
-    }
+    // Surface structured codex parse errors (1-based -> 0-based, clamped).
+    for (const auto &err : pstate.errors)
+        entry.diagnostics.push_back(to_diagnostic(err));
 
     entry.codex = std::make_unique<Skald::Codex>(std::move(pstate.codex));
     auto [inserted, _] = cache_.emplace(codex_fs_path, std::move(entry));

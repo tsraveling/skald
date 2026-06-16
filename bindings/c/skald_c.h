@@ -94,8 +94,12 @@ SKALD_API SkaldEngine *skald_engine_new(void);
 // Destroy an engine and free all associated memory.
 SKALD_API void skald_engine_free(SkaldEngine *engine);
 
-// Load a module from a file path.
-SKALD_API void skald_engine_load(SkaldEngine *engine, const char *path);
+// Load a module from a file path. Returns SKALD_OK on success, or an error
+// code on failure (SKALD_ERR_UNEXPECTED_NULL for a null engine/path,
+// SKALD_ERR_LOADING_MODULE if the module fails to parse). On failure the
+// engine has no usable module loaded, so do not call skald_engine_start.
+SKALD_API SkaldErrorCode skald_engine_load(SkaldEngine *engine,
+                                           const char *path);
 
 // =============================================================================
 // Global State Access
@@ -200,7 +204,10 @@ SKALD_API bool skald_option_group_get_available(const SkaldResponse *response,
 // SKALD_RESPONSE_METHOD_CALL_GET or SKALD_RESPONSE_METHOD_CALL_POST)
 //
 // A GET call expects a return value; answer it with skald_engine_answer_*.
-// A POST call is an action (void); answer to advance, the value is ignored.
+// A POST call is a fire-and-forget action (void): it is NOT pushed onto the
+// resolution stack, so do not answer it. Advance past it with
+// skald_engine_act() (any index) — calling skald_engine_answer_* on a POST
+// returns SKALD_ERR_RESOLUTION_QUEUE_EMPTY.
 // -----------------------------------------------------------------------------
 
 // Get the method name being called.

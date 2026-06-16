@@ -150,8 +150,17 @@ void Server::handle_did_change(const json &params) {
         std::string text = changes.back()["text"].get<std::string>();
         const Skald::Codex *codex = codex_for_uri(uri);
         ensure_project_index(codex, false);
-        documents_[uri] =
-            std::make_unique<Document>(uri, text, codex, &project_index_);
+        // Re-parse in place on the common path (text edits against the same
+        // mother codex); only rebuild the Document if its codex changed, since
+        // update() keeps the codex/project pointers it was constructed with.
+        auto it = documents_.find(uri);
+        if (it != documents_.end() && it->second->codex() == codex &&
+            it->second->project() == &project_index_) {
+            it->second->update(text);
+        } else {
+            documents_[uri] =
+                std::make_unique<Document>(uri, text, codex, &project_index_);
+        }
         publish_diagnostics(uri);
     }
 }
@@ -339,8 +348,11 @@ void Server::handle_did_change_watched_files(const json &params) {
     for (auto &[uri, doc] : documents_) {
         const Skald::Codex *codex = codex_for_uri(uri);
         ensure_project_index(codex, /*force=*/false);
-        std::string text = doc->text();
-        doc = std::make_unique<Document>(uri, text, codex, &project_index_);
+        // A watched-file change can swap the mother codex, so rebuild against
+        // the fresh codex/project. The new Document copies the old text before
+        // the assignment frees the old doc, so no separate text copy is needed.
+        doc = std::make_unique<Document>(uri, doc->text(), codex,
+                                         &project_index_);
     }
     for (auto &[uri, doc] : documents_) {
         publish_diagnostics(uri);

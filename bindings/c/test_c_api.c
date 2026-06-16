@@ -19,7 +19,11 @@ int main(int argc, char **argv) {
   }
 
   printf("Loading: %s\n", argv[1]);
-  skald_engine_load(engine, argv[1]);
+  if (skald_engine_load(engine, argv[1]) != SKALD_OK) {
+    printf("Failed to load module: %s\n", argv[1]);
+    skald_engine_free(engine);
+    return 1;
+  }
 
   // Global state API smoke check: setting an undefined global must fail with
   // VAR_UNDEFINED, and getting an undefined global must return false.
@@ -63,15 +67,22 @@ int main(int argc, char **argv) {
       resp = skald_engine_act(engine, 0); // Always pick first
       break;
     }
-    case SKALD_RESPONSE_METHOD_CALL_GET:
-    case SKALD_RESPONSE_METHOD_CALL_POST: {
+    case SKALD_RESPONSE_METHOD_CALL_GET: {
       const char *method = skald_query_get_method(resp);
-      bool expects = skald_query_expects_response(resp);
-      printf("[CALL: %s (%s)]\n", method, expects ? "get" : "post");
+      printf("[CALL: %s (get)]\n", method);
 
       skald_response_free(resp);
-      // Answer with null for now
+      // A GET expects a return value; answer with null for now.
       resp = skald_engine_answer_null(engine);
+      break;
+    }
+    case SKALD_RESPONSE_METHOD_CALL_POST: {
+      const char *method = skald_query_get_method(resp);
+      printf("[CALL: %s (post)]\n", method);
+
+      skald_response_free(resp);
+      // A POST is fire-and-forget; advance with act(), not answer().
+      resp = skald_engine_act(engine, 0);
       break;
     }
     case SKALD_RESPONSE_NOTIFICATION: {

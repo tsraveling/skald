@@ -1,5 +1,6 @@
 #include "project_index.h"
 #include "lsp_actions.h"
+#include "lsp_doc_util.h"
 #include "lsp_parse_state.h"
 #include "skald_grammar.h"
 #include "skalder_fs.h"
@@ -98,54 +99,14 @@ static std::vector<std::string> split_lines(const std::string &text) {
     return lines;
 }
 
-// Hover doc for a codex symbol defined at `def_line`: the trailing `---`
-// comment on that line, plus the contiguous block of `---` comment lines
-// immediately above it (a blank line breaks the chain).
+// Hover doc for a codex symbol defined at `def_line`, over the codex file's
+// lines. The extraction itself is shared (lsp_doc_util.h).
 static std::string extract_doc(const std::vector<std::string> &lines,
                                int def_line) {
-    auto strip_marker = [](const std::string &trimmed) {
-        auto content = trimmed.substr(3);
-        auto cs = content.find_first_not_of(" \t");
-        return cs != std::string::npos ? content.substr(cs) : std::string{};
-    };
-
-    std::string trailing;
-    if (def_line >= 0 && def_line < static_cast<int>(lines.size())) {
-        auto pos = lines[def_line].find("---");
-        if (pos != std::string::npos)
-            trailing = strip_marker(lines[def_line].substr(pos));
-    }
-
-    std::vector<std::string> preceding;
-    bool found = false;
-    for (int i = def_line - 1; i >= 0; --i) {
-        const std::string &prev = lines[i];
-        auto s = prev.find_first_not_of(" \t");
-        if (s == std::string::npos) {
-            if (found)
-                break;
-            continue;
-        }
-        auto trimmed = prev.substr(s);
-        if (trimmed.rfind("---", 0) == 0) {
-            found = true;
-            preceding.push_back(strip_marker(trimmed));
-        } else {
-            break;
-        }
-    }
-    std::string result;
-    for (auto it = preceding.rbegin(); it != preceding.rend(); ++it) {
-        if (!result.empty())
-            result += "\n";
-        result += *it;
-    }
-    if (!trailing.empty()) {
-        if (!result.empty())
-            result += "\n";
-        result += trailing;
-    }
-    return result;
+    return extract_doc_comment(def_line, [&](int i) {
+        return (i >= 0 && i < static_cast<int>(lines.size())) ? lines[i]
+                                                              : std::string{};
+    });
 }
 
 void ProjectIndex::build(const Skald::Codex *codex) {

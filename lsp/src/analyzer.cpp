@@ -1,4 +1,5 @@
 #include "analyzer.h"
+#include "lsp_doc_util.h"
 #include "project_index.h"
 #include "skald.h"
 #include <algorithm>
@@ -6,62 +7,11 @@
 
 namespace SkaldLsp {
 
-// Extract comment documentation for a symbol defined at the given line.
-// Comments are `---` (three hyphens): an end-of-line comment on the definition
-// line, plus contiguous `---` comment lines immediately preceding it.
+// Extract `---` doc comment for a symbol defined at the given line, over this
+// document's text. The extraction itself is shared (lsp_doc_util.h).
 static std::string extract_comment(const Document &doc, int def_line) {
-    auto strip_marker = [](const std::string &s) -> std::string {
-        // s is already trimmed of leading whitespace and starts with "---"
-        auto content = s.substr(3);
-        auto cs = content.find_first_not_of(" \t");
-        return cs != std::string::npos ? content.substr(cs) : "";
-    };
-
-    std::string same_line_comment;
-    std::string line_text = doc.get_line(def_line);
-    auto pos = line_text.find("---");
-    if (pos != std::string::npos) {
-        same_line_comment = line_text.substr(pos);
-        // trim to just the marker onward, then strip
-        auto t = same_line_comment.find("---");
-        same_line_comment = strip_marker(same_line_comment.substr(t));
-    }
-
-    // Walk upward collecting contiguous `---` comment lines, skipping blank
-    // lines between the definition and the comment block.
-    std::vector<std::string> preceding;
-    bool found_comment = false;
-    for (int i = def_line - 1; i >= 0; --i) {
-        std::string prev = doc.get_line(i);
-        auto start = prev.find_first_not_of(" \t");
-        if (start == std::string::npos) {
-            if (found_comment)
-                break;
-            continue;
-        }
-        auto trimmed = prev.substr(start);
-        if (trimmed.rfind("---", 0) == 0) {
-            found_comment = true;
-            preceding.push_back(strip_marker(trimmed));
-        } else {
-            break;
-        }
-    }
-
-    std::reverse(preceding.begin(), preceding.end());
-
-    std::string result;
-    for (auto &line : preceding) {
-        if (!result.empty())
-            result += "\n";
-        result += line;
-    }
-    if (!same_line_comment.empty()) {
-        if (!result.empty())
-            result += "\n";
-        result += same_line_comment;
-    }
-    return result;
+    return extract_doc_comment(def_line,
+                               [&](int i) { return doc.get_line(i); });
 }
 
 CompletionContext detect_completion_context(const std::string &line_text,
