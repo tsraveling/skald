@@ -21,6 +21,18 @@ int main(int argc, char **argv) {
   printf("Loading: %s\n", argv[1]);
   skald_engine_load(engine, argv[1]);
 
+  // Global state API smoke check: setting an undefined global must fail with
+  // VAR_UNDEFINED, and getting an undefined global must return false.
+  SkaldErrorCode set_err =
+      skald_engine_set_global_int(engine, "__does_not_exist__", 1);
+  SkaldValueType gt;
+  bool got = skald_engine_get_global(engine, "__does_not_exist__", &gt);
+  printf("Global API: set undefined -> code %d, get undefined -> %s\n", set_err,
+         got ? "found" : "not found");
+  if (set_err != SKALD_ERR_VAR_UNDEFINED || got) {
+    printf("  WARNING: unexpected global API behavior\n");
+  }
+
   printf("Starting...\n");
   SkaldResponse *resp = skald_engine_start(engine);
 
@@ -34,27 +46,38 @@ int main(int argc, char **argv) {
         printf("[%s]: ", attr);
       printf("%s\n", text);
 
-      size_t opt_count = skald_content_get_option_count(resp);
-      if (opt_count > 0) {
-        printf("  Choices:\n");
-        for (size_t i = 0; i < opt_count; i++) {
-          const char *opt_text = skald_content_get_option_text(resp, i);
-          bool avail = skald_content_get_option_available(resp, i);
-          printf("    %zu. %s %s\n", i, opt_text, avail ? "" : "(unavailable)");
-        }
-      }
-
       skald_response_free(resp);
       resp = skald_engine_act(engine, 0); // Always pick first/continue
       break;
     }
-    case SKALD_RESPONSE_QUERY: {
+    case SKALD_RESPONSE_OPTION_GROUP: {
+      size_t opt_count = skald_option_group_get_count(resp);
+      printf("  Choices:\n");
+      for (size_t i = 0; i < opt_count; i++) {
+        const char *opt_text = skald_option_group_get_text(resp, i);
+        bool avail = skald_option_group_get_available(resp, i);
+        printf("    %zu. %s %s\n", i, opt_text, avail ? "" : "(unavailable)");
+      }
+
+      skald_response_free(resp);
+      resp = skald_engine_act(engine, 0); // Always pick first
+      break;
+    }
+    case SKALD_RESPONSE_METHOD_CALL_GET:
+    case SKALD_RESPONSE_METHOD_CALL_POST: {
       const char *method = skald_query_get_method(resp);
-      printf("[QUERY: %s]\n", method);
+      bool expects = skald_query_expects_response(resp);
+      printf("[CALL: %s (%s)]\n", method, expects ? "get" : "post");
 
       skald_response_free(resp);
       // Answer with null for now
       resp = skald_engine_answer_null(engine);
+      break;
+    }
+    case SKALD_RESPONSE_NOTIFICATION: {
+      printf("[NOTIFY: %s]\n", skald_notification_get_var_name(resp));
+      skald_response_free(resp);
+      resp = skald_engine_act(engine, 0);
       break;
     }
     case SKALD_RESPONSE_ERROR: {
