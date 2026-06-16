@@ -55,8 +55,10 @@ typedef enum SkaldResponseType {
   SKALD_RESPONSE_NOTIFICATION = 8
 } SkaldResponseType;
 
-// Error codes - match the constants in skald.hpp
+// Error codes - match the constants in skald.hpp. SKALD_OK is C-bridge only
+// (no Skald counterpart) and signals success from functions that return a code.
 typedef enum SkaldErrorCode {
+  SKALD_OK = -1,
   SKALD_ERR_UNKNOWN = 0,
   SKALD_ERR_EOF = 1,
   SKALD_ERR_EMPTY_MODULE = 2,
@@ -103,8 +105,8 @@ SKALD_API void skald_engine_load(SkaldEngine *engine, const char *path);
 // does not exist, or with a mismatched type, fails.
 // =============================================================================
 
-// Set a global by type. Returns SKALD_ERR_UNKNOWN (0) on success, otherwise the
-// error code (SKALD_ERR_VAR_UNDEFINED or SKALD_ERR_TYPE_MISMATCH).
+// Set a global by type. Returns SKALD_OK on success, otherwise the error code
+// (SKALD_ERR_VAR_UNDEFINED or SKALD_ERR_TYPE_MISMATCH).
 SKALD_API SkaldErrorCode skald_engine_set_global_string(SkaldEngine *engine,
                                                         const char *key,
                                                         const char *value);

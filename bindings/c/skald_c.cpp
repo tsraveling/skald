@@ -113,10 +113,9 @@ void skald_engine_load(SkaldEngine *engine, const char *path) {
 // -----------------------------------------------------------------------------
 
 // Map the optional<Error> returned by Engine::set into a C error code.
-// SKALD_ERR_UNKNOWN (0) signals success here since set never produces UNKNOWN.
 static SkaldErrorCode set_result(std::optional<Skald::Error> err) {
   if (!err)
-    return SKALD_ERR_UNKNOWN;
+    return SKALD_OK;
   return static_cast<SkaldErrorCode>(err->code);
 }
 
