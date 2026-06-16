@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.0 - 2026-06-16
+#### Features
+- major engine change (#35) - (090047f) - Tim Raveling
+#### Bug Fixes
+- submodule update - (f31e674) - Tim Raveling
+#### Documentation
+- syntax updates - (209c348) - Tim Raveling
+- Syntax.md updates - (8d44e2b) - Tim Raveling
+
+- - -
+
 ## 0.5.1 - 2026-02-13
 #### Bug Fixes
 - adds preceding and same-line comments to hover output in LSP - (f9d8426) - Tim Raveling
