@@ -1109,4 +1109,35 @@ std::optional<std::string> Engine::get_codex_name() {
   return std::nullopt;
 }
 
+/// EXTERNAL STATE ACCESS ///
+
+/** Sets global state; errors if global doesn't exist or type mismatch. */
+std::optional<Error> Engine::set(std::string key, SimpleRValue val) {
+  auto it = global_state.find(key);
+  if (it == global_state.end()) {
+    return Error(ERROR_VAR_UNDEFINED,
+                 "Tried to set undefined global var " + key + ".", 0);
+  }
+
+  if (srval_get_type(it->second) != srval_get_type(val)) {
+    return Error(ERROR_TYPE_MISMATCH,
+                 "Tried to set global var " + key + " to " +
+                     rval_to_string(val) + ", but the type does not match.",
+                 0);
+  }
+
+  it->second = val;
+  return std::nullopt;
+}
+
+/** Returns state; errors if not set. */
+std::variant<Error, SimpleRValue> Engine::get(std::string key) {
+  auto it = global_state.find(key);
+  if (it == global_state.end()) {
+    return Error(ERROR_VAR_UNDEFINED,
+                 "Tried to get undefined global var " + key + ".", 0);
+  }
+  return it->second;
+}
+
 } // namespace Skald

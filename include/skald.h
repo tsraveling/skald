@@ -703,6 +703,7 @@ const uint ERROR_UNEXPECTED_NULL = 9;
 const uint ERROR_VAR_UNDEFINED = 10;
 const uint ERROR_UNEXPECTED_ACT = 11;
 const uint ERROR_LOADING_MODULE = 12;
+const uint ERROR_NO_GLOBAL = 13;
 struct Error {
   uint code = 0;
   std::string message;
@@ -903,6 +904,12 @@ public:
   /** Call this to answer a Query response; either the value that should be
    * returned if a return is expected, or null if not. */
   Response answer(std::optional<QueryAnswer> answer);
+
+  /** Sets global state; errors if global doesn't exist or type mismatch. */
+  std::optional<Error> set(std::string key, SimpleRValue val);
+
+  /** Returns state; errors if not set. */
+  std::variant<Error, SimpleRValue> get(std::string key);
 
   /// PROJECT STUFF ///
   std::optional<std::string> get_project_root();
