@@ -1,24 +1,89 @@
 #pragma once
 
+#include <array>
+#include <cassert>
 #include <cstddef>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
 namespace Skald {
 
+/** References a position in a codex or Skald module */
+struct ParsePosition {
+  size_t line;
+  size_t column;
+  std::string source;
+};
+
+/** Exception class for Skald parse errors */
+struct ParseError {
+  ParsePosition pos;
+  std::string msg;
+  enum Severity { WARNING, ERROR } severity = ERROR;
+  static ParseError file_error(std::string msg) {
+    return ParseError{.pos = ParsePosition{}, .msg = msg, .severity = ERROR};
+  }
+};
+
 enum SkaldLogLevel { VERBOSE, NORMAL, SPARSE, OFF };
 inline static SkaldLogLevel log_level = SkaldLogLevel::NORMAL;
 
+// Tracks its original line number; otherwise not special.
 struct LineEntity {
   size_t line_number = 0;
 };
 
+/** Used for strong typing declarations and methods. Only method definitions
+ *  will ever be ACTION. */
+enum ValueType { STRING, BOOL, INT, FLOAT, ACTION };
+inline static std::string val_type_to_str(const ValueType &type) {
+  switch (type) {
+  case STRING:
+    return "string";
+    break;
+  case BOOL:
+    return "bool";
+    break;
+  case INT:
+    return "int";
+    break;
+  case FLOAT:
+    return "float";
+    break;
+  case ACTION:
+    return "action";
+    break;
+  }
+  return "!!INVALID!!";
+}
+
+enum class VarScope { GLOBAL, MODULE, LOCAL };
+inline std::string scope_to_str(VarScope s) {
+  switch (s) {
+  case VarScope::GLOBAL:
+    return "global";
+  case VarScope::MODULE:
+    return "module";
+  case VarScope::LOCAL:
+    return "local";
+  }
+  return "error";
+}
+
 struct Variable {
   std::string name;
+  ValueType type;
+
+  std::string dbg_desc() const {
+    std::string ret = name + " (" + val_type_to_str(type) + +")";
+    return ret;
+  }
 };
 
 // Forward declarations
@@ -51,7 +116,38 @@ inline const MethodCall *rval_get_call(const RValue &val) {
 
 using SimpleRValue = std::variant<std::string, bool, int, float>;
 
+inline SimpleRValue get_zero(ValueType t) {
+  switch (t) {
+  case INT:
+    return 0;
+  case FLOAT:
+    return 0.0f;
+  case STRING:
+    return "";
+  case BOOL:
+    return false;
+  default:
+    return false;
+  }
+}
+
 // Simple RVal helper functions
+inline const ValueType srval_get_type(const SimpleRValue &val) {
+  return std::visit(
+      [](const auto &value) -> ValueType {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, std::string>) {
+          return ValueType::STRING;
+        } else if constexpr (std::is_same_v<T, bool>) {
+          return ValueType::BOOL;
+        } else if constexpr (std::is_same_v<T, int>) {
+          return ValueType::INT;
+        } else if constexpr (std::is_same_v<T, float>) {
+          return ValueType::FLOAT;
+        }
+      },
+      val);
+}
 inline const std::string *srval_get_str(const SimpleRValue &val) {
   return std::get_if<std::string>(&val);
 }
@@ -79,7 +175,7 @@ inline bool is_simple_rval_truthy(const SimpleRValue &val) {
       val);
 }
 
-/** Attempts to cast an RValue to a SimpleRValue, returnig nullopt if this is
+/** Attempts to cast an RValue to a SimpleRValue, returning nullopt if this is
  * impossible. */
 inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
   return std::visit(
@@ -94,10 +190,31 @@ inline std::optional<SimpleRValue> cast_rval_to_simple(const RValue &rval) {
       rval);
 }
 
-struct Declaration : LineEntity {
-  Variable var;
+struct DeclaredVar : LineEntity {
   SimpleRValue initial_value;
-  bool is_imported = false;
+  Variable var;
+};
+
+struct ArgDef {
+  std::string name;
+  ValueType type;
+  std::string dbg_desc() const { return name + ": " + val_type_to_str(type); }
+};
+
+struct MethodDef : LineEntity {
+  std::string name;
+  ValueType return_type;
+  std::vector<ArgDef> args;
+  std::string dbg_desc() const {
+    auto ret = name + "(";
+    auto i = 0;
+    for (auto &arg : args) {
+      ret += (i > 0 ? ", " : "") + arg.dbg_desc();
+      i++;
+    }
+    ret += ") -> " + val_type_to_str(return_type);
+    return ret;
+  }
 };
 
 struct MethodCall : LineEntity {
@@ -237,7 +354,7 @@ inline std::string dbg_desc_conditional_item(const ConditionalItem &item) {
       item);
 }
 
-struct TestbedDeclaration : LineEntity {
+struct TestbedSet : LineEntity {
   std::string variable;
   SimpleRValue test_value;
   std::string dbg_desc() const {
@@ -247,7 +364,7 @@ struct TestbedDeclaration : LineEntity {
 
 struct Testbed : LineEntity {
   std::string name;
-  std::vector<TestbedDeclaration> declarations;
+  std::vector<TestbedSet> declarations;
   std::string dbg_desc() const {
     std::string ret = "@" + name + ":";
     for (auto &dec : declarations) {
@@ -262,22 +379,24 @@ struct Mutation : LineEntity {
   std::string lvalue;
   Type type;
   std::optional<RValue> rvalue;
-  std::string dbg_desc() const {
-    std::string ret = "<" + lvalue + " ";
-    switch (type) {
+  static std::string label_for_type(Type t) {
+    switch (t) {
     case EQUATE:
-      ret += "EQUALS";
+      return "EQUALS";
       break;
     case SWITCH:
-      ret += "SWITCH";
+      return "SWITCH";
       break;
     case ADD:
-      ret += "ADD";
+      return "ADD";
       break;
     case SUBTRACT:
-      ret += "SUBTRACT";
+      return "SUBTRACT";
       break;
     }
+  }
+  std::string dbg_desc() const {
+    std::string ret = "<" + lvalue + " " + label_for_type(type);
     if (rvalue) {
       ret += " " + rval_to_string(*rvalue);
     }
@@ -309,12 +428,6 @@ struct Move : LineEntity {
   std::string target_tag;
 };
 
-using Operation = std::variant<Move, MethodCall, Mutation, GoModule, Exit>;
-
-inline const MethodCall *op_get_call(const Operation &val) {
-  return std::get_if<MethodCall>(&val);
-}
-
 /* DEBUG OUTPUT STUFF TO DELETE LATER */
 
 struct OpDebugProcessor {
@@ -334,18 +447,6 @@ struct OpDebugProcessor {
     return "EXIT: " + exit.dbg_desc();
   }
 };
-
-inline std::string dbg_dsc_op(const Operation &op) {
-  return std::visit(OpDebugProcessor{}, op);
-}
-
-inline std::string dbg_desc_ops(const std::vector<Operation> &ops) {
-  std::string ret = "";
-  for (auto &op : ops) {
-    ret += "\n    * " + dbg_dsc_op(op);
-  }
-  return ret;
-}
 
 using TernaryOption = std::tuple<RValue, RValue>;
 
@@ -410,51 +511,143 @@ struct TextContent {
   }
 };
 
-struct Choice : LineEntity {
+// STUB: Build AttachedCondition
+// This is an optional condition. If one is not present, it will pass; otherwise
+// the conditional will be resolved.
+struct AttachedCondition {
   std::optional<Conditional> condition;
-  TextContent content;
-  std::vector<Operation> operations;
 
+  // Allows truthy checks:
+  explicit operator bool() const { return condition.has_value(); }
   std::string dbg_desc() const {
-    return (condition ? condition->dbg_desc() + " " : "") + content.dbg_desc() +
-           " (" + std::to_string(operations.size()) + " ops)";
+    return (condition ? condition->dbg_desc() + " " : "");
   }
 };
 
+/** A narrative beat (text; attributed or not.) */
 struct Beat : LineEntity {
-  std::optional<Conditional> condition;
   std::string attribution;
-  std::vector<Operation> operations;
   TextContent content;
-  bool is_logic_block = false;
-  bool is_else = false;
-  std::vector<Choice> choices;
 
   std::string dbg_desc() const {
-    return (condition ? condition->dbg_desc() + " " : "") +
-           (attribution.length() > 0 ? attribution + ": " : "") +
-           (is_logic_block ? (is_else ? "<ELSE>" : "<LOGIC>")
-                           : content.dbg_desc()) +
-           (operations.size() > 0 ? dbg_desc_ops(operations) : "");
+    return (attribution.length() > 0 ? attribution + ": " : "") + "<beat>";
   }
 };
 
-// TODO: Support the "auto-continue" block
-// (that is untagged and follows an inline choice block)
+/** The raw types contained by a Member: Move, MethodCall,
+ *  Mutation, GoModule, Exit, or Beat. */
+using MemberBody =
+    std::variant<Move, MethodCall, Mutation, GoModule, Exit, Beat>;
+
+/** A member of a block (excludes CGs) or choice. .body: MemberBody, and ac:
+ *  AttachedCondition. */
+struct Member : LineEntity {
+  MemberBody body;
+  AttachedCondition ac;
+
+  const Move *get_move() const { return std::get_if<Move>(&body); }
+  const MethodCall *get_call() const { return std::get_if<MethodCall>(&body); }
+  const Mutation *get_mutation() const { return std::get_if<Mutation>(&body); }
+  const GoModule *get_go_module() const { return std::get_if<GoModule>(&body); }
+  const Exit *get_exit() const { return std::get_if<Exit>(&body); }
+  const Beat *get_beat() const { return std::get_if<Beat>(&body); }
+
+  bool is_move() const { return std::holds_alternative<Move>(body); }
+  bool is_call() const { return std::holds_alternative<MethodCall>(body); }
+  bool is_mutation() const { return std::holds_alternative<Mutation>(body); }
+  bool is_go_module() const { return std::holds_alternative<GoModule>(body); }
+  bool is_exit() const { return std::holds_alternative<Exit>(body); }
+  bool is_beat() const { return std::holds_alternative<Beat>(body); }
+
+  std::string dbg_desc() const {
+    std::string type = is_move()        ? "Move"
+                       : is_call()      ? "MethodCall"
+                       : is_mutation()  ? "Mutation"
+                       : is_go_module() ? "GoModule"
+                       : is_exit()      ? "Exit"
+                       : is_beat()      ? "Beat"
+                                        : "Unknown";
+    return type + " " + ac.dbg_desc();
+  }
+};
+
+struct Choice : LineEntity {
+  AttachedCondition condition;
+  TextContent content;
+  std::vector<Member> members;
+
+  std::string dbg_desc() const {
+    return condition.dbg_desc() + content.dbg_desc() + " (" +
+           std::to_string(members.size()) + " members)";
+  }
+};
+
+// This contains one or more choices, exists at any place in a block,
+// and blocks proceeding until a choice is selected. If no individual
+// choice is available, the group will be ignored.
+struct ChoiceGroup : LineEntity {
+  std::vector<Choice> choices;
+};
+
+/** A Beat, LineOp, or ChoiceGroup. Child of a Block or a ConditionalBlock. */
+using BlockMember = std::variant<Member, ChoiceGroup>;
+
+/** A block in a conditional chain. If cond is null, this is an else block. */
+struct ConditionalBlock : LineEntity {
+  AttachedCondition cond;
+  std::vector<BlockMember> members;
+};
+
+/** A string of 1-n conditional blocks: if, elseif..., endif. */
+struct ConditionalChain {
+  std::vector<ConditionalBlock> cond_blocks;
+};
+
+using MainBlockMember = std::variant<BlockMember, ConditionalChain>;
+inline bool mbm_is_chain(const MainBlockMember &m) {
+  return std::holds_alternative<ConditionalChain>(m);
+}
+
 struct Block : LineEntity {
   std::string tag;
-  std::vector<Beat> beats{};
+  std::vector<MainBlockMember> members{};
 };
 
-class Module {
-public:
+/** The Codex defines globals, methods, and project root. Only one codex is
+ * active on the engine at a time. Resetting codex resets state. */
+struct Codex {
+  std::string path;
   std::string filename;
-  std::vector<Declaration> declarations;
+
+  /** Global-scoped variables */
+  std::vector<DeclaredVar> global_vars;
+
+  /** Method definitions */
+  std::vector<MethodDef> method_defs;
+
+  /** Full path to the codex file itself. */
+  std::string codex_path() {
+    return (std::filesystem::path(path) / filename).string();
+  }
+
+  /** Resolves a module path relative to the codex's directory: with a codex
+   *  at ~/project/example.codex, "a/b/c.ska" -> "~/project/a/b/c.ska". */
+  std::string resolve_path(const std::string &rel_path) {
+    return (std::filesystem::path(path) / rel_path).string();
+  }
+};
+
+/** A Module is a single Skald file. Only one module is loaded at a time, but
+ *  global state persists between modules, and module vars get pushed on GO
+ *  transitions. */
+struct Module {
+  std::string filename;
+  std::vector<DeclaredVar> module_vars;
   std::vector<Testbed> testbeds;
   std::vector<Block> blocks;
   std::unordered_map<std::string, size_t> block_lookup;
 
-  size_t get_block_index(std::string tag) {
+  int get_block_index(const std::string &tag) {
     auto it = block_lookup.find(tag);
     return it != block_lookup.end() ? it->second : -1;
   }
@@ -475,16 +668,24 @@ struct Option {
 struct Content {
   std::string attribution = "";
   std::vector<Chunk> text;
+};
+
+// Contains one or more options
+struct OptionGroup {
   std::vector<Option> options;
 };
 
-/** This contains a query from the Skald engine out to the client. This is
- * mostly method calls. */
-struct Query {
+/** This posts the method out to the client, and is used to key the result back
+ * into Skald state. */
+struct MethodCallGet {
   MethodCall call;
-  bool expects_response = false;
   size_t line_number = 0;
   std::string get_key() { return key_for_call(call); }
+};
+
+struct MethodCallPost {
+  MethodCall call;
+  size_t line_number = 0;
 };
 
 /** This carries error information for anything that goes so wrong that the
@@ -498,6 +699,13 @@ const uint ERROR_CHOICE_UNAVAILABLE = 5;
 const uint ERROR_EXPECTED_ANSWER = 6;
 const uint ERROR_RESOLUTION_QUEUE_EMPTY = 7;
 const uint ERROR_TYPE_MISMATCH = 8;
+const uint ERROR_UNEXPECTED_NULL = 9;
+const uint ERROR_VAR_UNDEFINED = 10;
+const uint ERROR_UNEXPECTED_ACT = 11;
+const uint ERROR_LOADING_MODULE = 12;
+const uint ERROR_NO_GLOBAL = 13;
+const uint ERROR_OUT_OF_BOUNDS = 14;
+const uint ERROR_START_EMPTY_BLOCK = 15;
 struct Error {
   uint code = 0;
   std::string message;
@@ -507,6 +715,12 @@ struct Error {
       : code(code), message(std::move(message)), line_number(line_number) {}
 };
 
+/** Added to warning stack when non-breaking warnings happen */
+struct Warning {
+  std::string message;
+  size_t line_number;
+};
+
 /** Will be sent back by the client as an answer to the current open query --
  *  will be undefined if no value is returned. Undefined will not be keyed into
  *  the map, which will be treated as falsy if used in a conditional. */
@@ -514,11 +728,30 @@ struct QueryAnswer {
   std::optional<SimpleRValue> val;
 };
 
+struct Notification {
+  std::string var_name;
+  Mutation::Type mut_type;
+  std::optional<SimpleRValue> rval; // Real value, resolved out
+  VarScope scope;
+  std::string dbg_desc() const {
+    std::string v = rval ? rval_to_string(*rval) : "<no rvalue>";
+    return var_name + " " + Mutation::label_for_type(mut_type) + " " + v +
+           " (" + scope_to_str(scope) + ")";
+  }
+};
+
 /** Empty struct signifying that the script is concluded. */
-struct End {};
+struct End {
+
+  /** Optionally stores a reason for hitting an end; useful for debugging. */
+  std::string reason;
+
+  End(std::string reason = "") : reason(std::move(reason)) {}
+};
 
 /** Will contain either a Content struct or a Query */
-using Response = std::variant<Content, Query, Exit, GoModule, End, Error>;
+using Response = std::variant<Content, MethodCallGet, MethodCallPost, Exit,
+                              GoModule, OptionGroup, End, Error, Notification>;
 
 enum class ResponseType {
   CONTENT,
@@ -537,7 +770,7 @@ inline ResponseType get_response_type(Response &response) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, Content>)
           return ResponseType::CONTENT;
-        else if constexpr (std::is_same_v<T, Query>)
+        else if constexpr (std::is_same_v<T, MethodCallGet>)
           return ResponseType::QUERY;
         else if constexpr (std::is_same_v<T, Exit>)
           return ResponseType::EXIT;
@@ -559,14 +792,6 @@ struct Action {
   int selection;
 };
 
-/** This is the phase of processing for a given beat:
- *  1. Conditional: checking to see if the beat should be played at all.
- *  2. Resolution: applying the beat's effects.
- *  3. Presentation: returning the content to the client and waiting for player
- *  4. Execution: applying effects of the selected choice, if there is one
- * */
-enum class ProcessPhase { Conditional, Resolution, Presentation, Execution };
-
 /** Marks where we are in the module, and what is expected from the client
  * next
  */
@@ -576,102 +801,90 @@ struct Cursor {
    * the next advance_cursor */
   std::string queued_transition;
 
-  /** Each beat has a conditional, resolution, and presentation phase. These
-   *  check if the beat is valid, calculate values via method calls etc. to the
-   *  external client, and present the content, respectively. */
-  ProcessPhase current_phase = ProcessPhase::Conditional;
+  /** Is the next member pre-processed, queries queued etc */
+  bool is_preprocessed = false;
 
   /** Which block are we currently in */
   int current_block_index = 0;
 
-  /** Which beat are we currently working through */
-  int current_beat_index = 0;
+  /** Which part are we currently working through */
+  int current_member_index = 0;
+
+  /** If we are in a conditional thread, which block? */
+  int thread_block = 0;
+
+  /** We've processed the conditionals sufficiently to enter a block */
+  bool entered_thread_block = false;
+
+  /** And which member in that block? */
+  int thread_member = 0;
 
   /** Which choice do we need to process? */
-  int choice_selection = 0;
+  int choice_selection = -1;
+
+  /** If >= 0, we are stepping through the operations of a choice. */
+  int choice_thread_index = 0;
 
   /** If this is present, do an exit */
-  Exit *queued_exit;
+  Exit *queued_exit = nullptr;
 
   /** If this is present, do a transition */
-  GoModule *queued_go;
+  GoModule *queued_go = nullptr;
 
   /** These track method calls etc. that require queries to the external client.
    *  These have to be resolved by the client via the answer() method before the
    *  engine will proceed. */
-  std::vector<Query> resolution_stack;
+  std::vector<MethodCallGet> resolution_stack;
 
-  /** Tracks if the previous beat conditioned out or not. If it didn't, a
-   *  following else block will succeed. */
-  bool did_last_condition_pass = false;
+  /** Adds more MethodCallGets to the resolution stack. */
+  void add_to_res_stack(std::vector<MethodCallGet> res) {
+    resolution_stack.insert(resolution_stack.end(), res.begin(), res.end());
+  }
 
-  /** This will reset the cursor to a "new" state */
+  /** This will reset the cursor to a "new" state. Currently only called on
+   *  module entry. */
   void reset() {
     resolution_stack.clear();
     queued_exit = NULL;
     queued_go = NULL;
     queued_transition = "";
-    choice_selection = 0;
+    choice_selection = -1;
+    choice_thread_index = 0;
     current_block_index = 0;
-    current_beat_index = 0;
-    did_last_condition_pass = true;
+    current_member_index = 0;
+    entered_thread_block = false;
+    is_preprocessed = false;
+    // did_last_condition_pass = true;
   }
 };
 
 enum ProgressResult { OK, END_OF_FILE, MODULE_NOT_FOUND };
 
+struct ParseResult {
+  bool ok;
+  std::vector<ParseError> exceptions;
+  static ParseResult with(std::vector<ParseError> exceptions) {
+    bool ok = true;
+    for (auto &ex : exceptions) {
+      if (ex.severity == ParseError::ERROR) {
+        ok = false;
+        break;
+      }
+    }
+    return ParseResult{.ok = ok, .exceptions = exceptions};
+  }
+  static ParseResult fail(std::string msg) {
+    auto errors = {ParseError::file_error(msg)};
+    return ParseResult{.ok = false, .exceptions = errors};
+  }
+};
+
+// SECTION: Main Engine
+
 class Engine {
-private:
-  std::unique_ptr<Module> current;
-  std::unordered_map<std::string, SimpleRValue> state;
-  std::unordered_map<std::string, SimpleRValue> query_cache;
-
-  void build_state(const Module &module);
-
-  // Util
-  std::pair<Block &, Beat &> getCurrentBlockAndBeat();
-
-  /** This zeroes the state and drops us in at this beat index, e.g. from an
-   *  external entry point. It also initializes Skald state, leaving extant
-   *  state intact. */
-  Response enter(int block, int beat);
-
-  std::optional<Error> advance_cursor(int from_line_number = 0);
-
-  // Shared
-
-  std::optional<Error> do_operation(Operation &op);
-
-  // 1. Conditional phase
-
-  void setup_beat();
-
-  // 2. Resolution phase
-
-  void process_beat();
-
-  // 3. Presentation phase
-
-  // 4. Execution phase
-
-  void setup_choice();
-
-  SimpleRValue resolve_rval_to_simple(const RValue &rval);
-  bool resolve_conditional_atom(const ConditionalAtom &atom);
-  bool resolve_conditional_item(const ConditionalItem &item);
-  bool resolve_condition(const std::optional<Conditional> &cond);
-  bool resolve_condition(const Conditional &cond);
-  // STUB: Add a perform_operation() method
-  std::string resolve_simple(const SimpleInsertion &ins);
-  std::string resolve_tern(const TernaryInsertion &tern);
-  std::vector<Chunk> resolve_text(const TextContent &text_content);
-
-  Cursor cursor;
-  // STUB: Next: see TODO>CURRENT
-  Response next();
-
 public:
-  void load(std::string path);
+  ParseResult setup(std::string path);
+  ParseResult load(std::string path);
   void trace(std::string path);
 
   // Actions
@@ -690,10 +903,21 @@ public:
   /** Get the current response that's awaiting action */
   Response get_current();
 
-  /** Call this to answer a Query reponse; either the value that should be
+  /** Call this to answer a Query response; either the value that should be
    * returned if a return is expected, or null if not. */
   Response answer(std::optional<QueryAnswer> answer);
 
+  /** Sets global state; errors if global doesn't exist or type mismatch. */
+  std::optional<Error> set(std::string key, SimpleRValue val);
+
+  /** Returns state; errors if not set. */
+  std::variant<Error, SimpleRValue> get(std::string key);
+
+  /// PROJECT STUFF ///
+  std::optional<std::string> get_project_root();
+  std::optional<std::string> get_codex_name();
+
+  /// DEBUG STUFF ///
   std::string dbg_print_cache() {
     std::string ret;
     for (const auto &[key, value] : query_cache) {
@@ -701,6 +925,146 @@ public:
     }
     return ret;
   }
+
+private:
+  /** Main loop processor */
+  Response next();
+
+  ///--  MODULE AND STATE  --///
+
+  /** If codex is not present, globals and methods will not be available, and GO
+   *  subfolder paths will not resolve properly. */
+  std::unique_ptr<Codex> codex;
+
+  /** The currently loaded module */
+  std::unique_ptr<Module> current;
+
+  /** Not cleared */
+  std::unordered_map<std::string, SimpleRValue> global_state;
+
+  /** Cleared on EXIT */
+  std::unordered_map<std::string, SimpleRValue> module_state;
+
+  /** Cleared on every new module start */
+  std::unordered_map<std::string, SimpleRValue> local_state;
+
+  std::unordered_map<std::string, SimpleRValue> query_cache;
+
+  /** Initializes state after a codex is loaded */
+  void init_state();
+  void build_state(const Module &module);
+
+  ///--  UTIL  --///
+  // ConditionalChain *get_current_conditional_chain();
+
+  /** Gets the current block for the cursor */
+  Block &cursor_block();
+
+  /** Gets current MainBlockMember (BM or CT) where we already know block */
+  MainBlockMember &cursor_mbm(Block &block);
+
+  /** Gets current MainBlockMember (BM or CT) from scratch */
+  MainBlockMember &cursor_mbm();
+
+  /** Gets current BlockMember (Mem or CG), including in a CT, where we already
+   * know the parent MBM (which either is this, or is the parent) */
+  BlockMember &cursor_bm(MainBlockMember &mbm);
+
+  /** Gets current BlockMember (Mem or CG), including in a CT, where we don't
+   * know the parent MBM (which either is this, or is the parent) */
+  BlockMember &cursor_bm();
+
+  /** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
+   * choice in a CG. In this case we know the parent / superclass BM. */
+  Member &cursor_mem(BlockMember &bm);
+
+  /** Gets current member; may be MBM:BM:Mem, may be child, or may be child of a
+   * choice in a CG. */
+  Member &cursor_mem();
+
+  /** This zeroes the state and drops us in at this beat index, e.g. from an
+   *  external entry point. It also initializes Skald state, leaving extant
+   *  state intact. */
+  Response enter(int block, int beat);
+
+  std::optional<Error> advance_cursor(int from_line_number = 0);
+
+  ///--  ENGINE LOGIC FLOW  --///
+
+  std::vector<Warning> warnings;
+
+  /** Log to the warning stack without blocking operation */
+  void warn(std::string tx, size_t ln = 0);
+
+  /** Performs a mutation. Returns either error or a notification that can be
+   *  sent directly to the client. */
+  std::variant<Error, Notification> do_mutation(Mutation &mut);
+
+  std::optional<Response> do_member(Member &mem);
+
+  /** Queues the member's conditional for processing. */
+  void setup_mbm(MainBlockMember &mbm);
+
+  /** Queues conditional for a bock member */
+  void setup_bm(BlockMember &bm);
+
+  /** Queues conditional, rvalue methods, or arg menus */
+  void setup_member(Member &member);
+
+  ///-- RESOLUTION --///
+
+  static const char *scope_to_string(VarScope s) {
+    switch (s) {
+    case VarScope::GLOBAL:
+      return "global";
+    case VarScope::MODULE:
+      return "module";
+    case VarScope::LOCAL:
+      return "local";
+    }
+    return "unknown";
+  }
+
+  struct ScopeMap {
+    VarScope scope;
+    std::unordered_map<std::string, SimpleRValue> &map;
+  };
+
+  /** Returns the scope maps in lookup-priority order: global, module, local. */
+  std::array<ScopeMap, 3> scopes();
+
+  /** Gets a var, preferring global, module, then local. Gets false if local,
+   *  and warns. */
+  SimpleRValue var_get(const std::string var_name);
+
+  /** Set a variable, preferring global, module, and then local var. Sets as
+   *  local if not exists. */
+  std::variant<Error, VarScope>
+  var_set(const std::string var_name, const SimpleRValue &rval, size_t ln = 0);
+
+  /** Will switch a bool. Throws an error if not a bool, and a warning if not
+   *  previously set (and sets to false in this case) */
+  std::variant<Error, VarScope> var_switch(const std::string var_name,
+                                           size_t ln = 0);
+
+  /** Will mathematically mutate a float or int. Errors if string or bool, or if
+   * arg is string or bool. floats and ints can be used interchangeably (int -
+   * float will round down). If sign is false, will subtract. */
+  std::variant<Error, VarScope> var_add(const std::string var_name,
+                                        const SimpleRValue &rval, bool sign,
+                                        size_t ln = 0);
+
+  SimpleRValue resolve_rval_to_simple(const RValue &rval);
+  bool resolve_conditional_atom(const ConditionalAtom &atom);
+  bool resolve_conditional_item(const ConditionalItem &item);
+  bool resolve_condition(const std::optional<Conditional> &cond);
+  bool resolve_condition(const Conditional &cond);
+  bool resolve_condition(const AttachedCondition &cond);
+  std::string resolve_simple(const SimpleInsertion &ins);
+  std::string resolve_tern(const TernaryInsertion &tern);
+  std::vector<Chunk> resolve_text(const TextContent &text_content);
+
+  Cursor cursor;
 };
 
 } // namespace Skald

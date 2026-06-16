@@ -3,9 +3,12 @@
 #include "transport.h"
 
 int main() {
-  // Disable debug output from skald library
+  // Silence all skald library logging: stdout is the LSP protocol channel and
+  // any stray text corrupts the JSON-RPC stream.
   Skald::log_level = Skald::SkaldLogLevel::OFF;
   dbg_out_on = false;
+  dbg_always_cout = false;
+  dbg_sink = [](const std::string &) {};
 
   SkaldLsp::Server server;
 
@@ -15,7 +18,13 @@ int main() {
       // stdin closed or read error
       break;
     }
-    server.handle_message(*msg);
+    // A malformed document or request must never take down the server.
+    try {
+      server.handle_message(*msg);
+    } catch (const std::exception &) {
+      // swallow: keep serving subsequent messages
+    } catch (...) {
+    }
   }
 
   return 0;

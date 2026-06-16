@@ -14,9 +14,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Options
-option(SKALD_BUILD_TEST_EXECUTABLE "Build test executable" OFF)
 option(SKALD_BUILD_SKALDER "Build skalder TUI tool" ON)
-option(SKALD_BUILD_SHARED "Build shared library with C bindings" ON)
+option(SKALD_BUILD_SHARED "Build shared library with C bindings" OFF)
 
 # Include PEGTL
 add_subdirectory(deps/pegtl)
@@ -24,6 +23,8 @@ add_subdirectory(deps/pegtl)
 # Core sources (used by both static and shared builds)
 set(SKALD_CORE_SOURCES
     src/debug.cpp
+    src/parse_state.cpp
+    src/codex_parse_state.cpp
     src/skald.cpp
 )
 
@@ -83,13 +84,6 @@ if(SKALD_BUILD_SHARED)
     target_link_libraries(skald_shared PRIVATE taocpp::pegtl)
 endif()
 
-# =============================================================================
-# Test executable and tests 
-# =============================================================================
-if(SKALD_BUILD_TEST_EXECUTABLE)
-    add_executable(skald_test src/test_main.cpp)
-    target_link_libraries(skald_test PRIVATE skald_static)
-endif()
 
 include(FetchContent)
 
@@ -104,7 +98,7 @@ if(SKALD_BUILD_SKALDER)
     target_link_libraries(skalder PRIVATE skald_static ftxui::screen ftxui::dom ftxui::component)
 endif()
 
-option(SKALD_BUILD_LSP "Build the Skald LSP server" ON)
+option(SKALD_BUILD_LSP "Build the Skald LSP server" OFF)
 
 if(SKALD_BUILD_LSP)
     FetchContent_Declare(json
@@ -120,6 +114,9 @@ if(SKALD_BUILD_LSP)
         lsp/src/analyzer.cpp
         lsp/src/document.cpp
         lsp/src/workspace.cpp
+        lsp/src/codex_cache.cpp
+        lsp/src/move_resolver.cpp
+        lsp/src/project_index.cpp
     )
     target_link_libraries(skald_lsp PRIVATE skald_static nlohmann_json::nlohmann_json)
     target_include_directories(skald_lsp PRIVATE

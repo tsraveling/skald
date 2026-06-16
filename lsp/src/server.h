@@ -1,6 +1,8 @@
 #pragma once
 
+#include "codex_cache.h"
 #include "document.h"
+#include "project_index.h"
 #include "workspace.h"
 #include <nlohmann/json.hpp>
 #include <string>
@@ -47,9 +49,19 @@ private:
     // Publish diagnostics for a document
     void publish_diagnostics(const std::string &uri);
 
+    // Codex + project helpers
+    const Skald::Codex *codex_for_uri(const std::string &uri);
+    void ensure_project_index(const Skald::Codex *codex, bool force);
+    void publish_codex_diagnostics(const std::string &ska_uri);
+    // This document's path relative to the codex root (for cross-file lookups).
+    std::string rel_path_for(const std::string &uri, const Skald::Codex *codex);
+
     // State
     std::unordered_map<std::string, std::unique_ptr<Document>> documents_;
     Workspace workspace_;
+    CodexCache codex_cache_;
+    ProjectIndex project_index_;
+    std::string indexed_codex_path_;
     bool initialized_ = false;
     bool shutdown_ = false;
     bool exit_ = false;

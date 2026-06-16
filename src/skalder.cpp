@@ -1,14 +1,30 @@
 #include "debug.h"
 #include "skald.h"
+#include "skalder_fs.h"
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
 
 using namespace ftxui;
 using namespace Skald;
+
+namespace {
+enum class LogSeverity { DEBUG, INFO, WARN, ERROR };
+struct SkalderLog {
+  std::string msg;
+  LogSeverity severity;
+};
+std::vector<SkalderLog> log_lines;
+constexpr int DEBUG_PANEL_HEIGHT = 12;
+
+void dbg_log(std::string msg, LogSeverity sev = LogSeverity::DEBUG) {
+  log_lines.push_back({std::move(msg), sev});
+}
+} // namespace
 
 enum class NarrativeItemType { NORMAL, SYSTEM, ERROR, INPUT };
 
@@ -41,18 +57,6 @@ public:
 
     Response &resp = response;
 
-    // First eliminate autos
-    for (;;) {
-      if (auto *q = std::get_if<Query>(&resp)) {
-        if (!q->expects_response) {
-          note_system(q->call.dbg_desc());
-          resp = engine.answer(std::nullopt);
-          continue;
-        }
-      }
-      break;
-    }
-
     current_response = &resp;
     current_options.clear();
 
@@ -60,36 +64,54 @@ public:
         [&](const auto &value) {
           using T = std::decay_t<decltype(value)>;
           if constexpr (std::is_same_v<T, Content>) {
+            dbg_log("processing Content");
             narrative.push_back(NarrativeItem{.attribution = value.attribution,
                                               .content = stitch(value.text)});
-            if (value.options.size() > 0) {
-              expected_input = InputType::CHOICES;
-              for (size_t i = 0; i < value.options.size(); i++) {
-                auto &opt = value.options[i];
-                current_options.push_back(
-                    NarrativeOption{.text = stitch(opt.text),
-                                    .is_available = opt.is_available});
-              }
-              current_prompt = "Select an option";
-            } else {
-              expected_input = InputType::CONTINUE;
-              current_prompt = "Spacebar to continue ...";
+            expected_input = InputType::CONTINUE;
+            current_prompt = "Spacebar to continue ...";
+          } else if constexpr (std::is_same_v<T, OptionGroup>) {
+            dbg_log("processing OptionGroup with " +
+                    std::to_string(value.options.size()) + " options");
+            expected_input = InputType::CHOICES;
+            for (size_t i = 0; i < value.options.size(); i++) {
+              auto &opt = value.options[i];
+              current_options.push_back(NarrativeOption{
+                  .text = stitch(opt.text), .is_available = opt.is_available});
             }
-          } else if constexpr (std::is_same_v<T, Query>) {
+            current_prompt = "Select an option";
+          } else if constexpr (std::is_same_v<T, MethodCallPost>) {
+            dbg_log("Processing Post");
+            note_system("MethodCallPost: " + value.call.dbg_desc());
+            current_prompt = "Press spacebar to simulate concluding the "
+                             "MethodCallPost (still async even "
+                             "though no explicit response is expected)";
+            expected_input = InputType::CONTINUE;
+          } else if constexpr (std::is_same_v<T, Notification>) {
+            dbg_log("Processing Notification");
+            note_system("Notification: " + value.dbg_desc());
+            current_prompt = "Mutation! Could auto-skip, silently if desired. "
+                             "Here in Skalder, press space to continue.";
+            expected_input = InputType::CONTINUE;
+          } else if constexpr (std::is_same_v<T, MethodCallGet>) {
+            dbg_log("Processing Query");
             current_prompt = value.call.dbg_desc();
             expected_input = InputType::TEXT;
           } else if constexpr (std::is_same_v<T, Exit>) {
+            dbg_log("Processing Exit");
             current_prompt = "Press spacebar to conclude script.";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, GoModule>) {
+            dbg_log("Processing GoModule");
             current_prompt =
                 "Press spacebar to continue to " + value.module_path + "!";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, End>) {
+            dbg_log("Processing End");
             current_prompt =
                 "This is an END response -- we shouldn't be here anymore!";
             expected_input = InputType::CONTINUE;
           } else if constexpr (std::is_same_v<T, Error>) {
+            dbg_log(value.message, LogSeverity::ERROR);
             current_prompt = value.message;
             expected_input = InputType::CONTINUE;
           }
@@ -128,13 +150,23 @@ public:
           using T = std::decay_t<decltype(value)>;
           if constexpr (std::is_same_v<T, Content>) {
             return engine.act(0);
+          } else if constexpr (std::is_same_v<T, GoModule>) {
+            return engine.act(0);
+          } else if constexpr (std::is_same_v<T, OptionGroup>) {
+            // TODO: Consider erroring out here if we require a choice
+            return engine.act(0);
           } else if constexpr (std::is_same_v<T, Exit>) {
-            return End{};
-          } else if constexpr (std::is_same_v<T, Query>) {
+            return End{"Module EXIT."};
+          } else if constexpr (std::is_same_v<T, MethodCallPost>) {
+            return engine.act(0);
+          } else if constexpr (std::is_same_v<T, Notification>) {
+            return engine.act(0);
+          } else if constexpr (std::is_same_v<T, MethodCallGet>) {
             return engine.answer(std::nullopt);
           } else {
             // TODO: Better error handling if this is a problem
-            return End{};
+            return End("Exiting because tried to continue on an unknown "
+                       "Response type.");
           }
         },
         response);
@@ -152,11 +184,12 @@ public:
     return std::visit(
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, Content>) {
+          if constexpr (std::is_same_v<T, OptionGroup>) {
             return engine.act(choice);
           } else {
             // TODO: Better error handling if this is a problem
-            return End{};
+            return End{"Exited because we tried to process a choice on "
+                       "something that wasn't an OptionGroup!"};
           }
         },
         response);
@@ -167,27 +200,25 @@ public:
     return std::visit(
         [&](const auto &value) -> Response {
           using T = std::decay_t<decltype(value)>;
-          if constexpr (std::is_same_v<T, Query>) {
-            if (value.expects_response) {
-              SimpleRValue parsed = false;
-              if (txt == "true") {
-                parsed = true;
-              } else if (txt == "false") {
-                parsed = false;
+          if constexpr (std::is_same_v<T, MethodCallGet>) {
+            SimpleRValue parsed = false;
+            if (txt == "true") {
+              parsed = true;
+            } else if (txt == "false") {
+              parsed = false;
+            } else {
+              // Try int first (more restrictive than float)
+              char *end;
+              long lval = std::strtol(txt.c_str(), &end, 10);
+              if (*end == '\0' && end != txt.c_str()) {
+                parsed = static_cast<int>(lval);
               } else {
-                // Try int first (more restrictive than float)
-                char *end;
-                long lval = std::strtol(txt.c_str(), &end, 10);
+                // Try float
+                float fval = std::strtof(txt.c_str(), &end);
                 if (*end == '\0' && end != txt.c_str()) {
-                  parsed = static_cast<int>(lval);
+                  parsed = fval;
                 } else {
-                  // Try float
-                  float fval = std::strtof(txt.c_str(), &end);
-                  if (*end == '\0' && end != txt.c_str()) {
-                    parsed = fval;
-                  } else {
-                    parsed = txt;
-                  }
+                  parsed = txt;
                 }
               }
               note_system(value.call.dbg_desc() + " <- " + txt);
@@ -210,8 +241,24 @@ public:
   Engine engine;
 };
 
+void print_parse_errors(std::vector<ParseError> &errs) {
+  if (errs.size() == 0) {
+    std::cout << "0 parse errors found.\n";
+  };
+  for (auto &err : errs) {
+    bool is_error = err.severity == ParseError::ERROR;
+    std::cerr << (is_error ? "\033[31merror" : "\033[33mwarning") << "\033[0m";
+    if (!err.pos.source.empty()) {
+      std::cerr << " " << err.pos.source << ":" << err.pos.line << ":"
+                << err.pos.column;
+    }
+    std::cerr << ": " << err.msg << "\n";
+  }
+}
+
 int main(int argc, char *argv[]) {
-  dbg_out_on = false;
+  dbg_out_on = true;
+  dbg_sink = [](const std::string &s) { dbg_log(s); };
 
   auto screen = ScreenInteractive::Fullscreen();
 
@@ -219,14 +266,54 @@ int main(int argc, char *argv[]) {
   std::string path = (argc < 2) ? "../test/test.ska" : argv[1];
 
   SkaldTester tester{};
-  tester.engine.load(path);
-  tester.note_system("STARTING MODULE: " + path);
+  FileManager files{};
 
+  // This is the path to the module (.ska file)
+  std::string module_path = path;
+
+  // This is the path to the project (.codex file)
+  auto project_root = files.find_project_root(path);
+
+  // If string, we have a codex file.
+  if (auto *codex_path = std::get_if<std::string>(&project_root)) {
+    tester.note_system("CODEX: " + *codex_path);
+    dbg_out("CODEX: " + *codex_path);
+    auto res = tester.engine.setup(*codex_path);
+    print_parse_errors(res.exceptions);
+    if (!res.ok) {
+      return 0;
+    }
+    auto project_root = tester.engine.get_project_root();
+    assert(project_root); // setup must actually work given detection
+    module_path = files.loc_to_proj(*project_root, module_path);
+  } else if (auto *err = std::get_if<FileManager::FileError>(&project_root)) {
+    // If error, return
+    tester.note_error(err->msg);
+    dbg_log(err->msg, LogSeverity::ERROR);
+    return 0;
+  } else {
+    // If NoOp, that means it's an orphan
+    tester.note_system("Not in a Skald codex; loading as orphan (no globals or "
+                       "methods available).");
+  }
+
+  // Now load the module (.ska file)
+  auto res = tester.engine.load(module_path);
+  print_parse_errors(res.exceptions);
+  if (!res.ok) {
+    return 0;
+  }
+  tester.note_system("STARTING MODULE: " + module_path);
+  dbg_log("STARTING MODULE: " + module_path);
+
+  // Start the loaded module
   Response response;
   response = tester.engine.start();
   tester.process(response);
 
   std::string input_content;
+  std::string exit_reason;
+  bool show_logs = false;
   auto input = Input(&input_content, "string, int, float, true, or false");
 
   auto component = Renderer(input, [&] {
@@ -283,6 +370,7 @@ int main(int argc, char *argv[]) {
       prompt_content = nullptr;
       break;
     case SkaldTester::CHOICES: {
+      dbg_log("Setting up a current_options thing");
       Elements choices;
       int i = 1;
       for (auto &opt : tester.current_options) {
@@ -306,16 +394,56 @@ int main(int argc, char *argv[]) {
     auto prompt_box =
         prompt_contents | borderStyled(ROUNDED, Color::MediumPurple2);
 
-    return vbox({
-               padded_logs,
-               prompt_box,
-           }) |
-           borderStyled(ROUNDED, Color::White);
+    auto main_box = vbox({
+                        padded_logs,
+                        prompt_box,
+                    }) |
+                    borderStyled(ROUNDED, Color::White) | flex;
+
+    if (!show_logs) {
+      return main_box;
+    }
+
+    Elements debug_elements;
+    debug_elements.push_back(filler());
+    size_t available = DEBUG_PANEL_HEIGHT - 2;
+    size_t start =
+        log_lines.size() > available ? log_lines.size() - available : 0;
+    for (size_t i = start; i < log_lines.size(); i++) {
+      Color c = Color::GrayLight;
+      switch (log_lines[i].severity) {
+      case LogSeverity::DEBUG:
+        c = Color::GrayLight;
+        break;
+      case LogSeverity::INFO:
+        c = Color::White;
+        break;
+      case LogSeverity::WARN:
+        c = Color::Yellow;
+        break;
+      case LogSeverity::ERROR:
+        c = Color::Red;
+        break;
+      }
+      auto line = text(log_lines[i].msg) | color(c);
+      if (i == log_lines.size() - 1) {
+        line = line | bold;
+      }
+      debug_elements.push_back(line);
+    }
+    auto debug_panel = vbox(debug_elements) |
+                       size(HEIGHT, EQUAL, DEBUG_PANEL_HEIGHT) |
+                       borderStyled(ROUNDED, Color::Yellow);
+
+    return vbox({main_box, debug_panel});
   });
 
   // This will advance to the next point and exit if we reach an END type.
   auto do_next = [&] {
     if (std::holds_alternative<End>(response)) {
+      auto &end = std::get<End>(response);
+      exit_reason = end.reason.empty() ? "Exited because narrative reached End."
+                                       : end.reason;
       screen.Exit();
       return;
     }
@@ -325,12 +453,17 @@ int main(int argc, char *argv[]) {
 
   component = CatchEvent(component, [&](Event event) {
     if (event == Event::Escape) {
+      exit_reason = "Exited because user pressed Escape.";
       screen.Exit();
+      return true;
+    }
+    if (event == Event::F12) {
+      show_logs = !show_logs;
       return true;
     }
     switch (tester.expected_input) {
     case SkaldTester::CONTINUE: {
-      if (event == Event::Character(' ')) {
+      if (event == Event::Character(' ') || event == Event::Character('n')) {
         response = tester.do_continue(response);
         do_next();
         return true;
@@ -375,6 +508,30 @@ int main(int argc, char *argv[]) {
   });
 
   screen.Loop(component);
+
+  if (!exit_reason.empty()) {
+    std::cout << exit_reason << std::endl;
+  }
+
+  std::cout << "\n--- LOGS ---" << std::endl;
+  for (const auto &entry : log_lines) {
+    const char *prefix = "~ ";
+    switch (entry.severity) {
+    case LogSeverity::DEBUG:
+      prefix = "";
+      break;
+    case LogSeverity::INFO:
+      prefix = "";
+      break;
+    case LogSeverity::WARN:
+      prefix = "[*] ";
+      break;
+    case LogSeverity::ERROR:
+      prefix = "[!] ";
+      break;
+    }
+    std::cout << prefix << entry.msg << std::endl;
+  }
 
   std::cout << "\n\nGoodbye!" << std::endl;
   return 0;

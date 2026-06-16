@@ -1,7 +1,10 @@
 #include "server.h"
 #include "analyzer.h"
 #include "transport.h"
+#include <filesystem>
 #include <iostream>
+
+namespace fs = std::filesystem;
 
 namespace SkaldLsp {
 
@@ -87,13 +90,54 @@ json Server::handle_shutdown(const json &id) {
 
 void Server::handle_exit() { exit_ = true; }
 
+const Skald::Codex *Server::codex_for_uri(const std::string &uri) {
+    std::string path = Workspace::uri_to_path(uri);
+    return codex_cache_.codex_for(path);
+}
+
+void Server::ensure_project_index(const Skald::Codex *codex, bool force) {
+    if (!codex)
+        return;
+    std::string full = (fs::path(codex->path) / codex->filename).string();
+    if (!force && full == indexed_codex_path_)
+        return;
+    project_index_.build(codex);
+    indexed_codex_path_ = full;
+}
+
+std::string Server::rel_path_for(const std::string &uri,
+                                 const Skald::Codex *codex) {
+    if (!codex)
+        return "";
+    std::error_code ec;
+    auto rel = fs::relative(Workspace::uri_to_path(uri), codex->path, ec);
+    return ec ? "" : rel.generic_string();
+}
+
+void Server::publish_codex_diagnostics(const std::string &ska_uri) {
+    std::string codex_path =
+        codex_cache_.codex_path_for(Workspace::uri_to_path(ska_uri));
+    if (codex_path.empty())
+        return;
+    json diags = json::array();
+    for (auto &d : codex_cache_.diagnostics_for_codex(codex_path))
+        diags.push_back(d);
+    Transport::write_message(Transport::make_notification(
+        "textDocument/publishDiagnostics",
+        {{"uri", Workspace::path_to_uri(codex_path)}, {"diagnostics", diags}}));
+}
+
 void Server::handle_did_open(const json &params) {
     auto td = params["textDocument"];
     std::string uri = td["uri"].get<std::string>();
     std::string text = td["text"].get<std::string>();
 
-    documents_[uri] = std::make_unique<Document>(uri, text);
+    const Skald::Codex *codex = codex_for_uri(uri);
+    ensure_project_index(codex, false);
+    documents_[uri] =
+        std::make_unique<Document>(uri, text, codex, &project_index_);
     publish_diagnostics(uri);
+    publish_codex_diagnostics(uri);
 }
 
 void Server::handle_did_change(const json &params) {
@@ -104,11 +148,18 @@ void Server::handle_did_change(const json &params) {
     if (!changes.empty()) {
         // Full sync mode: take the last full content
         std::string text = changes.back()["text"].get<std::string>();
+        const Skald::Codex *codex = codex_for_uri(uri);
+        ensure_project_index(codex, false);
+        // Re-parse in place on the common path (text edits against the same
+        // mother codex); only rebuild the Document if its codex changed, since
+        // update() keeps the codex/project pointers it was constructed with.
         auto it = documents_.find(uri);
-        if (it != documents_.end()) {
+        if (it != documents_.end() && it->second->codex() == codex &&
+            it->second->project() == &project_index_) {
             it->second->update(text);
         } else {
-            documents_[uri] = std::make_unique<Document>(uri, text);
+            documents_[uri] =
+                std::make_unique<Document>(uri, text, codex, &project_index_);
         }
         publish_diagnostics(uri);
     }
@@ -150,18 +201,46 @@ json Server::handle_definition(const json &id, const json &params) {
         return Transport::make_response(id, loc);
     }
 
-    // Find definition in current document
+    // Same-file definition (fast path).
     auto def = doc.find_definition(sym->name, sym->kind);
-    if (!def) {
-        return Transport::make_response(id, json(nullptr));
+    if (def) {
+        LspTypes::Location loc;
+        loc.uri = tdp.textDocument.uri;
+        loc.range = {{def->range.line, def->range.col},
+                     {def->range.line, def->range.end_col}};
+        return Transport::make_response(id, loc);
     }
 
-    LspTypes::Location loc;
-    loc.uri = tdp.textDocument.uri;
-    loc.range = {{def->range.line, def->range.col},
-                 {def->range.line, def->range.end_col}};
+    // Methods are defined in the codex.
+    if (sym->kind == SymbolKind::Method) {
+        if (auto md = project_index_.resolve_method(sym->name)) {
+            LspTypes::Location loc;
+            loc.uri = md->uri;
+            loc.range = {{md->line, md->col}, {md->line, md->end_col}};
+            return Transport::make_response(id, loc);
+        }
+    }
 
-    return Transport::make_response(id, loc);
+    if (sym->kind == SymbolKind::Variable) {
+        // Cross-file: codex global or thread var from a predecessor module.
+        std::string rel = rel_path_for(tdp.textDocument.uri, doc.codex());
+        if (auto vd = project_index_.resolve_external_var(sym->name, rel)) {
+            LspTypes::Location loc;
+            loc.uri = vd->uri;
+            loc.range = {{vd->line, vd->col}, {vd->line, vd->end_col}};
+            return Transport::make_response(id, loc);
+        }
+        // Local/ad-hoc variable: jump to the topmost place it's set.
+        if (auto a = doc.find_first_assignment(sym->name)) {
+            LspTypes::Location loc;
+            loc.uri = tdp.textDocument.uri;
+            loc.range = {{a->range.line, a->range.col},
+                         {a->range.line, a->range.end_col}};
+            return Transport::make_response(id, loc);
+        }
+    }
+
+    return Transport::make_response(id, json(nullptr));
 }
 
 json Server::handle_references(const json &id, const json &params) {
@@ -249,6 +328,37 @@ json Server::handle_document_symbol(const json &id, const json &params) {
 
 void Server::handle_did_change_watched_files(const json &params) {
     workspace_.refresh();
+
+    // Invalidate any changed .codex files so they re-parse.
+    bool codex_changed = false;
+    if (params.contains("changes")) {
+        for (auto &ch : params["changes"]) {
+            std::string uri = ch.value("uri", std::string{});
+            if (uri.size() >= 6 && uri.substr(uri.size() - 6) == ".codex") {
+                codex_cache_.invalidate(Workspace::uri_to_path(uri));
+                codex_changed = true;
+            }
+        }
+    }
+
+    // Re-parse open documents against fresh codex/project state. Their
+    // method/global checks depend on the codex, so this must cascade. Clearing
+    // the indexed path forces one rebuild per distinct codex below.
+    indexed_codex_path_.clear();
+    for (auto &[uri, doc] : documents_) {
+        const Skald::Codex *codex = codex_for_uri(uri);
+        ensure_project_index(codex, /*force=*/false);
+        // A watched-file change can swap the mother codex, so rebuild against
+        // the fresh codex/project. The new Document copies the old text before
+        // the assignment frees the old doc, so no separate text copy is needed.
+        doc = std::make_unique<Document>(uri, doc->text(), codex,
+                                         &project_index_);
+    }
+    for (auto &[uri, doc] : documents_) {
+        publish_diagnostics(uri);
+        if (codex_changed)
+            publish_codex_diagnostics(uri);
+    }
 }
 
 void Server::publish_diagnostics(const std::string &uri) {
