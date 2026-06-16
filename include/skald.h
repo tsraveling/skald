@@ -826,10 +826,10 @@ struct Cursor {
   int choice_thread_index = 0;
 
   /** If this is present, do an exit */
-  Exit *queued_exit;
+  Exit *queued_exit = nullptr;
 
   /** If this is present, do a transition */
-  GoModule *queued_go;
+  GoModule *queued_go = nullptr;
 
   /** These track method calls etc. that require queries to the external client.
    *  These have to be resolved by the client via the answer() method before the

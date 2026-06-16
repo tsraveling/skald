@@ -518,7 +518,7 @@ std::variant<Error, Notification> Engine::do_mutation(Mutation &o) {
     res = var_add(o.lvalue, *rv, false, o.line_number);
     break;
   case Mutation::Type::SWITCH:
-    res = var_switch(o.lvalue);
+    res = var_switch(o.lvalue, o.line_number);
     break;
   }
   if (auto *err = std::get_if<Error>(&res)) {
@@ -760,7 +760,12 @@ Response Engine::next() {
     // Debug stopper; while developing, lock loop iterations to 50 to keep
     // from getting stuck in a permaloop.
     debug_blocker++;
-    assert(debug_blocker < 50);
+    if (debug_blocker > 50) {
+      return Error{
+          ERROR_UNKNOWN,
+          "Module was caught in an infinite loop; bailed out at 50 iterations.",
+          0};
+    }
 
     /// EXIT and GO ///
 
@@ -819,7 +824,6 @@ Response Engine::next() {
     }
 
     /// Block Logic and Interaction ///
-
     auto &bm = cursor_bm(mbm);
 
     std::optional<Response> response = std::visit(
@@ -1070,7 +1074,6 @@ ParseResult Engine::load(std::string path) {
       return ParseResult::fail("File not found: " + file_path);
     }
     pegtl::file_input in(file_path);
-    dbg_out_on = false;
     dbg_out("Loaded file: " << file_path);
 
     /// PARSING ///
