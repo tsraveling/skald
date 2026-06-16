@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-#define DEBUG_LOGS
+// #define DEBUG_LOGS
 
 extern bool dbg_out_on;
 extern bool dbg_always_cout;
