@@ -242,8 +242,8 @@ queries_for_member_conditional(const BlockMember &mem) {
   return std::visit(
       [](const auto &value) -> std::vector<MethodCallGet> {
         using T = std::decay_t<decltype(value)>;
-        if constexpr (std::is_same_v<T, Member()>) {
-          return queries_for_attached_condition(value.condition);
+        if constexpr (std::is_same_v<T, Member>) {
+          return queries_for_attached_condition(value.ac);
         } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
           return queries_for_choice_group(value);
         }
@@ -720,15 +720,15 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
   cursor.current_member_index++; // aka will -> 0 after a transition
 
   /// END OF BLOCKS ///
-  Block &block = cursor_block();
-  while (cursor.current_member_index >= block.members.size()) {
+  Block *block = &cursor_block();
+  while (cursor.current_member_index >= block->members.size()) {
     cursor.current_block_index++;
     cursor.current_member_index = 0;
     if (cursor.current_block_index >= current->blocks.size()) {
       return Error(ERROR_EOF, "Unexpectedly reached the end of the file",
                    from_line_number);
     }
-    block = cursor_block();
+    block = &cursor_block();
   }
 
   // If we get here, that means the block has members.
@@ -737,7 +737,7 @@ std::optional<Error> Engine::advance_cursor(int from_line_number) {
                       << cursor.current_member_index);
 
   // Queue up any conditional queries etc needed to run our next member
-  auto &mbm = cursor_mbm(block);
+  auto &mbm = cursor_mbm(*block);
   setup_mbm(mbm);
 
   // And return ok.
@@ -1000,6 +1000,14 @@ Response Engine::enter(int block, int index) {
   build_state(*current);
   cursor.current_block_index = block;
   cursor.current_member_index = 0;
+
+  // Ensure this has members
+  auto &b = cursor_block();
+  if (b.members.size() == 0) {
+    return Error{ERROR_START_EMPTY_BLOCK,
+                 "You cannot enter into an empty block!", b.line_number};
+  }
+
   setup_mbm(cursor_mbm());
   return next();
 }

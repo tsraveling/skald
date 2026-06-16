@@ -704,6 +704,8 @@ const uint ERROR_VAR_UNDEFINED = 10;
 const uint ERROR_UNEXPECTED_ACT = 11;
 const uint ERROR_LOADING_MODULE = 12;
 const uint ERROR_NO_GLOBAL = 13;
+const uint ERROR_OUT_OF_BOUNDS = 14;
+const uint ERROR_START_EMPTY_BLOCK = 15;
 struct Error {
   uint code = 0;
   std::string message;
