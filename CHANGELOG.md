@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.1 - 2026-06-17
+#### Bug Fixes
+- switches to custom source reader, fixes bug with GO defs - (48c1754) - Tim Raveling
+
+- - -
+
 ## 0.6.0 - 2026-06-16
 #### Features
 - major engine change (#35) - (090047f) - Tim Raveling
