@@ -189,11 +189,13 @@ json Server::handle_definition(const json &id, const json &params) {
         return Transport::make_response(id, json(nullptr));
     }
 
-    // Handle file references (GO path)
+    // Handle file references (GO path). GO paths resolve relative to the codex
+    // root, not the workspace (git) root; fall back to workspace root if there
+    // is no codex.
     if (sym->kind == SymbolKind::FileRef) {
-        // Resolve path relative to workspace root
-        std::string file_path =
-            workspace_.root_path() + "/" + sym->name;
+        const Skald::Codex *codex = doc.codex();
+        std::string base = codex ? codex->path : workspace_.root_path();
+        std::string file_path = (fs::path(base) / sym->name).string();
         std::string file_uri = Workspace::path_to_uri(file_path);
         LspTypes::Location loc;
         loc.uri = file_uri;
@@ -277,9 +279,32 @@ json Server::handle_completion(const json &id, const json &params) {
     }
 
     auto &doc = *it->second;
+
+    // GO paths resolve relative to the codex root, not the workspace (git)
+    // root, so completion paths must be codex-relative too. Re-base the
+    // workspace's .ska list onto the document's codex root, dropping any file
+    // outside it (unreachable by a relative GO). No codex => fall back to the
+    // workspace-relative list.
+    std::vector<std::string> ska_files;
+    const Skald::Codex *codex = doc.codex();
+    if (codex) {
+        for (auto &rel : workspace_.ska_files()) {
+            fs::path abs = fs::path(workspace_.root_path()) / rel;
+            std::error_code ec;
+            auto codex_rel = fs::relative(abs, codex->path, ec);
+            if (ec)
+                continue;
+            std::string s = codex_rel.generic_string();
+            if (s.rfind("..", 0) == 0) // outside codex root
+                continue;
+            ska_files.push_back(s);
+        }
+    } else {
+        ska_files = workspace_.ska_files();
+    }
+
     auto items = get_completions(doc, tdp.position.line,
-                                  tdp.position.character,
-                                  workspace_.ska_files());
+                                  tdp.position.character, ska_files);
 
     json result = json::array();
     for (auto &item : items) {

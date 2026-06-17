@@ -9,9 +9,11 @@
 #include "tao/pegtl/parse.hpp"
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/trace.hpp>
@@ -995,9 +997,32 @@ Response Engine::enter(int block, int index) {
 
 // TODO: Serialize
 
+// Build basic fs reader to use by default
+std::optional<std::string> default_source_reader(const std::string &path) {
+  if (!std::filesystem::exists(path)) {
+    return std::nullopt;
+  }
+  std::ifstream f(path, std::ios::binary);
+  if (!f) {
+    return std::nullopt;
+  }
+  std::ostringstream ss;
+  ss << f.rdbuf();
+  return ss.str();
+}
+
+void Engine::set_source_reader(SourceReader reader) {
+  reader_ = std::move(reader);
+}
+
 ParseResult Engine::setup(std::string path) {
   try {
-    pegtl::file_input in(path);
+    std::optional<std::string> source =
+        reader_ ? reader_(path) : default_source_reader(path);
+    if (!source) {
+      return ParseResult::fail("File not found: " + path);
+    }
+    pegtl::memory_input in(*source, path);
     CodexParseState pstate(path);
 
     dbg_out("------- CODEX PARSING ------");
@@ -1043,10 +1068,12 @@ ParseResult Engine::load(std::string path) {
     // Resolve project paths against the codex root: "alice.ska" with codex
     // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
     std::string file_path = codex ? codex->resolve_path(path) : path;
-    if (!std::filesystem::exists(file_path)) {
+    std::optional<std::string> source =
+        reader_ ? reader_(file_path) : default_source_reader(file_path);
+    if (!source) {
       return ParseResult::fail("File not found: " + file_path);
     }
-    pegtl::file_input in(file_path);
+    pegtl::memory_input in(*source, file_path);
     dbg_out("Loaded file: " << file_path);
 
     /// PARSING ///

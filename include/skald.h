@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -881,11 +882,26 @@ struct ParseResult {
 
 // SECTION: Main Engine
 
+/** Function should return text of Skald module when given a Skald path
+ * (relative to codex or absolute). Returns nullopt if the source can't be found
+ * or read. Lets embedders with a virtual filesystem (Godot res://, archives,
+ * network, in-memory) supply bytes; default reads from the OS filesystem.
+ */
+using SourceReader =
+    std::function<std::optional<std::string>(const std::string &resolved_path)>;
+
+/** Default SourceReader: basic fs reader. */
+std::optional<std::string> default_source_reader(const std::string &path);
+
 class Engine {
 public:
   ParseResult setup(std::string path);
   ParseResult load(std::string path);
   void trace(std::string path);
+
+  /** Set source reader for loading raw content of files / abstract entities
+   * etc. */
+  void set_source_reader(SourceReader reader);
 
   // Actions
   /** Start the Skald engine at a particular tag. This sets the cursor to the
@@ -938,6 +954,9 @@ private:
 
   /** The currently loaded module */
   std::unique_ptr<Module> current;
+
+  /** Source fetcher. Empty => filesystem default (default_source_reader). */
+  SourceReader reader_;
 
   /** Not cleared */
   std::unordered_map<std::string, SimpleRValue> global_state;
