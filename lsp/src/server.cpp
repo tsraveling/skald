@@ -8,6 +8,14 @@ namespace fs = std::filesystem;
 
 namespace SkaldLsp {
 
+// A .codex file is the project's mother codex, not a .ska script. It must be
+// parsed by the codex grammar (via CodexCache), never the .ska Document parser
+// — otherwise every @methods/@globals/declaration line trips the .ska grammar's
+// malformed-line recovery and floods the file with bogus diagnostics.
+static bool is_codex_uri(const std::string &uri) {
+    return uri.size() >= 6 && uri.substr(uri.size() - 6) == ".codex";
+}
+
 void Server::handle_message(const json &msg) {
     std::string method;
     if (msg.contains("method")) {
@@ -132,6 +140,14 @@ void Server::handle_did_open(const json &params) {
     std::string uri = td["uri"].get<std::string>();
     std::string text = td["text"].get<std::string>();
 
+    // Opening the codex itself: parse it as a codex, not a .ska document.
+    // codex_for_uri() loads it into the cache; then publish its own diagnostics.
+    if (is_codex_uri(uri)) {
+        codex_for_uri(uri);
+        publish_codex_diagnostics(uri);
+        return;
+    }
+
     const Skald::Codex *codex = codex_for_uri(uri);
     ensure_project_index(codex, false);
     documents_[uri] =
@@ -146,6 +162,16 @@ void Server::handle_did_change(const json &params) {
 
     auto &changes = params["contentChanges"];
     if (!changes.empty()) {
+        // Editing the codex itself: re-parse via the codex grammar (from disk),
+        // never the .ska Document parser. Drop the stale cache so codex_for_uri
+        // reloads, then republish the codex's own diagnostics.
+        if (is_codex_uri(uri)) {
+            codex_cache_.invalidate(Workspace::uri_to_path(uri));
+            codex_for_uri(uri);
+            publish_codex_diagnostics(uri);
+            return;
+        }
+
         // Full sync mode: take the last full content
         std::string text = changes.back()["text"].get<std::string>();
         const Skald::Codex *codex = codex_for_uri(uri);
