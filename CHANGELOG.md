@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.2 - 2026-06-22
+#### Bug Fixes
+- fixes codex parsing in LSP - (abed656) - Tim Raveling
+
+- - -
+
 ## 0.6.1 - 2026-06-17
 #### Bug Fixes
 - switches to custom source reader, fixes bug with GO defs - (48c1754) - Tim Raveling
