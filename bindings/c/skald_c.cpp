@@ -36,7 +36,8 @@ struct SkaldResponse {
 };
 
 // Pull the MethodCall out of either method-call response variant.
-static const Skald::MethodCall *get_method_call(const SkaldResponse *response) {
+static const Skald::MethodCall *
+get_method_call(const SkaldResponse *response) {
   if (auto *g = std::get_if<Skald::MethodCallGet>(&response->response))
     return &g->call;
   if (auto *p = std::get_if<Skald::MethodCallPost>(&response->response))
@@ -74,10 +75,8 @@ static SkaldResponse *wrap_response(Skald::Response resp) {
   } else if (auto *exit = std::get_if<Skald::Exit>(&r->response)) {
     // Cache exit value if it's a string
     if (exit->argument) {
-      if (auto simple = Skald::cast_rval_to_simple(*exit->argument)) {
-        if (auto *s = Skald::srval_get_str(*simple)) {
-          r->exit_string_cache = *s;
-        }
+      if (auto *s = Skald::srval_get_str(*exit->argument)) {
+        r->exit_string_cache = *s;
       }
     }
   } else if (auto *notif = std::get_if<Skald::Notification>(&r->response)) {
@@ -125,8 +124,8 @@ SkaldErrorCode skald_engine_set_global_string(SkaldEngine *engine,
                                               const char *value) {
   if (!engine || !key)
     return SKALD_ERR_VAR_UNDEFINED;
-  return set_result(
-      engine->engine.set(key, Skald::SimpleRValue(std::string(value ? value : ""))));
+  return set_result(engine->engine.set(
+      key, Skald::SimpleRValue(std::string(value ? value : ""))));
 }
 
 SkaldErrorCode skald_engine_set_global_bool(SkaldEngine *engine,
@@ -411,15 +410,14 @@ const char *skald_go_module_get_tag(const SkaldResponse *response) {
 // Exit Accessors
 // -----------------------------------------------------------------------------
 
-// Unwrap an Exit response's argument into a SimpleRValue, or nullopt if this is
-// not an Exit, carries no argument, or the argument is not simple-castable.
+// Unwrap an Exit response's argument, or nullopt if this is not an Exit or
+// carries no argument.
 static std::optional<Skald::SimpleRValue>
 exit_simple(const SkaldResponse *response) {
   if (!response)
     return std::nullopt;
   if (auto *e = std::get_if<Skald::Exit>(&response->response)) {
-    if (e->argument)
-      return Skald::cast_rval_to_simple(*e->argument);
+    return e->argument;
   }
   return std::nullopt;
 }

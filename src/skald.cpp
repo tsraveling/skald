@@ -154,57 +154,57 @@ void Engine::warn(std::string tx, size_t ln) {
   warnings.push_back(Warning{.message = tx, .line_number = ln});
 }
 
-/** This extracts all queries needed to solve a Conditional. */
-std::vector<MethodCallGet> queries_for_conditional(const Conditional &cond) {
+/** This extracts all call ops needed to solve a Conditional. */
+std::vector<const MethodCallOp *>
+call_ops_for_conditional(const Conditional &cond) {
 
-  std::vector<MethodCallGet> result;
+  std::vector<const MethodCallOp *> result;
 
   for (const auto &item : cond.items) {
     if (auto *atom = std::get_if<ConditionalAtom>(&item)) {
-      const MethodCall *a = rval_get_call(atom->a);
-      const MethodCall *b = atom->b ? rval_get_call(*atom->b) : nullptr;
+      const MethodCallOp *a = rval_get_call(atom->a);
+      const MethodCallOp *b = atom->b ? rval_get_call(*atom->b) : nullptr;
       if (a)
-        result.push_back(
-            MethodCallGet{.call = *a, .line_number = a->line_number});
+        result.push_back(a);
       if (b)
-        result.push_back(
-            MethodCallGet{.call = *b, .line_number = b->line_number});
+        result.push_back(b);
 
     } else if (auto *nested =
                    std::get_if<std::shared_ptr<Conditional>>(&item)) {
-      auto queries = queries_for_conditional(**nested);
-      result.insert(result.end(), queries.begin(), queries.end());
+      auto ops = call_ops_for_conditional(**nested);
+      result.insert(result.end(), ops.begin(), ops.end());
     }
   }
 
   return result;
 }
 
-/** This returns all the queries needed to resolve an AC (handles null case) */
-std::vector<MethodCallGet>
-queries_for_attached_condition(const AttachedCondition &c) {
+/** This returns all call ops needed to resolve an AC (handles null case) */
+std::vector<const MethodCallOp *>
+call_ops_for_attached_condition(const AttachedCondition &c) {
   if (c.condition) {
-    return queries_for_conditional(*c.condition);
+    return call_ops_for_conditional(*c.condition);
   } else {
     return {};
   }
 }
 
-std::vector<MethodCallGet> queries_for_mutation(const Mutation &m) {
+std::vector<const MethodCallOp *> call_ops_for_mutation(const Mutation &m) {
   if (m.rvalue) {
-    if (const MethodCall *call = rval_get_call(*m.rvalue)) {
-      return {MethodCallGet{.call = *call, .line_number = call->line_number}};
+    if (const MethodCallOp *call = rval_get_call(*m.rvalue)) {
+      return {call};
     }
   }
   return {};
 }
 
-/** Returns all queries needed to display a list of choices. Ops are handled
+/** Returns all call ops needed to display a list of choices. Ops are handled
  *  on player picking a choice, so aren't queried here. */
-std::vector<MethodCallGet> queries_for_choice_group(const ChoiceGroup &group) {
-  std::vector<MethodCallGet> ret;
+std::vector<const MethodCallOp *>
+call_ops_for_choice_group(const ChoiceGroup &group) {
+  std::vector<const MethodCallOp *> ret;
   for (const auto &choice : group.choices) {
-    auto q = queries_for_attached_condition(choice.condition);
+    auto q = call_ops_for_attached_condition(choice.condition);
     ret.insert(ret.end(), q.begin(), q.end());
   }
   return ret;
@@ -212,15 +212,15 @@ std::vector<MethodCallGet> queries_for_choice_group(const ChoiceGroup &group) {
 
 /** This is called in the Conditional beat phase, to check if the beat should
  * be processed at all */
-std::vector<MethodCallGet>
-queries_for_member_conditional(const BlockMember &mem) {
+std::vector<const MethodCallOp *>
+call_ops_for_member_conditional(const BlockMember &mem) {
   return std::visit(
-      [](const auto &value) -> std::vector<MethodCallGet> {
+      [](const auto &value) -> std::vector<const MethodCallOp *> {
         using T = std::decay_t<decltype(value)>;
         if constexpr (std::is_same_v<T, Member>) {
-          return queries_for_attached_condition(value.ac);
+          return call_ops_for_attached_condition(value.ac);
         } else if constexpr (std::is_same_v<T, ChoiceGroup>) {
-          return queries_for_choice_group(value);
+          return call_ops_for_choice_group(value);
         }
         return {};
       },
@@ -360,8 +360,8 @@ SimpleRValue Engine::resolve_rval_to_simple(const RValue &rval) {
   return std::visit(
       [this](const auto &value) -> SimpleRValue {
         using T = std::decay_t<decltype(value)>;
-        if constexpr (std::is_same_v<T, std::shared_ptr<MethodCall>>) {
-          auto key = key_for_call(*value);
+        if constexpr (std::is_same_v<T, std::shared_ptr<MethodCallOp>>) {
+          auto key = resolve_call(*value).key;
           auto it = query_cache.find(key);
           auto val = it != query_cache.end() ? it->second : SimpleRValue{false};
           if (it == query_cache.end()) {
@@ -376,6 +376,25 @@ SimpleRValue Engine::resolve_rval_to_simple(const RValue &rval) {
         }
       },
       rval);
+}
+
+MethodCall Engine::resolve_call(const MethodCallOp &op) {
+  MethodCall ret{.method = op.method};
+  for (const auto &arg : op.args) {
+    ret.args.push_back(resolve_rval_to_simple(arg));
+  }
+  ret.key = key_for_call(ret);
+  return ret;
+}
+
+std::vector<MethodCallGet>
+Engine::build_queries(const std::vector<const MethodCallOp *> &ops) {
+  std::vector<MethodCallGet> ret;
+  for (const auto *op : ops) {
+    ret.push_back(MethodCallGet{.call = resolve_call(*op),
+                                .line_number = op->line_number});
+  }
+  return ret;
 }
 
 bool Engine::resolve_conditional_atom(const ConditionalAtom &atom) {
@@ -522,10 +541,11 @@ std::optional<Response> Engine::do_member(Member &mem) {
         } else if constexpr (std::is_same_v<T, Move>) {
           /// MOVE ///
           cursor.queued_transition = m.target_tag;
-        } else if constexpr (std::is_same_v<T, MethodCall>) {
+        } else if constexpr (std::is_same_v<T, MethodCallOp>) {
           /// METHOD ///
           dbg_out("   -()() METHOD CALL POST");
-          ret = MethodCallPost{.call = m, .line_number = m.line_number};
+          ret = MethodCallPost{.call = resolve_call(m),
+                               .line_number = m.line_number};
         } else if constexpr (std::is_same_v<T, Mutation>) {
           /// MUTATION ///
           auto mres = do_mutation(m);
@@ -547,11 +567,12 @@ std::optional<Response> Engine::do_member(Member &mem) {
   return ret;
 }
 
-/** Set up member (AC, mutation RValues. method args not supported yet) */
+/** Set up member (AC, mutation RValues) */
 void Engine::setup_member(Member &member) {
-  cursor.add_to_res_stack(queries_for_attached_condition(member.ac));
+  cursor.add_to_res_stack(
+      build_queries(call_ops_for_attached_condition(member.ac)));
   if (auto *mut = std::get_if<Mutation>(&member.body)) {
-    cursor.add_to_res_stack(queries_for_mutation(*mut));
+    cursor.add_to_res_stack(build_queries(call_ops_for_mutation(*mut)));
   }
   dbg_out("Engine::setup_member");
   cursor.is_preprocessed = true;
@@ -560,11 +581,12 @@ void Engine::setup_member(Member &member) {
 /** Sets up a block member (CG or Mem) directly */
 void Engine::setup_bm(BlockMember &member) {
   if (auto *cg = std::get_if<ChoiceGroup>(&member)) {
-    cursor.add_to_res_stack(queries_for_choice_group(*cg));
+    cursor.add_to_res_stack(build_queries(call_ops_for_choice_group(*cg)));
   }
 
   dbg_out("Engine::setup_bm");
-  cursor.resolution_stack = queries_for_member_conditional(member);
+  cursor.resolution_stack =
+      build_queries(call_ops_for_member_conditional(member));
   cursor.is_preprocessed = true;
 }
 
@@ -581,7 +603,8 @@ void Engine::setup_mbm(MainBlockMember &mbm) {
     cursor.entered_thread_block = false;
     auto &cb = cc->cond_blocks[cursor.thread_block];
     assert(cb.cond); // First cond block must not be an else
-    cursor.resolution_stack = queries_for_attached_condition(cb.cond);
+    cursor.resolution_stack =
+        build_queries(call_ops_for_attached_condition(cb.cond));
     cursor.is_preprocessed = true;
     return;
   }
@@ -791,7 +814,8 @@ Response Engine::next() {
             cursor.entered_thread_block = true;
           } else {
             // elseif block: add to res stack and loop de loop.
-            cursor.resolution_stack = queries_for_attached_condition(nb.cond);
+            cursor.resolution_stack =
+                build_queries(call_ops_for_attached_condition(nb.cond));
             continue; // Will get resolved on next main loop iteration
           }
         }

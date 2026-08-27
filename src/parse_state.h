@@ -109,7 +109,7 @@ struct ParseState {
   std::optional<MemberBody> member_body_buffer;
 
   /** Validates a method and adds errors to the stack if any are found */
-  void validate_method(const MethodCall &m, const tao::pegtl::position pos);
+  void validate_method(const MethodCallOp &m, const tao::pegtl::position pos);
 
   // SECTION: TEXT
 
