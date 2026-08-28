@@ -88,9 +88,9 @@ struct Variable {
 };
 
 // Forward declarations
-struct MethodCall;
+struct MethodCallOp;
 using RValue = std::variant<std::string, bool, int, float, Variable,
-                            std::shared_ptr<MethodCall>>;
+                            std::shared_ptr<MethodCallOp>>;
 
 // Rval helper functions
 inline const std::string *rval_get_str(const RValue &val) {
@@ -108,8 +108,8 @@ inline const float *rval_get_float(const RValue &val) {
 inline const Variable *rval_get_var(const RValue &val) {
   return std::get_if<Variable>(&val);
 }
-inline const MethodCall *rval_get_call(const RValue &val) {
-  if (auto *p = std::get_if<std::shared_ptr<MethodCall>>(&val)) {
+inline const MethodCallOp *rval_get_call(const RValue &val) {
+  if (auto *p = std::get_if<std::shared_ptr<MethodCallOp>>(&val)) {
     return p->get();
   }
   return nullptr;
@@ -218,7 +218,7 @@ struct MethodDef : LineEntity {
   }
 };
 
-struct MethodCall : LineEntity {
+struct MethodCallOp : LineEntity {
   std::string method;
   std::vector<RValue> args;
   std::string dbg_desc() const; // Declare only for circular dep reasons
@@ -238,24 +238,15 @@ inline std::string rval_to_string(const VariantType &val) {
           return std::to_string(value);
         } else if constexpr (std::is_same_v<T, Variable>) {
           return value.name;
-        } else if constexpr (std::is_same_v<T, std::shared_ptr<MethodCall>>) {
+        } else if constexpr (std::is_same_v<T, std::shared_ptr<MethodCallOp>>) {
           return value->dbg_desc();
         }
       },
       val);
 }
 
-/** The key used to encode a query for answer caching */
-inline std::string key_for_call(MethodCall &call) {
-  std::string ret = call.method;
-  for (auto &arg : call.args) {
-    ret += "|" + rval_to_string(arg);
-  }
-  return ret;
-}
-
-// Now define MethodCall::dbg_desc after rval_to_string is available
-inline std::string MethodCall::dbg_desc() const {
+// Now define MethodCallOp::dbg_desc after rval_to_string is available
+inline std::string MethodCallOp::dbg_desc() const {
   std::string ret = "CALL " + method + ": ";
   for (const auto &arg : args) {
     ret += rval_to_string(arg) + " ";
@@ -415,7 +406,7 @@ struct GoModule : LineEntity {
 };
 
 struct Exit : LineEntity {
-  std::optional<RValue> argument;
+  std::optional<SimpleRValue> argument;
   std::string dbg_desc() const {
     if (argument) {
       return rval_to_string(*argument);
@@ -435,7 +426,7 @@ struct OpDebugProcessor {
   std::string operator()(const Move &move) {
     return "MOVE TO: " + move.target_tag;
   }
-  std::string operator()(const MethodCall &method_call) {
+  std::string operator()(const MethodCallOp &method_call) {
     return "CALL: " + method_call.dbg_desc();
   }
   std::string operator()(const Mutation &mutation) {
@@ -538,7 +529,7 @@ struct Beat : LineEntity {
 /** The raw types contained by a Member: Move, MethodCall,
  *  Mutation, GoModule, Exit, or Beat. */
 using MemberBody =
-    std::variant<Move, MethodCall, Mutation, GoModule, Exit, Beat>;
+    std::variant<Move, MethodCallOp, Mutation, GoModule, Exit, Beat>;
 
 /** A member of a block (excludes CGs) or choice. .body: MemberBody, and ac:
  *  AttachedCondition. */
@@ -547,14 +538,16 @@ struct Member : LineEntity {
   AttachedCondition ac;
 
   const Move *get_move() const { return std::get_if<Move>(&body); }
-  const MethodCall *get_call() const { return std::get_if<MethodCall>(&body); }
+  const MethodCallOp *get_call() const {
+    return std::get_if<MethodCallOp>(&body);
+  }
   const Mutation *get_mutation() const { return std::get_if<Mutation>(&body); }
   const GoModule *get_go_module() const { return std::get_if<GoModule>(&body); }
   const Exit *get_exit() const { return std::get_if<Exit>(&body); }
   const Beat *get_beat() const { return std::get_if<Beat>(&body); }
 
   bool is_move() const { return std::holds_alternative<Move>(body); }
-  bool is_call() const { return std::holds_alternative<MethodCall>(body); }
+  bool is_call() const { return std::holds_alternative<MethodCallOp>(body); }
   bool is_mutation() const { return std::holds_alternative<Mutation>(body); }
   bool is_go_module() const { return std::holds_alternative<GoModule>(body); }
   bool is_exit() const { return std::holds_alternative<Exit>(body); }
@@ -676,12 +669,35 @@ struct OptionGroup {
   std::vector<Option> options;
 };
 
-/** This posts the method out to the client, and is used to key the result back
- * into Skald state. */
+/** Describes a method call sent out to a Response. Arguments resolved. */
+struct MethodCall {
+  std::string method;
+  std::vector<SimpleRValue> args;
+  std::string key; // Calculated on creation
+  std::string dbg_desc() const {
+    std::string ret = "CALL " + method + ": ";
+    for (const auto &arg : args) {
+      ret += rval_to_string(arg) + " ";
+    }
+    return ret;
+  }
+};
+
+/** The key used to encode a resolved query for answer caching */
+inline std::string key_for_call(const MethodCall &call) {
+  std::string ret = call.method;
+  for (auto &arg : call.args) {
+    ret += "|" + rval_to_string(arg);
+  }
+  return ret;
+}
+
+/** This posts the method out to the client, and is used to key the result
+ * back into Skald state. */
 struct MethodCallGet {
   MethodCall call;
   size_t line_number = 0;
-  std::string get_key() { return key_for_call(call); }
+  std::string get_key() { return call.key; }
 };
 
 struct MethodCallPost {
@@ -1074,6 +1090,15 @@ private:
                                         size_t ln = 0);
 
   SimpleRValue resolve_rval_to_simple(const RValue &rval);
+
+  /** Resolves an MethodCallOp (aka the call-as-operation, in relation to a
+   * module) with a MethodCall (aka call-as-response, in relation to the
+   * external client. */
+  MethodCall resolve_call(const MethodCallOp &op);
+
+  /** Builds queries from list of ops calls */
+  std::vector<MethodCallGet>
+  build_queries(const std::vector<const MethodCallOp *> &ops);
   bool resolve_conditional_atom(const ConditionalAtom &atom);
   bool resolve_conditional_item(const ConditionalItem &item);
   bool resolve_condition(const std::optional<Conditional> &cond);

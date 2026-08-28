@@ -149,7 +149,7 @@ void ParseState::add_conditional_atom(const ConditionalAtom &atom) {
 }
 
 // SECTION: METHODS
-void ParseState::validate_method(const MethodCall &m,
+void ParseState::validate_method(const MethodCallOp &m,
                                  const tao::pegtl::position pos) {
   // 1. There must be a codex
   if (!codex) {

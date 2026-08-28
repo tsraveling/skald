@@ -281,7 +281,7 @@ template <> struct action<r_variable> {
 template <> struct action<r_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto method_call = std::make_shared<MethodCall>(MethodCall{
+    auto method_call = std::make_shared<MethodCallOp>(MethodCallOp{
         .method = state.pop_id(), .args = std::move(state.argument_queue)});
     state.validate_method(*method_call, input.position());
     state.rval_buffer.push_back(method_call);
@@ -566,9 +566,9 @@ template <> struct action<op_exit> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_exit: " << input.string() << " (pushing onto queue)");
-    std::optional<RValue> arg = std::nullopt;
+    std::optional<SimpleRValue> arg = std::nullopt;
     if (state.rval_buffer.size() > 0)
-      arg = state.rval_buffer_pop();
+      arg = state.simple_rval_buffer_pop(input.position());
     state.member_body_buffer = Exit{.argument = arg};
   }
 };
@@ -585,8 +585,8 @@ template <> struct action<op_move> {
 template <> struct action<op_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    auto mc = MethodCall{input.position().line, state.pop_id(),
-                         std::move(state.argument_queue)};
+    auto mc = MethodCallOp{input.position().line, state.pop_id(),
+                           std::move(state.argument_queue)};
     state.validate_method(mc, input.position());
     state.member_body_buffer = std::move(mc);
     dbg_out(">>> op_method: " << input.string());
