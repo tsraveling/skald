@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.3 - 2026-08-28
+#### Bug Fixes
+- all Response exits now use SimpleRValue instead of RValue (#36) - (00157f2) - Tim Raveling
+
+- - -
+
 ## 0.6.2 - 2026-06-22
 #### Bug Fixes
 - fixes codex parsing in LSP - (abed656) - Tim Raveling
