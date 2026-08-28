@@ -170,23 +170,6 @@ if (auto name = engine.get_codex_name()) {
 }
 ```
 
-### .trace()
-
-Debug usage only. Utility that parses and walks a module at the given path, printing trace output.
-
-- `path` (`std::string`): path to the module file.
-
-```cpp
-engine.trace("chapters/intro.ska"); // dumps grammar trace to stdout
-```
-
-### .dbg_print_cache()
-
-Debug utility returning the query answer cache as a printable string. Useful for building debug tools in your game.
-
-```cpp
-std::cout << engine.dbg_print_cache();
-```
 
 ## Static methods
 
@@ -224,23 +207,56 @@ default:
 }
 ```
 
-### RValue / SimpleRValue helpers
+## SimpleRValue helpers
 
-`rval_get_str`, `rval_get_int`, `rval_get_bool`, `rval_get_float`, `rval_get_var`, `rval_get_call` each take an `RValue` and return a pointer to the held alternative, or `nullptr` if it holds something else. The `srval_get_*` equivalents do the same for `SimpleRValue`, and `srval_get_type` returns the held alternative's `ValueType`.
+All values on `Response` types, e.g. method arguments, Exit values, etc., will come in as `SimpleRValue`, a variant of type `int`, `float`, `std::string`, or `bool`. The following take a `SimpleRValue` as an arg and return the relevant value:
+
+- `srval_get_str` returns `*std::string`
+- `srval_get_int` returns `*int`
+- `srval_get_float` returns `*float`
+- `srval_get_bool` returns `*bool`
+
+These helper methods will return `nullptr` if the type is incorrect.
 
 ```cpp
-if (const int *n = Skald::rval_get_int(rval)) {
-  use(*n);
-} else if (const Skald::Variable *var = Skald::rval_get_var(rval)) {
-  lookup(var->name);
-}
-
-if (Skald::srval_get_type(sval) == Skald::ValueType::STRING) {
-  greet(*Skald::srval_get_str(sval));
+if (const int *n = Skald::srval_get_int(srval)) {
+    do_something_with(*n);
 }
 ```
 
-### cast_rval_to_simple
+# Debug Functions
+
+The following methods and types are only used in debugging, or when setting up debug features in your own game or integration.
+
+## Engine Debug Methods
+
+The following methods are available, but mostly used for debugging:
+
+### .trace()
+
+Debug usage only. Utility that parses and walks a module at the given path, printing trace output.
+
+- `path` (`std::string`): path to the module file.
+
+```cpp
+engine.trace("chapters/intro.ska"); // dumps grammar trace to stdout
+```
+
+### .dbg_print_cache()
+
+Debug utility returning the query answer cache as a printable string. Useful for building debug tools in your game.
+
+```cpp
+std::cout << engine.dbg_print_cache();
+```
+
+## RValues
+
+An `RValue` is a value in Skald *before* it has been resolved. It has the same four base types as SimpleRValue (int, bool, string, float), and in addition can support **methods** and **variables**. Variables are pulled from global, module, or local scope (in that order); methods must first be resolved using the `QueryAnswer` system.
+
+As such, `Response` types always resolve before sending. If you want to try to dig into the inner workings of Skald, though, or extend state-watching capabilities, here are some useful methods.
+
+### Skald::cast_rval_to_simple(rval)
 
 Narrows an `RValue` to a `SimpleRValue`, returning `std::nullopt` when the value is a `Variable` or `MethodCall` and can't be represented simply.
 
@@ -254,9 +270,9 @@ if (auto simple = Skald::cast_rval_to_simple(rval)) {
 }
 ```
 
-### is_simple_rval_truthy
+### Skald::is_simple_rval_truthy()
 
-Returns the truthiness of a `SimpleRValue`: non-empty for strings, non-zero/true otherwise.
+Returns the truthiness of a `SimpleRValue`: non-empty for strings, non-zero/true otherwise. Used for conditionals and ternaries.
 
 - `val` (`const SimpleRValue&`): value to test.
 
@@ -265,7 +281,7 @@ Skald::SimpleRValue v = std::string("hello");
 bool truthy = Skald::is_simple_rval_truthy(v); // true (non-empty string)
 ```
 
-### get_zero
+### Skald::get_zero(value_type)
 
 Returns the zero value for a `ValueType` (`0`, `0.0f`, `""`, or `false`).
 
@@ -275,7 +291,7 @@ Returns the zero value for a `ValueType` (`0`, `0.0f`, `""`, or `false`).
 Skald::SimpleRValue blank = Skald::get_zero(Skald::ValueType::FLOAT); // 0.0f
 ```
 
-### val_type_to_str / scope_to_str
+### Skald::val_type_to_str(value_type) / Skald::scope_to_str(var_scope)
 
 `val_type_to_str` renders a `ValueType` as its lowercase name; `scope_to_str` does the same for a `VarScope`.
 
@@ -284,7 +300,7 @@ Skald::val_type_to_str(Skald::ValueType::INT);   // "int"
 Skald::scope_to_str(Skald::VarScope::MODULE);    // "module"
 ```
 
-### rval_to_string
+### Skald::rval_to_string(rval)
 
 Template rendering any `RValue`/`SimpleRValue` variant to a display string, mainly for debugging.
 
@@ -294,9 +310,9 @@ Template rendering any `RValue`/`SimpleRValue` variant to a display string, main
 std::cout << Skald::rval_to_string(rval);   // e.g. "42", "{T}", "gold"
 ```
 
-### key_for_call
+### Skald::key_for_call(method_call)
 
-Builds the cache key string used to memoize a method call's answer, from the method name and its arguments.
+Builds the cache key string used to store a method call's answer, from the method name and its arguments. That answer is then used during the resolution of the `RValue` that called the method into the `SimpleRValue` that the client returned in its `QueryAnswer`.
 
 - `call` (`MethodCall&`): the call to encode.
 
@@ -304,6 +320,8 @@ Builds the cache key string used to memoize a method call's answer, from the met
 Skald::MethodCallGet &query = std::get<Skald::MethodCallGet>(response);
 std::string key = Skald::key_for_call(query.call); // e.g. "roll_dice|6"
 ```
+
+# Type Glossary
 
 ## Type aliases
 
@@ -359,7 +377,7 @@ std::string key = Skald::key_for_call(query.call); // e.g. "roll_dice|6"
 
 `GoModule` signals a transition to another module: `module_path` plus optional `start_in_tag`.
 
-`Exit` signals script exit with an optional `argument` RValue.
+`Exit` signals script exit with an optional `argument` SimpleRValue.
 
 `End` is an empty terminator meaning the script concluded, with an optional debug `reason`.
 

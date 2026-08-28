@@ -1091,8 +1091,9 @@ private:
 
   SimpleRValue resolve_rval_to_simple(const RValue &rval);
 
-  /** Resolves an op call with rvalue args -> sent call with simple rvalue
-   *  args */
+  /** Resolves an MethodCallOp (aka the call-as-operation, in relation to a
+   * module) with a MethodCall (aka call-as-response, in relation to the
+   * external client. */
   MethodCall resolve_call(const MethodCallOp &op);
 
   /** Builds queries from list of ops calls */
