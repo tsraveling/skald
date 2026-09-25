@@ -32,12 +32,12 @@ void ParseState::warn(const tao::pegtl::position pos, std::string msg) {
 
 // SECTION: BLOCKS
 
-void ParseState::start_block(const std::string &tag) {
+void ParseState::start_block(const std::string &tag, size_t line) {
   Log::verbose("Starting new block:", tag);
 
   Block new_block;
-  // STUB: Use stored tag level
   new_block.tag = tag;
+  new_block.line_number = line;
   module.blocks.push_back(new_block);
   dbg_out(">>> [] block_lookup[" << tag << "] = " << module.blocks.size() - 1);
   module.block_lookup[tag] = module.blocks.size() - 1;

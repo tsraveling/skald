@@ -1,22 +1,27 @@
 #!/usr/bin/env bash
 # Dev loop: build skald + run tests. Edit code, run `./test.sh`, repeat.
-# Forwards extra args to ctest, e.g. `./test.sh -R grammar` or `./test.sh --stop-on-failure`.
+# Forwards extra args to ctest, e.g. `./test.sh -R compile` or `./test.sh --stop-on-failure`.
 set -euo pipefail
 
 BUILD_DIR="build"
 
-# First run only: generate Ninja build files with tests enabled + debug symbols.
-# Skipped on subsequent runs since CMake re-runs itself automatically when
-# CMakeLists.txt changes.
-if [ ! -f "${BUILD_DIR}/build.ninja" ]; then
-    cmake -S . -B "${BUILD_DIR}" -G Ninja \
+# Fresh build dir: prefer Ninja when available. Existing build dir: keep
+# whatever generator configured it (README uses Makefiles) and just make
+# sure the tests option is on.
+if [ ! -f "${BUILD_DIR}/CMakeCache.txt" ]; then
+    gen=()
+    if command -v ninja >/dev/null; then
+        gen=(-G Ninja)
+    fi
+    cmake -S . -B "${BUILD_DIR}" "${gen[@]}" \
         -DSKALD_BUILD_TESTS=ON \
         -DCMAKE_BUILD_TYPE=Debug
+else
+    cmake -S . -B "${BUILD_DIR}" -DSKALD_BUILD_TESTS=ON >/dev/null
 fi
 
-# Incremental build — Ninja only recompiles what changed.
+# Incremental build.
 cmake --build "${BUILD_DIR}" -j
 
-# Run both test suites (grammar + e2e). --output-on-failure shows doctest output
-# only when something fails, keeping passing runs quiet.
+# --output-on-failure keeps passing runs quiet.
 ctest --test-dir "${BUILD_DIR}" --output-on-failure "$@"

@@ -48,7 +48,8 @@ public:
 
   /** Walks the filetree and finds all .ska files in or below the given
    *  project root. Returned paths are relative to that root, sorted. Hidden
-   *  directories (".git" etc.) are skipped. */
+   *  directories (".git" etc.) and subdirectories holding their own .codex
+   *  (nested projects) are skipped. */
   std::vector<std::string> find_modules(const std::string &project_path) {
     namespace fs = std::filesystem;
     std::vector<std::string> modules;
@@ -66,7 +67,8 @@ public:
       }
       const auto &entry = *it;
       std::string name = entry.path().filename().string();
-      if (entry.is_directory(ec) && !name.empty() && name[0] == '.') {
+      if (entry.is_directory(ec) &&
+          ((!name.empty() && name[0] == '.') || has_codex(entry.path()))) {
         it.disable_recursion_pending();
         continue;
       }
@@ -76,6 +78,21 @@ public:
     }
     std::sort(modules.begin(), modules.end());
     return modules;
+  }
+
+  /** True if `dir` directly contains a .codex file. */
+  static bool has_codex(const std::filesystem::path &dir) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    for (fs::directory_iterator
+             dit(dir, fs::directory_options::skip_permission_denied, ec),
+         dend;
+         !ec && dit != dend; dit.increment(ec)) {
+      if (dit->is_regular_file(ec) && dit->path().extension() == ".codex") {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Checks start_path's directory, then every parent, until it finds one

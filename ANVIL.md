@@ -1,50 +1,16 @@
 ## FIXES
 
-- FIX: need to be able to set mutations to method outputs -- if this is working it is not resolving properly!
-- FIX: Comments don't seem to be detected fully in the middle of a block, ie between beats.
-- LSP: count a_b as one word, not two
+- LSP: parser breaks when typing a `(? variable >= 3)` type of conditional. Boolean ones seem to work fine.
+- Parser: inline choice redirect `> text -> a.b` builds its Move from `pop_id()` (skald_actions.h `inline_choice_move`), so a dotted or relative target likely keeps only the last identifier instead of `move_identifier_store`.
+- Parser: switch ternary default `_` (`switch_default`) has no action, so `{x ? [1:"a", _:"b"]}` pops the wrong rvals.
+- Parser: `@receive` matches in the grammar but has no action and no `Module` field; it is silently dropped.
+- Parser: `EXIT some_var` errors because `Exit.argument` is `SimpleRValue`; Syntax.md 4.1.2 says variables are allowed.
+- Codex: `@readonly` documented in Syntax.md 4.2.2 but absent from `codex_grammar.h`.
 
 ## NEXT
 
-- LSP updates
-- Test engine and polish
-- Skald-Godot updates
-- Treesitter updates
 
 ## TO DO
-
-- Move operations inline
-- Move choices into choice groups
-- Handle child blocks
-    * [ ] Map type of prefix to type of block
-    * [ ] Use e.g. parent.child.grandchild as key, so that transitions can be done using string manipulation
-- Updated transitions
-    * [ ] support nested blocks in transitions
-    * [ ] support GO insertions
-- Conditional Blocks
-    * [ ] Set up in data
-    * [ ] Set up parsing for nested systems
-    * [ ] Handle in parser
-    * [ ] Handle in engine
-- Choice sub-beats
-- Strong typing
-- Module variables vs ad hoc variables
-- Codices
-    * [ ] Infrastructure for secondary file type
-    * [ ] @globals in grammar
-    * [ ] @methods in grammar
-    * [ ] Support in data
-    * [ ] Support in engine infrastructure
-    * [ ] Build out global state system
-- Support full conditional statements in ternaries
-- Support custom engine insertion
-
-## DOING
-
-- @let clause
-- Structural refactor
-
-## TESTING
 
 
 ## DONE

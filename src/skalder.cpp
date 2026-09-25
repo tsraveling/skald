@@ -1,6 +1,9 @@
 #include "debug.h"
 #include "skald.h"
-#include "skalder_fs.h"
+#include "skalder_args.h"
+#include "skalder_common.h"
+#include "skalder_compile.h"
+#include "skalder_headless.h"
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -241,74 +244,51 @@ public:
   Engine engine;
 };
 
-void print_parse_errors(std::vector<ParseError> &errs) {
-  if (errs.size() == 0) {
-    std::cout << "0 parse errors found.\n";
-  };
-  for (auto &err : errs) {
-    bool is_error = err.severity == ParseError::ERROR;
-    std::cerr << (is_error ? "\033[31merror" : "\033[33mwarning") << "\033[0m";
-    if (!err.pos.source.empty()) {
-      std::cerr << " " << err.pos.source << ":" << err.pos.line << ":"
-                << err.pos.column;
-    }
-    std::cerr << ": " << err.msg << "\n";
-  }
-}
-
 int main(int argc, char *argv[]) {
+  auto args = SkalderArgs::parse(argc, argv);
+  if (args.help) {
+    SkalderArgs::print_usage(std::cout);
+    return 0;
+  }
+  if (!args.error.empty()) {
+    std::cerr << "error: " << args.error << "\n\n";
+    SkalderArgs::print_usage(std::cerr);
+    return 2;
+  }
+  if (args.compile) {
+    return run_compile(args);
+  }
+  if (args.script) {
+    return run_headless(args);
+  }
+
   dbg_out_on = true;
   dbg_sink = [](const std::string &s) { dbg_log(s); };
 
+  SkaldTester tester{};
+  auto load = skalder::load_engine(tester.engine, args.path);
+  for (auto &note : load.notes) {
+    tester.note_system(note);
+    dbg_log(note);
+  }
+  if (load.exit_code) {
+    return load.exit_code;
+  }
+  if (!skalder::apply_testbed_arg(tester.engine, args.testbed)) {
+    return 2;
+  }
+  tester.note_system("STARTING MODULE: " + load.module_path);
+  dbg_log("STARTING MODULE: " + load.module_path);
+
   auto screen = ScreenInteractive::Fullscreen();
 
-  // FIXME: Eventually remove this debug option (or flag it out)
-  std::string path = (argc < 2) ? "../test/test.ska" : argv[1];
-
-  SkaldTester tester{};
-  FileManager files{};
-
-  // This is the path to the module (.ska file)
-  std::string module_path = path;
-
-  // This is the path to the project (.codex file)
-  auto project_root = files.find_project_root(path);
-
-  // If string, we have a codex file.
-  if (auto *codex_path = std::get_if<std::string>(&project_root)) {
-    tester.note_system("CODEX: " + *codex_path);
-    dbg_out("CODEX: " + *codex_path);
-    auto res = tester.engine.setup(*codex_path);
-    print_parse_errors(res.exceptions);
-    if (!res.ok) {
-      return 0;
-    }
-    auto project_root = tester.engine.get_project_root();
-    assert(project_root); // setup must actually work given detection
-    module_path = files.loc_to_proj(*project_root, module_path);
-  } else if (auto *err = std::get_if<FileManager::FileError>(&project_root)) {
-    // If error, return
-    tester.note_error(err->msg);
-    dbg_log(err->msg, LogSeverity::ERROR);
-    return 0;
-  } else {
-    // If NoOp, that means it's an orphan
-    tester.note_system("Not in a Skald codex; loading as orphan (no globals or "
-                       "methods available).");
-  }
-
-  // Now load the module (.ska file)
-  auto res = tester.engine.load(module_path);
-  print_parse_errors(res.exceptions);
-  if (!res.ok) {
-    return 0;
-  }
-  tester.note_system("STARTING MODULE: " + module_path);
-  dbg_log("STARTING MODULE: " + module_path);
-
   // Start the loaded module
-  Response response;
-  response = tester.engine.start();
+  Response response = skalder::start_engine(tester.engine, args.start);
+  if (args.start && std::holds_alternative<Error>(response) &&
+      std::get<Error>(response).code == ERROR_MODULE_TAG_NOT_FOUND) {
+    std::cerr << "error: " << std::get<Error>(response).message << "\n";
+    return 2;
+  }
   tester.process(response);
 
   std::string input_content;
