@@ -58,7 +58,7 @@ Another year! Now my age is {age}.
 
 ~ simple_args(5, "bob")
 
-(? gender = "m") ~ age += 2 --- conditional operation
+(? gender == "m") ~ age += 2 --- conditional operation
 
 
 tester: This is an attributed beat.

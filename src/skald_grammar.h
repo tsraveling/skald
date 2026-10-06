@@ -20,6 +20,7 @@ struct operator_plus_equals : string<'+', '='> {};
 struct operator_minus_equals : string<'-', '='> {};
 struct operator_not_equals : string<'!', '='> {};
 struct operator_equals : one<'='> {};
+struct operator_cond_equals : string<'=', '='> {};
 struct operator_equals_switch : string<'=', '!'> {};
 struct operator_more : one<'>'> {};
 struct operator_less : one<'<'> {};
@@ -86,7 +87,7 @@ struct top_matter : star<sor<testbed, let, receive, ignored, malformed_line>> {
 
 struct checkable_not_truthy : seq<one<'!'>, rvalue> {};
 struct checkable_2f_operator
-    : sor<operator_equals, operator_not_equals, operator_more_equal,
+    : sor<operator_cond_equals, operator_not_equals, operator_more_equal,
           operator_less_equal, operator_more, operator_less> {};
 struct checkable_right_tail : seq<ws, checkable_2f_operator, ws, rvalue> {};
 struct checkable_base

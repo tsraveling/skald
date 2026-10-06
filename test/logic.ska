@@ -50,8 +50,9 @@ Inline conditionals.
 (? returns_something() and flag) Method and variable.
 (? flag or returns_something()) Variable or method.
 (? returns_something() > 3) Method compare.
-(? count = returns_something()) Variable compare to method.
-(? returns_w_args(count, "x") = "y") Method with args compare.
+(? count == returns_something()) Variable compare to method.
+(? returns_w_args(count, "x") == "y") Method with args compare.
+(? count != 2 and count >= 1 and count <= 9) Other comparisons.
 (? (returns_something() > 1) and !flag) Subclause with method.
 (? returns_something()) ~ simple()
 (? flag) ~ count = returns_something()
@@ -68,7 +69,7 @@ Injected {returns_something()} and {returns_w_args(1, "a")}.
 
 If on method.
 
-@elseif returns_w_args(count, "z") = "z"
+@elseif returns_w_args(count, "z") == "z"
 
 Elseif on method with args.
 

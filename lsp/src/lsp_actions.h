@@ -16,8 +16,8 @@ SourceRange range_from_input(const ActionInput &input) {
           static_cast<int>(pos.column) - 1 + static_cast<int>(input.size())};
 }
 
-// Helper: a line-level rule (declaration, testbed_set) begins with optional
-// indent then an identifier. Pull out that leading identifier's name and a
+// Helper: a rule (declaration, testbed_set, method call) begins with optional
+// indent or `~` then an identifier. Pull out that leading identifier's name and a
 // tight range over it.
 template <typename ActionInput>
 static std::pair<std::string, SourceRange>
@@ -25,7 +25,7 @@ leading_identifier(const ActionInput &input) {
   std::string s = input.string();
   auto pos = input.position();
   size_t i = 0;
-  while (i < s.size() && (s[i] == ' ' || s[i] == '\t'))
+  while (i < s.size() && (s[i] == ' ' || s[i] == '\t' || s[i] == '~'))
     ++i;
   size_t start = i;
   while (i < s.size() &&
@@ -47,15 +47,6 @@ template <> struct lsp_action<Skald::identifier> {
   static void apply(const ActionInput &input, LspParseState &state) {
     state.last_identifier_range = range_from_input(input);
     Skald::action<Skald::identifier>::apply(input, state);
-  }
-};
-
-// variable_name: alias for identifier; base action<identifier> won't fire.
-template <> struct lsp_action<Skald::variable_name> {
-  template <typename ActionInput>
-  static void apply(const ActionInput &input, LspParseState &state) {
-    state.last_identifier_range = range_from_input(input);
-    state.last_identifier = input.string();
   }
 };
 
@@ -141,13 +132,13 @@ template <> struct lsp_action<Skald::testbed_set> {
   }
 };
 
-// op_mutate_start: save the mutation target identifier name and range before
-// rvalue parsing can overwrite last_identifier/last_identifier_range
-template <> struct lsp_action<Skald::op_mutate_start> {
+// mutate_lvalue: save the mutation target name and range
+template <> struct lsp_action<Skald::mutate_lvalue> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    state.mutate_target_name = state.last_identifier;
-    state.mutate_target_range = state.last_identifier_range;
+    state.mutate_target_name = input.string();
+    state.mutate_target_range = range_from_input(input);
+    Skald::action<Skald::mutate_lvalue>::apply(input, state);
   }
 };
 
@@ -187,58 +178,36 @@ template <> struct lsp_action<Skald::op_mutate_subtract> {
   }
 };
 
-// op_method: method call as an inline operation (:method(...))
+// op_method: method call as an inline operation (~ method(...)). Name comes
+// from the input, as args overwrite last_identifier.
 template <> struct lsp_action<Skald::op_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.last_identifier;
-    state.record_symbol(name, SymbolKind::Method, false,
-                        state.last_identifier_range, /*is_rvalue=*/false);
+    auto [name, range] = leading_identifier(input);
+    state.record_symbol(name, SymbolKind::Method, false, range,
+                        /*is_rvalue=*/false);
     Skald::action<Skald::op_method>::apply(input, state);
   }
 };
 
-// r_method: method call used as an rvalue / conditional (:method(...))
+// r_method: method call used as an rvalue / conditional (method(...))
 template <> struct lsp_action<Skald::r_method> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
-    auto name = state.last_identifier;
-    state.record_symbol(name, SymbolKind::Method, false,
-                        state.last_identifier_range, /*is_rvalue=*/true);
+    auto [name, range] = leading_identifier(input);
+    state.record_symbol(name, SymbolKind::Method, false, range,
+                        /*is_rvalue=*/true);
     Skald::action<Skald::r_method>::apply(input, state);
   }
 };
 
-// checkable_2f_operator: flag `==`, `=>`, `=<`. The grammar matches the first
-// `=` and then backtracks, so without this they fail with no useful error.
+// checkable_2f_operator: mark the rval buffer so checkable_base can tell
+// whether the right-hand rvalue parsed.
 template <> struct lsp_action<Skald::checkable_2f_operator> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, LspParseState &state) {
     state.comparison_rval_mark = state.rval_buffer.size();
     Skald::action<Skald::checkable_2f_operator>::apply(input, state);
-
-    if (input.string() != "=" || input.end() >= input.input().end())
-      return;
-    std::string msg;
-    switch (*input.end()) {
-    case '=':
-      msg = "Use `=` for equality, not `==`";
-      break;
-    case '>':
-      msg = "Use `>=`, not `=>`";
-      break;
-    case '<':
-      msg = "Use `<=`, not `=<`";
-      break;
-    default:
-      return;
-    }
-    // Backtracking can fire this more than once for the same operator.
-    auto pos = Skald::from_pos(input.position());
-    for (auto &e : state.errors)
-      if (e.pos.line == pos.line && e.pos.column == pos.column && e.msg == msg)
-        return;
-    state.err(input.position(), msg);
   }
 };
 

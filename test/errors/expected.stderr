@@ -3,3 +3,5 @@ errors.ska:5:1: error: No method by that name is in the Codex.
 errors.ska:6:11: error: No method by that name is in the Codex.
 errors.ska:7:1: error: Method in codex has 2 arguments; this one has 1.
 errors.ska:8:4: error: No method by that name is in the Codex.
+errors.ska:9:1: error: Malformed line: could not be parsed.
+errors.ska:10:1: error: Malformed line: could not be parsed.

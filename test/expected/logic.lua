@@ -608,6 +608,59 @@ return {
             type = "and",
             items = {
               {
+                t = "atom",
+                a = {
+                  t = "var",
+                  name = "count",
+                },
+                cmp = "ne",
+                b = {
+                  t = "int",
+                  v = 2,
+                },
+              },
+              {
+                t = "atom",
+                a = {
+                  t = "var",
+                  name = "count",
+                },
+                cmp = "ge",
+                b = {
+                  t = "int",
+                  v = 1,
+                },
+              },
+              {
+                t = "atom",
+                a = {
+                  t = "var",
+                  name = "count",
+                },
+                cmp = "le",
+                b = {
+                  t = "int",
+                  v = 9,
+                },
+              },
+            },
+          },
+          line = 55,
+          body = {
+            t = "beat",
+            attribution = "",
+            text = {
+              parts = {
+                "Other comparisons.",
+              },
+            },
+          },
+        },
+        {
+          cond = {
+            type = "and",
+            items = {
+              {
                 t = "group",
                 cond = {
                   type = "and",
@@ -639,7 +692,7 @@ return {
               },
             },
           },
-          line = 55,
+          line = 56,
           body = {
             t = "beat",
             attribution = "",
@@ -666,7 +719,7 @@ return {
               },
             },
           },
-          line = 56,
+          line = 57,
           body = {
             t = "call",
             method = "simple",
@@ -687,7 +740,7 @@ return {
               },
             },
           },
-          line = 57,
+          line = 58,
           body = {
             t = "mutation",
             op = "set",
@@ -701,7 +754,7 @@ return {
           },
         },
         {
-          line = 59,
+          line = 60,
           body = {
             t = "beat",
             attribution = "",
@@ -743,7 +796,7 @@ return {
         },
         {
           t = "choices",
-          line = 61,
+          line = 62,
           choices = {
             {
               cond = {
@@ -768,7 +821,7 @@ return {
               },
               members = {
                 {
-                  line = 62,
+                  line = 63,
                   body = {
                     t = "call",
                     method = "simple",
@@ -776,7 +829,7 @@ return {
                   },
                 },
                 {
-                  line = 63,
+                  line = 64,
                   body = {
                     t = "mutation",
                     op = "set",
@@ -790,7 +843,7 @@ return {
                   },
                 },
               },
-              line = 61,
+              line = 62,
             },
             {
               text = {
@@ -800,7 +853,7 @@ return {
               },
               members = {
                 {
-                  line = 65,
+                  line = 66,
                   body = {
                     t = "mutation",
                     op = "add",
@@ -812,7 +865,7 @@ return {
                   },
                 },
               },
-              line = 64,
+              line = 65,
             },
           },
         },
@@ -835,10 +888,10 @@ return {
                   },
                 },
               },
-              line = 67,
+              line = 68,
               members = {
                 {
-                  line = 69,
+                  line = 70,
                   body = {
                     t = "beat",
                     attribution = "",
@@ -880,10 +933,10 @@ return {
                   },
                 },
               },
-              line = 71,
+              line = 72,
               members = {
                 {
-                  line = 73,
+                  line = 74,
                   body = {
                     t = "beat",
                     attribution = "",
@@ -920,10 +973,10 @@ return {
                   },
                 },
               },
-              line = 75,
+              line = 76,
               members = {
                 {
-                  line = 77,
+                  line = 78,
                   body = {
                     t = "beat",
                     attribution = "",
@@ -937,10 +990,10 @@ return {
               },
             },
             {
-              line = 79,
+              line = 80,
               members = {
                 {
-                  line = 81,
+                  line = 82,
                   body = {
                     t = "beat",
                     attribution = "",
@@ -956,7 +1009,7 @@ return {
           },
         },
         {
-          line = 85,
+          line = 86,
           body = {
             t = "exit",
           },

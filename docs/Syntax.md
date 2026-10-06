@@ -520,7 +520,7 @@ These are ad hoc operations:
 
 Condition is true!
 
-@elseif sky="red"
+@elseif sky == "red"
 
 Seems apocalyptic
 > Continue
@@ -564,10 +564,10 @@ You can also nest parentheses:
 
 ### 3.2.2 Value Checks
 
-You can check **equality** on any variable:
+You can check **equality** on any variable with `==` (a single `=` is only for mutations):
 
 ```
-(? bool_var = true or str_var = "Test" or num_var = 3) This beat will show up if any of these variables match the given variable.
+(? bool_var == true or str_var == "Test" or num_var == 3) This beat will show up if any of these variables match the given variable.
 ```
 
 Likewise, you can check **not equals**:

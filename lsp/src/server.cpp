@@ -79,7 +79,7 @@ json Server::handle_initialize(const json &id, const json &params) {
     json capabilities = {
         {"textDocumentSync",
          {{"openClose", true}, {"change", 1} /* Full sync */}},
-        {"completionProvider", {{"triggerCharacters", {">", ":", "~", " "}}}},
+        {"completionProvider", {{"triggerCharacters", {">", "~", " ", "(", "{"}}}},
         {"definitionProvider", true},
         {"referencesProvider", true},
         {"hoverProvider", true},

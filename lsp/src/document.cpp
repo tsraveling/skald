@@ -14,6 +14,78 @@ namespace fs = std::filesystem;
 
 namespace SkaldLsp {
 
+namespace {
+
+struct BadOperator {
+  int col;
+  int len;
+  std::string msg;
+};
+
+// Flags `=`, `=>`, `=<` inside conditions (`(? ...)`, `@if`, `@elseif`). The
+// grammar rejects these, which turns `(? ...)` lines into plain beats and
+// `@if` lines into malformed lines without saying why.
+std::vector<BadOperator> find_bad_cond_operators(const std::string &line) {
+  std::vector<BadOperator> out;
+  auto scan = [&](size_t start, size_t end) {
+    for (size_t i = start; i < end; ++i) {
+      char c = line[i];
+      if (c == '"') {
+        for (++i; i < end && line[i] != '"'; ++i)
+          if (line[i] == '\\')
+            ++i;
+        continue;
+      }
+      if (c != '=')
+        continue;
+      char prev = i > 0 ? line[i - 1] : '\0';
+      char next = i + 1 < line.size() ? line[i + 1] : '\0';
+      if (next == '=') {
+        ++i;
+        continue;
+      }
+      if (prev == '!' || prev == '<' || prev == '>')
+        continue;
+      if (next == '>')
+        out.push_back({static_cast<int>(i), 2, "Use `>=`, not `=>`"});
+      else if (next == '<')
+        out.push_back({static_cast<int>(i), 2, "Use `<=`, not `=<`"});
+      else
+        out.push_back({static_cast<int>(i), 1, "Use `==` for equality, not `=`"});
+    }
+  };
+
+  auto comment = line.find("---");
+  size_t limit = comment == std::string::npos ? line.size() : comment;
+  auto lead = line.find_first_not_of(" \t");
+  if (lead == std::string::npos)
+    return out;
+  if (line.compare(lead, 4, "@if ") == 0) {
+    scan(lead + 4, limit);
+    return out;
+  }
+  if (line.compare(lead, 8, "@elseif ") == 0) {
+    scan(lead + 8, limit);
+    return out;
+  }
+  for (size_t open = line.find("(?"); open != std::string::npos && open < limit;
+       open = line.find("(?", open + 2)) {
+    size_t i = open + 2;
+    int depth = 1;
+    for (; i < limit && depth > 0; ++i) {
+      if (line[i] == '(')
+        ++depth;
+      else if (line[i] == ')')
+        --depth;
+    }
+    scan(open + 2, i);
+  }
+  return out;
+}
+
+} // namespace
+
+
 Document::Document(const std::string &uri, const std::string &text,
                    const Skald::Codex *codex, const ProjectIndex *project)
     : uri_(uri), text_(text), codex_(codex), project_(project) {
@@ -146,6 +218,16 @@ void Document::run_semantic_checks() {
         return true;
     return false;
   };
+
+  // --- Comparison operators in conditions ---
+  {
+    std::istringstream in(text_);
+    std::string line;
+    for (int ln = 0; std::getline(in, line); ++ln)
+      for (auto &bad : find_bad_cond_operators(line))
+        push({ln, bad.col, bad.col + bad.len},
+             LspTypes::DiagnosticSeverity::Error, bad.msg);
+  }
 
   // --- 1.4 Transition resolution: -> target must resolve to a block ---
   BlockHierarchy hierarchy(module_);

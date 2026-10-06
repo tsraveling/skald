@@ -87,10 +87,8 @@ NOTE: Don't send raw JSON, because the transport layer expects `Content-Length` 
 - **Find References**: Shows all occurrences of a block tag, variable, or method.
 - **Completion**:
   - After `-> `: block tags.
-  - After `:`: methods.
-  - Inside `{...}` or `(? ...)`: variables.
+  - On `~` lines, after `@if`/`@elseif`, inside `{...}` or `(? ...)`: variables and methods.
   - After `GO `: `.ska` file paths from the workspace. 
-  - After `~`: variables.
 - **Hover**: Variable type and initial value, block beat count, method/file ref info. 
 - **Document Symbols**: Outline view showing declared variables and block tags. 
 

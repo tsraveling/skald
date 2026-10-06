@@ -6,3 +6,5 @@
 ~ count = missing_method()
 ~ simple_args(5)
 (? missing_method()) Unknown method in a conditional.
+@if count = 1
+@endif
