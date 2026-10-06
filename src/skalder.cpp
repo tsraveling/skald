@@ -224,14 +224,9 @@ public:
                   parsed = txt;
                 }
               }
-              note_system(value.call.dbg_desc() + " <- " + txt);
-              return engine.answer(QueryAnswer{parsed});
             }
-            note_error("Failed to parse [" + txt +
-                       "] into a valid Skald value");
-            return Error(
-                ERROR_UNKNOWN,
-                "Failed to parse [" + txt + "] into a valid Skald value", 0);
+            note_system(value.call.dbg_desc() + " <- " + txt);
+            return engine.answer(QueryAnswer{parsed});
           } else {
             note_error("We got an input, but this isn't a query!");
             return Error(ERROR_UNKNOWN,
