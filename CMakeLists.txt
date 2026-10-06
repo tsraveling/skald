@@ -26,6 +26,9 @@ set(SKALD_CORE_SOURCES
     src/parse_state.cpp
     src/codex_parse_state.cpp
     src/skald.cpp
+    src/emit.cpp
+    src/emit_lua.cpp
+    src/emit_json.cpp
 )
 
 # =============================================================================
@@ -94,7 +97,11 @@ if(SKALD_BUILD_SKALDER)
     )
     FetchContent_MakeAvailable(ftxui)
 
-    add_executable(skalder src/skalder.cpp)
+    add_executable(skalder
+        src/skalder.cpp
+        src/skalder_compile.cpp
+        src/skalder_headless.cpp
+    )
     target_link_libraries(skalder PRIVATE skald_static ftxui::screen ftxui::dom ftxui::component)
 endif()
 
@@ -123,6 +130,27 @@ if(SKALD_BUILD_LSP)
         ${CMAKE_CURRENT_SOURCE_DIR}/lsp/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src
     )
+endif()
+
+option(SKALD_BUILD_TESTS "Build tests" OFF)
+
+if(SKALD_BUILD_TESTS AND SKALD_BUILD_SKALDER)
+    enable_testing()
+    set(SKALD_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
+    set(SKALD_TEST_SCRIPTS ${SKALD_TEST_DIR}/scripts)
+
+    add_test(NAME compile_golden
+        COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_golden.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
+    add_test(NAME compile_json
+        COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_json.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
+    add_test(NAME compile_luajit
+        COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_luajit.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
+    add_test(NAME compile_bad
+        COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_bad.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
+    add_test(NAME headless_golden
+        COMMAND bash ${SKALD_TEST_SCRIPTS}/headless_golden.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
+    # Scripts exit 77 when an optional tool (python3, luajit) is missing.
+    set_tests_properties(compile_json compile_luajit PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 option(SKALD_BUILD_C_TEST "Build C API test" OFF)
@@ -154,7 +182,7 @@ if(SKALD_BUILD_SHARED)
 endif()
 
 # Optionally install the C++ header and static lib (for C++ consumers)
-install(FILES include/skald.h
+install(FILES include/skald.h include/skald_emit.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/skald_version.h

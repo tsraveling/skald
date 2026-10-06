@@ -60,7 +60,7 @@ template <> struct action<block_tag_name> {
       state.open_grandchild_tag = base;
       break;
     }
-    state.start_block(tag);
+    state.start_block(tag, input.position().line);
   }
 };
 
@@ -122,6 +122,7 @@ template <> struct action<testbed_open> {
                 "section was already open.");
     }
     state.module.testbeds.push_back(Testbed{.name = state.pop_id()});
+    state.module.testbeds.back().line_number = input.position().line;
     state.top_matter_section = ParseState::TopMatterSection::TESTBED;
   }
 };
@@ -148,6 +149,8 @@ template <> struct action<testbed_set> {
     auto val = *cast_rval_to_simple(state.rval_buffer_pop());
     state.module.testbeds.back().declarations.push_back(
         TestbedSet{.variable = state.pop_id(), .test_value = val});
+    state.module.testbeds.back().declarations.back().line_number =
+        input.position().line;
   }
 };
 
@@ -237,6 +240,7 @@ template <> struct action<declaration> {
     // Add to stack
     state.module_vars_stack.push_back(
         DeclaredVar{.initial_value = v, .var = var});
+    state.module_vars_stack.back().line_number = input.position().line;
 
     // Cleanup
     state.declaration_was_typed = false;
@@ -444,7 +448,10 @@ template <> struct action<module_path> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> module_path: " << input.string() << " (stored in buffer)");
-    state.path_buffer = input.string();
+    // Grammar admits trailing blanks before EOL; the path never wants them.
+    auto raw = input.string();
+    auto end = raw.find_last_not_of(" \t");
+    state.path_buffer = end == std::string::npos ? "" : raw.substr(0, end + 1);
   }
 };
 
@@ -557,8 +564,9 @@ template <> struct action<op_go> {
     std::string start_tag =
         state.does_go_have_start_tag ? state.move_identifier_store : "";
     dbg_out(" - >>> start_tag: " << start_tag);
-    state.member_body_buffer =
-        GoModule{.module_path = state.path_buffer, .start_in_tag = start_tag};
+    GoModule go{.module_path = state.path_buffer, .start_in_tag = start_tag};
+    go.line_number = input.position().line;
+    state.member_body_buffer = go;
   }
 };
 

@@ -35,6 +35,9 @@ struct LspParseState : public Skald::ParseState {
     SourceRange move_expr_range;      // Range of the last move identifier expr
     SourceRange mutate_target_range;  // Saved by op_mutate_start for mutations
     std::string mutate_target_name;   // Saved by op_mutate_start
+    // rval_buffer size when a comparison operator matched; if the buffer
+    // hasn't grown by checkable_base, the right-hand rvalue never parsed.
+    size_t comparison_rval_mark = 0;
 
     LspParseState(const std::string &filename, const Skald::Codex *codex)
         : ParseState(filename, codex) {

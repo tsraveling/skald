@@ -57,7 +57,7 @@ struct ParseState {
 
   /** Creates a block with the given tag and sets it as current in the parse
    * state */
-  void start_block(const std::string &tag);
+  void start_block(const std::string &tag, size_t line = 0);
 
   // SECTION: MEMBERS AND CONDITIONAL CHAINS
 

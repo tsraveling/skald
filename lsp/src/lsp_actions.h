@@ -209,6 +209,58 @@ template <> struct lsp_action<Skald::r_method> {
   }
 };
 
+// checkable_2f_operator: flag `==`, `=>`, `=<`. The grammar matches the first
+// `=` and then backtracks, so without this they fail with no useful error.
+template <> struct lsp_action<Skald::checkable_2f_operator> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, LspParseState &state) {
+    state.comparison_rval_mark = state.rval_buffer.size();
+    Skald::action<Skald::checkable_2f_operator>::apply(input, state);
+
+    if (input.string() != "=" || input.end() >= input.input().end())
+      return;
+    std::string msg;
+    switch (*input.end()) {
+    case '=':
+      msg = "Use `=` for equality, not `==`";
+      break;
+    case '>':
+      msg = "Use `>=`, not `=>`";
+      break;
+    case '<':
+      msg = "Use `<=`, not `=<`";
+      break;
+    default:
+      return;
+    }
+    // Backtracking can fire this more than once for the same operator.
+    auto pos = Skald::from_pos(input.position());
+    for (auto &e : state.errors)
+      if (e.pos.line == pos.line && e.pos.column == pos.column && e.msg == msg)
+        return;
+    state.err(input.position(), msg);
+  }
+};
+
+// checkable_base: if the comparison tail backtracked after the operator fired,
+// only the left rvalue is on the buffer. Downgrade to a truthy check so the
+// base action doesn't pop an empty buffer.
+template <> struct lsp_action<Skald::checkable_base> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, LspParseState &state) {
+    using C = Skald::ConditionalAtom::Comparison;
+    if (state.current_comparison != C::TRUTHY &&
+        state.current_comparison != C::NOT_TRUTHY &&
+        state.rval_buffer.size() <= state.comparison_rval_mark)
+      state.current_comparison = C::TRUTHY;
+    if (state.rval_buffer.empty()) {
+      state.current_comparison = C::TRUTHY;
+      return;
+    }
+    Skald::action<Skald::checkable_base>::apply(input, state);
+  }
+};
+
 // module_path: file reference in GO commands
 template <> struct lsp_action<Skald::module_path> {
   template <typename ActionInput>

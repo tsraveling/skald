@@ -1039,28 +1039,17 @@ void Engine::set_source_reader(SourceReader reader) {
   reader_ = std::move(reader);
 }
 
-ParseResult Engine::setup(std::string path) {
+ParsedCodex parse_codex(const std::string &text, const std::string &path) {
+  CodexParseState pstate(path);
   try {
-    std::optional<std::string> source =
-        reader_ ? reader_(path) : default_source_reader(path);
-    if (!source) {
-      return ParseResult::fail("File not found: " + path);
-    }
-    pegtl::memory_input in(*source, path);
-    CodexParseState pstate(path);
-
+    pegtl::memory_input in(text, path);
     dbg_out("------- CODEX PARSING ------");
-    if (pegtl::parse<codex_grammar, codex_action>(in, pstate)) {
-      dbg_out("----------------------------");
-      dbg_out("Codex parse successful!");
-    } else {
-      dbg_out("----------------------------");
+    if (!pegtl::parse<codex_grammar, codex_action>(in, pstate)) {
       dbg_out("Codex parse failed!");
-      return ParseResult::fail("Codex parse failed!");
+      return ParsedCodex{std::move(pstate.codex),
+                         ParseResult::fail("Codex parse failed!")};
     }
-
-    dbg_out(">>> Parse results:\n");
-
+    dbg_out("Codex parse successful!");
     dbg_out("GLOBAL VARS:");
     for (const auto &dec : pstate.codex.global_vars) {
       dbg_out(" - " << dec.var.dbg_desc() << " = "
@@ -1070,58 +1059,122 @@ ParseResult Engine::setup(std::string path) {
     for (const auto &def : pstate.codex.method_defs) {
       dbg_out(" - " << def.dbg_desc());
     }
-
-    // Grab the finished module from the parse state
-    codex = std::make_unique<Codex>(std::move(pstate.codex));
-
-    // Initialize state with the new codex (wipes prior state)
-    init_state();
-    return ParseResult::with(std::move(pstate.errors));
-    dbg_out(">>> codex_path() = " << codex->codex_path());
+    return ParsedCodex{std::move(pstate.codex),
+                       ParseResult::with(std::move(pstate.errors))};
   } catch (const pegtl::parse_error &e) {
     dbg_out("Codex parse error: " << e.what());
-    return ParseResult::fail(e.what());
+    return ParsedCodex{std::move(pstate.codex), ParseResult::fail(e.what())};
   } catch (const std::exception &e) {
     dbg_out("Codex error: " << e.what());
-    return ParseResult::fail(e.what());
+    return ParsedCodex{std::move(pstate.codex), ParseResult::fail(e.what())};
   }
 }
 
-ParseResult Engine::load(std::string path) {
+ParsedModule parse_module(const std::string &text, const std::string &path,
+                          const Codex *codex, const std::string &source) {
+  ParseState pstate(path, codex);
   try {
-    // Resolve project paths against the codex root: "alice.ska" with codex
-    // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
-    std::string file_path = codex ? codex->resolve_path(path) : path;
-    std::optional<std::string> source =
-        reader_ ? reader_(file_path) : default_source_reader(file_path);
-    if (!source) {
-      return ParseResult::fail("File not found: " + file_path);
-    }
-    pegtl::memory_input in(*source, file_path);
-    dbg_out("Loaded file: " << file_path);
-
-    /// PARSING ///
-
-    ParseState pstate(path, codex.get());
-
-    if (pegtl::parse<grammar, action>(in, pstate)) {
-      dbg_out("Parse successful!");
-      pstate.do_dbg_desc();
-    } else {
+    pegtl::memory_input in(text, source.empty() ? path : source);
+    if (!pegtl::parse<grammar, action>(in, pstate)) {
       dbg_out("Parse failed!");
-      return ParseResult::fail("Module parse failed!");
+      return ParsedModule{std::move(pstate.module),
+                          ParseResult::fail("Module parse failed!")};
     }
-
-    // Grab the finished module from the parse state
-    current = std::make_unique<Module>(std::move(pstate.module));
-    return ParseResult::with(pstate.errors);
+    dbg_out("Parse successful!");
+    pstate.do_dbg_desc();
+    return ParsedModule{std::move(pstate.module),
+                        ParseResult::with(std::move(pstate.errors))};
   } catch (const pegtl::parse_error &e) {
     dbg_out("Parse error: " << e.what());
-    return ParseResult::fail(e.what());
+    return ParsedModule{std::move(pstate.module), ParseResult::fail(e.what())};
   } catch (const std::exception &e) {
     dbg_out("Error: " << e.what());
-    return ParseResult::fail(e.what());
+    return ParsedModule{std::move(pstate.module), ParseResult::fail(e.what())};
   }
+}
+
+ParseResult Engine::setup(std::string path) {
+  std::optional<std::string> source =
+      reader_ ? reader_(path) : default_source_reader(path);
+  if (!source) {
+    return ParseResult::fail("File not found: " + path);
+  }
+  auto parsed = parse_codex(*source, path);
+  if (!parsed.result.ok) {
+    return parsed.result;
+  }
+  codex = std::make_unique<Codex>(std::move(parsed.codex));
+  dbg_out(">>> codex_path() = " << codex->codex_path());
+
+  // Initialize state with the new codex (wipes prior state)
+  init_state();
+  return parsed.result;
+}
+
+ParseResult Engine::load(std::string path) {
+  // Resolve project paths against the codex root: "alice.ska" with codex
+  // ~/bob/a.codex -> ~/bob/alice.ska. Without a codex, use the path as-is.
+  std::string file_path = codex ? codex->resolve_path(path) : path;
+  std::optional<std::string> source =
+      reader_ ? reader_(file_path) : default_source_reader(file_path);
+  if (!source) {
+    return ParseResult::fail("File not found: " + file_path);
+  }
+  dbg_out("Loaded file: " << file_path);
+  auto parsed = parse_module(*source, path, codex.get(), file_path);
+  if (!parsed.result.ok) {
+    return parsed.result;
+  }
+  current = std::make_unique<Module>(std::move(parsed.module));
+  return parsed.result;
+}
+
+std::optional<Error> Engine::apply_testbed(const std::string &name) {
+  if (!current) {
+    return Error(ERROR_LOADING_MODULE, "No module loaded.", 0);
+  }
+  const Testbed *bed = nullptr;
+  for (auto &t : current->testbeds) {
+    if (t.name == name) {
+      bed = &t;
+      break;
+    }
+  }
+  if (!bed) {
+    return Error(ERROR_VAR_UNDEFINED, "Unknown testbed: " + name, 0);
+  }
+  for (auto &set : bed->declarations) {
+    auto t = srval_get_type(set.test_value);
+    auto git = global_state.find(set.variable);
+    if (git != global_state.end()) {
+      if (srval_get_type(git->second) != t) {
+        return Error(ERROR_TYPE_MISMATCH,
+                     "Testbed sets global " + set.variable + " to " +
+                         rval_to_string(set.test_value) +
+                         ", but the type does not match.",
+                     set.line_number);
+      }
+      git->second = set.test_value;
+      continue;
+    }
+    const DeclaredVar *decl = nullptr;
+    for (auto &v : current->module_vars) {
+      if (v.var.name == set.variable) {
+        decl = &v;
+        break;
+      }
+    }
+    if (decl && decl->var.type != t) {
+      return Error(ERROR_TYPE_MISMATCH,
+                   "Testbed sets " + set.variable + " to " +
+                       rval_to_string(set.test_value) +
+                       ", but the type does not match.",
+                   set.line_number);
+    }
+    // Undeclared names land in module state too; start() keeps them.
+    module_state[set.variable] = set.test_value;
+  }
+  return std::nullopt;
 }
 
 void Engine::trace(std::string path) {

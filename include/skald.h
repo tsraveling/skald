@@ -945,6 +945,10 @@ public:
   /** Returns state; errors if not set. */
   std::variant<Error, SimpleRValue> get(std::string key);
 
+  /** Applies a testbed from the loaded module. Call after load() and before
+   *  start(). Returns error if testbed doesn't exist or there is no module. */
+  std::optional<Error> apply_testbed(const std::string &name);
+
   /// PROJECT STUFF ///
   std::optional<std::string> get_project_root();
   std::optional<std::string> get_codex_name();
@@ -1110,5 +1114,28 @@ private:
 
   Cursor cursor;
 };
+
+// SECTION: Parsing
+
+struct ParsedCodex {
+  Codex codex;
+  ParseResult result;
+};
+
+struct ParsedModule {
+  Module module;
+  ParseResult result;
+};
+
+/** Parses codex text. `path` = path to codex ; its directory becomes
+ *  Codex::path and its filename Codex::filename. Doesn't throw. */
+ParsedCodex parse_codex(const std::string &text, const std::string &path);
+
+/** Parses module text. `path` becomes Module::filename and, unless `source`
+ *  is given, the source name that will be used in error positions. `codex` may
+ * be null (aka for modules running in isolation). With a codex, method calls
+ * and globals are validated against it. Doesn't throw. */
+ParsedModule parse_module(const std::string &text, const std::string &path,
+                          const Codex *codex, const std::string &source = "");
 
 } // namespace Skald

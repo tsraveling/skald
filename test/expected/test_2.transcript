@@ -1,0 +1,27 @@
+C||This is the first beat. My age is 50. Now we mutate ...
+O|0|1|Loop
+O|1|1|Continue
+N|age|add|global
+C||A mutation should have just happened, and age is now 51.
+C||I'm over 30!
+C||Coming out of the cond my age is 51.
+N|age|add|global
+C||Another year! Now my age is 52.
+O|0|1|Again!
+O|1|1|Bye
+P|simple_args|5,"bob"
+N|age|add|global
+C|tester|This is an attributed beat.
+O|0|1|This choice will continue
+O|1|1|Goes to grandchild b
+O|2|1|Goes to child2
+C||This is the continuation beat.
+C||This is first child block. And here we do some conditionals:
+C||This comes after the conditional blocks.
+C||This is grandchild a
+O|0|1|Up to parent
+O|1|1|To sib
+C||This is grandchild b
+C||This is second child block
+C||And this is the end.
+X|
