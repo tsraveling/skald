@@ -677,6 +677,10 @@ In other words, relative to main.codex.
 
 And then that module at some point does `GO B.ska`, then `B.ska` will be able to read and mutate the a_one variable.
 
+--- NOTE to integrate:
+
+`GO cdc.ska -> start_in_tag`
+
 Here's a subtle rule: if a module is pushed into this one, this one will push it on. But if we come in from a different origin that *doesn't* define that variable, it will be treated as a local ad-hoc variable.
 
 So let's say we have `A.ska` above which pushes to `B.ska`, but we *also* have `A2.ska` which pushes to B. In the case where we start at `A2` and `GO` -> `B`, `a_one` and `a_two` will still be module-defined (pushed onward on `GO`), but will be defined as the zero value (0, 0.0, false, "") unless locally set in `@let` (see next section, 4.1.1.1).

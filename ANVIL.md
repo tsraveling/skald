@@ -1,6 +1,8 @@
 ## FIXES
 
 - LSP: parser breaks when typing a `(? variable >= 3)` type of conditional. Boolean ones seem to work fine.
+- skalder crashes on go with dest block
+- method call syntax doesn't really make sense in conditionals. maybe better to just prefix all commands with ~, e.g. ~ index ++ or ~ call_method()?
 - Parser: inline choice redirect `> text -> a.b` builds its Move from `pop_id()` (skald_actions.h `inline_choice_move`), so a dotted or relative target likely keeps only the last identifier instead of `move_identifier_store`.
 - Parser: switch ternary default `_` (`switch_default`) has no action, so `{x ? [1:"a", _:"b"]}` pops the wrong rvals.
 - Parser: `@receive` matches in the grammar but has no action and no `Module` field; it is silently dropped.
