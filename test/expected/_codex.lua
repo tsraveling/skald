@@ -79,6 +79,7 @@ return {
   },
   modules = {
     "hold.ska",
+    "logic.ska",
     "test.ska",
     "test2.ska",
     "test_2.ska",

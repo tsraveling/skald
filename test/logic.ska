@@ -1,0 +1,85 @@
+--- Coverage for the `~` logic prefix, methods as rvalues, and method checks.
+
+@let
+  count int = 1
+  other int = 7
+  label string
+  flag bool = true
+  ratio float
+@end
+
+# start
+
+Mutations with literal rvalues.
+
+~ count = 5
+~ count += 2
+~ count -= 1
+~ label = "hello"
+~ ratio = 1.5
+~ flag =!
+
+Mutations with variable and method rvalues.
+
+~ count = other
+~ count += other
+~ count = returns_something()
+~ count += returns_something()
+~ count -= returns_something()
+~ label = returns_w_args(count, "x")
+
+Whitespace is optional after the prefix.
+
+~count = 3
+~count+=1
+~simple()
+~   simple()
+
+Method operations.
+
+~ simple()
+~ simple_args(5, "bob")
+~ simple_args(count, label)
+~ simple() --- end comment on a method
+~ count = returns_something() --- end comment on a mutation
+
+Inline conditionals.
+
+(? returns_something()) Method check.
+(? !returns_something()) Negated method check.
+(? returns_something() and flag) Method and variable.
+(? flag or returns_something()) Variable or method.
+(? returns_something() > 3) Method compare.
+(? count = returns_something()) Variable compare to method.
+(? returns_w_args(count, "x") = "y") Method with args compare.
+(? (returns_something() > 1) and !flag) Subclause with method.
+(? returns_something()) ~ simple()
+(? flag) ~ count = returns_something()
+
+Injected {returns_something()} and {returns_w_args(1, "a")}.
+
+> (? returns_something()) Conditional choice
+  ~ simple()
+  ~ count = returns_something()
+> Plain choice
+  ~count+=1
+
+@if returns_something()
+
+If on method.
+
+@elseif returns_w_args(count, "z") = "z"
+
+Elseif on method with args.
+
+@elseif !returns_something() and flag
+
+Elseif negated method and variable.
+
+@else
+
+Else.
+
+@endif
+
+EXIT

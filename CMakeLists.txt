@@ -147,6 +147,8 @@ if(SKALD_BUILD_TESTS AND SKALD_BUILD_SKALDER)
         COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_luajit.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
     add_test(NAME compile_bad
         COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_bad.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
+    add_test(NAME compile_errors
+        COMMAND bash ${SKALD_TEST_SCRIPTS}/compile_errors.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
     add_test(NAME headless_golden
         COMMAND bash ${SKALD_TEST_SCRIPTS}/headless_golden.sh $<TARGET_FILE:skalder> ${SKALD_TEST_DIR})
     # Scripts exit 77 when an optional tool (python3, luajit) is missing.

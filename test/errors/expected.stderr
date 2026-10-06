@@ -1,0 +1,5 @@
+errors.ska:5:15: error: Methods are not yet supported as arguments of other methods
+errors.ska:5:1: error: No method by that name is in the Codex.
+errors.ska:6:11: error: No method by that name is in the Codex.
+errors.ska:7:1: error: Method in codex has 2 arguments; this one has 1.
+errors.ska:8:4: error: No method by that name is in the Codex.

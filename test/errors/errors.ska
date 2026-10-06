@@ -1,0 +1,8 @@
+--- Each logic line below must produce a parse error.
+
+# start
+
+~ simple_args(returns_something(), "a")
+~ count = missing_method()
+~ simple_args(5)
+(? missing_method()) Unknown method in a conditional.
