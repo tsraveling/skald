@@ -77,8 +77,8 @@ struct let : seq<let_open, star<sor<ignored, declaration>>, let_close> {};
 struct receive : seq<keyword_receive, ws, module_path, functional_eol> {};
 
 /** The whole top matter section */
-struct top_matter
-    : star<sor<testbed, let, receive, ignored, malformed_line>> {};
+struct top_matter : star<sor<testbed, let, receive, ignored, malformed_line>> {
+};
 
 // SECTION: CONDITIONALS
 
@@ -150,10 +150,24 @@ struct text_content : plus<text_content_part> {};
 
 // SECTION: OPERATIONS
 
-struct op_mutate_start : seq<one<'~'>, ws, identifier, ws> {};
+/* Logic = methods or mutations, and now all start w/ ~ */
+struct op_logic_start : seq<one<'~'>, ws> {};
+
+/* A method is specifically an identifier followed by some stuff in parens */
+struct method : seq<identifier, paren<opt<arg_list>>> {};
+
+/* A method operation is just logic + method */
+struct op_method : seq<op_logic_start, method> {};
+
+// Evaled separately bc otherwise we lose it in a `var = method()` exchange
+struct mutate_lvalue : identifier {};
+
+// Whereas the lvalue in an op_mutate_* will never have parens, and will always
+// be followed by some operator
+struct op_mutate_start : seq<op_logic_start, mutate_lvalue, ws> {};
 struct op_mutate_equate : seq<op_mutate_start, operator_equals, ws, rvalue> {};
 struct op_mutate_switch : seq<op_mutate_start, operator_equals_switch> {};
-struct math_rvalue : sor<r_variable, val_int, val_float, r_method> {};
+struct math_rvalue : sor<r_method, r_variable, val_int, val_float> {};
 struct op_mutate_add
     : seq<op_mutate_start, operator_plus_equals, ws, math_rvalue> {};
 struct op_mutate_subtract
@@ -181,7 +195,7 @@ struct op_go : seq<keyword_go, plus<space>, module_path, opt<op_go_start_tag>> {
 };
 struct op_move : seq<move_marker, ws,
                      sor<move_identifier_full, move_identifier_short>, ws> {};
-struct op_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
+
 struct operation : sor<op_move, op_method, op_mutation, op_go, op_exit> {};
 
 // SECTION: BEATS
@@ -278,8 +292,8 @@ struct malformed_line : seq<not_at<block_tag_line>, not_at<eolf>, until<eolf>> {
 /** A `block` starts with a tag line, then has beats, comments/blank,
  * operations, choice blocks until the next block starts. */
 struct block
-    : seq<block_tag_line,
-          star<sor<cond_chain, block_member, malformed_line>>> {};
+    : seq<block_tag_line, star<sor<cond_chain, block_member, malformed_line>>> {
+};
 
 // SECTION: FULL GRAMMAR
 

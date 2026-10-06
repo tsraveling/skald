@@ -8,6 +8,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Skald {
@@ -295,7 +296,14 @@ template <> struct action<r_method> {
 template <> struct action<argument> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.argument_queue.push_back(state.rval_buffer_pop());
+    auto rv = state.rval_buffer_pop();
+
+    // methods as method args are not yet supported!
+    if (rval_get_call(rv)) {
+      state.err(input.position(),
+                "Methods are not yet supported as arguments of other methods");
+    }
+    state.argument_queue.push_back(std::move(rv));
   }
 };
 
@@ -601,23 +609,33 @@ template <> struct action<op_method> {
   }
 };
 
-/// SECTION: MUTATIONS ///
+/// SECTION: MUTATIONS
+
+// Store the mutation lvalue separately so it doesn't get lost in the right-side
+// ident consumption
+template <> struct action<mutate_lvalue> {
+  template <typename ActionInput>
+  static void apply(const ActionInput &input, ParseState &state) {
+    state.mutate_lvalue = input.string();
+  }
+};
 
 template <> struct action<op_mutate_subtract> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_subtract: " << input.string());
     state.member_body_buffer =
-        Mutation{input.position().line, state.pop_id(), Mutation::SUBTRACT,
-                 state.rval_buffer_pop()};
+        Mutation{input.position().line, std::exchange(state.mutate_lvalue, {}),
+                 Mutation::SUBTRACT, state.rval_buffer_pop()};
   }
 };
 template <> struct action<op_mutate_add> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_add: " << input.string());
-    state.member_body_buffer = Mutation{input.position().line, state.pop_id(),
-                                        Mutation::ADD, state.rval_buffer_pop()};
+    state.member_body_buffer =
+        Mutation{input.position().line, std::exchange(state.mutate_lvalue, {}),
+                 Mutation::ADD, state.rval_buffer_pop()};
   }
 };
 template <> struct action<op_mutate_equate> {
@@ -625,15 +643,17 @@ template <> struct action<op_mutate_equate> {
   static void apply(const ActionInput &input, ParseState &state) {
     dbg_out(">>> op_mutate_equate: " << input.string());
     state.member_body_buffer =
-        Mutation{input.position().line, state.pop_id(), Mutation::EQUATE,
-                 state.rval_buffer_pop()};
+        Mutation{input.position().line, std::exchange(state.mutate_lvalue, {}),
+                 Mutation::EQUATE, state.rval_buffer_pop()};
   }
 };
 template <> struct action<op_mutate_switch> {
   template <typename ActionInput>
   static void apply(const ActionInput &input, ParseState &state) {
-    state.member_body_buffer =
-        Mutation{input.position().line, state.pop_id(), Mutation::SWITCH, {}};
+    state.member_body_buffer = Mutation{input.position().line,
+                                        std::exchange(state.mutate_lvalue, {}),
+                                        Mutation::SWITCH,
+                                        {}};
   }
 };
 

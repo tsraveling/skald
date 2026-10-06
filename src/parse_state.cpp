@@ -190,11 +190,6 @@ void ParseState::validate_method(const MethodCallOp &m,
                      " was expected, " + val_type_to_str(t) + " was found.");
       }
     }
-
-    // Must be normal RValue (not method call)
-    if (rval_get_call(m.args[i])) {
-      err(pos, "Methods are not yet supported as arguments of other methods");
-    }
   }
 }
 

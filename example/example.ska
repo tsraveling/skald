@@ -34,7 +34,7 @@ I'm over 10!
 
 Like really though, over ten.
 
-:simple()
+~ simple()
 
 ~ age += 10
 
@@ -56,7 +56,7 @@ Another year! Now my age is {age}.
   -> start
 > Bye
 
-:simple_args(5, "bob")
+~ simple_args(5, "bob")
 
 (? gender = "m") ~ age += 2 --- conditional operation
 

@@ -65,10 +65,14 @@ struct type_bool : keyword<'b', 'o', 'o', 'l'> {};
 
 /** A variable name used as an rvalue */
 struct arg_list;
-struct r_method : seq<one<':'>, identifier, paren<opt<arg_list>>> {};
+
+/** This is identical to `method` but exists in a different context. We use a
+ * lookahead to avoid consuming ids for variables. */
+struct r_method
+    : seq<at<identifier, one<'('>>, identifier, paren<opt<arg_list>>> {};
 struct r_variable : variable_name {};
 struct rvalue
-    : sor<val_bool, val_string, val_float, val_int, r_variable, r_method> {};
+    : sor<val_bool, val_string, val_float, val_int, r_method, r_variable> {};
 struct rvalue_simple : sor<val_bool, val_string, val_float, val_int> {};
 struct arg_separator : seq<ws, one<','>, ws> {};
 

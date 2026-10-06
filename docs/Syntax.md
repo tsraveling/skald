@@ -129,7 +129,7 @@ You can invoke a number of **operations** (see 3.1 below) by indenting on the li
 
 ```
 > This is a third choice with some other stuff
-  :call_method
+  ~ call_method()
   -> other-target-block
 ```
 
@@ -149,7 +149,7 @@ Or a conditional block, for a group of choices:
 > First conditional choice
     -> some move
 > Second conditional choice
-    :some_method_call()
+    ~ some_method_call()
 @end
 > Nevermind.
 ```
@@ -222,8 +222,8 @@ Triggered by selecting a choice:
 
 ```
 > This is a choice with an operation group
-  :call_method()
-  ~set_var = 2
+  ~ call_method()
+  ~ set_var = 2
   -> transition-block
 ```
 
@@ -286,7 +286,7 @@ You can navigate to a sibling like this:
 # main
 ## first
 ## second
--> -first -- navs to main.first
+-> -first --- navs to main.first
 ```
 
 You can navigate to this block's parent like this:
@@ -345,7 +345,7 @@ And of course you can navigate absolutely:
 A **method** communicates via the api to call a method on the game side:
 
 ```
-:some_method()
+~ some_method()
 ```
 
 Methods interfaces are registered in the **codex** (see TBD). Trying to use a non-registered method will throw a warning.
@@ -353,9 +353,9 @@ Methods interfaces are registered in the **codex** (see TBD). Trying to use a no
 A method may optionally return a boolean value for use in a conditional (see 3.2.3):
 
 ```
-> (? :check_method()) Optional choice
+> (? check_method()) Optional choice
 
-@if :check_method()
+@if check_method()
 
 This beat will fire after check_method processes through, if the result is true.
 
@@ -369,15 +369,15 @@ And this one will follow regardless.
 Finally, methods can include simple **arguments** of the three types (string, int, or bool). These types will be defined in the codex, and trying to use the wrong type will throw an error:
 
 ```
-:a_method(1)             -- Calls `some_method` with (int)1
-:b_method(1, "hello")    -- Calls with two args, 1 and "hello"
-:c_method(false)         -- Calls with bool false
+~ a_method(1)             --- Calls `some_method` with (int)1
+~ b_method(1, "hello")    --- Calls with two args, 1 and "hello"
+~ c_method(false)         --- Calls with bool false
 ```
 
 Or a variable:
 
 ```
-:some_method(is_traveling)  -- Calls with the contents of the "is_traveling" variable
+~ some_method(is_traveling)  --- Calls with the contents of the "is_traveling" variable
 ```
 
 If that variable is global or module-scoped, and is the wrong type, you will see a warning up front. If it is an ad hoc variable and of the wrong type, you will encounter a runtime rror. See the next section (3.1.3) for more details.
@@ -459,12 +459,12 @@ You can **set** all variables, and **mutate** bool and integer variables:
 
 ```skald
 > Mutate things ...
-  ~ num_var += 1                -- You can add to variables
-  ~ num_var -= 1                -- or subtract
-  ~ bool_var =!                 -- You can toggle a bool
-  ~ num_var = 30                -- or set numbers
-  ~ bool_var = false            -- or set bools directly
-  ~ str_var = "Goodbye, World!" -- or set strings
+  ~ num_var += 1                --- You can add to variables
+  ~ num_var -= 1                --- or subtract
+  ~ bool_var =!                 --- You can toggle a bool
+  ~ num_var = 30                --- or set numbers
+  ~ bool_var = false            --- or set bools directly
+  ~ str_var = "Goodbye, World!" --- or set strings
 ```
 
 You can also use **same-type** values on the righthand side:
@@ -482,7 +482,7 @@ More advanced operators, like multiplication, division, or string concatenation,
 You can pass a variable to a method as an argument, if it is the right type:
 
 ```
-:call_method(str_var) -- Send str_var to the `call_method` method via the API
+~ call_method(str_var) --- Send str_var to the `call_method` method via the API
 
 (? check_method(num_var, bool_var)) This beat will fire if `check_method`, with the two given arguments, returns true.
 ```
@@ -495,8 +495,8 @@ For ad hoc variables, you are responsible for sending the right type!
 These are ad hoc operations:
 ~ a = 10
 ~ b = "cow"
-:do_damage(a) --- does 10 damage
-:do_damage(b) --- throws an error!
+~ do_damage(a) --- does 10 damage
+~ do_damage(b) --- throws an error!
 ```
 
 ## 3.2 Conditionals
@@ -508,7 +508,7 @@ These are ad hoc operations:
 ```skald
 (? bool_var) This beat will only appear (and attached operations will only be run) if bool_var is true.
 
-(? bool_var) :call_method() -- only called if bool_var is true
+(? bool_var) ~ call_method() --- only called if bool_var is true
 
 > (? bool_var) This choice will only be enabled if bool_var is true.
 ```
@@ -597,19 +597,19 @@ You can compare integers using **more and less than operators**:
 Any method can be used as a **boolean check**. If the method does not return a response, that will be treated as a **false** value.
 
 ```
-(? :check_method()) -- This will fire if check_method() returns true via the API.
+(? check_method()) ~ do_something() --- This will fire if check_method() returns true via the API.
 ```
 
 Likewise the false boolean check syntax applies to methods:
 
 ```
-(? !:check_method()) -- This will fire if check_method() returns false via the API.
+(? !check_method()) ~ do_something() --- This will fire if check_method() returns false via the API.
 ```
 
 You can also pass arguments to conditional methods:
 
 ```
-(? :check_method(some_variable)) -- This will pass `some_variable` to `check_method`, where it can be used in determining the calculation
+(? check_method(some_variable)) ~ do_something() --- This will pass `some_variable` to `check_method`, where it can be used in determining the calculation
 ```
 
 # 4. Modules and Codices
@@ -749,7 +749,7 @@ A **codex file** looks like this:
   --- a: describe a param
   call_something(a string) int
 
-  do_something() action -- action types do not return a value.
+  do_something() action --- action types do not return a value.
 @end
 
 @globals
@@ -786,14 +786,14 @@ Putting it all together:
 
 ```
 --- Hover text!
-hesome_method(some_argument int) action
+some_method(some_argument int) action
 ```
 
 This method takes a single int argument, and does not return a value, and will show "Hover text!" when you hover the method name in a Skald file.
 ```
-:some_method(1) --- this works!
-:some_method("one") --- this doesn't, because the argument is a string
-(? :some_method(1)) -> somewhere --- this doesn't work, because action types don't return anything, and so can't be used in conditionals.
+~ some_method(1) --- this works!
+~ some_method("one") --- this doesn't, because the argument is a string
+(? some_method(1)) -> somewhere --- this doesn't work, because action types don't return anything, and so can't be used in conditionals.
 ```
 
 ### 4.2.2 Global Variable Definitions
@@ -835,8 +835,8 @@ You can test a Skald file using the **command-line tool**, or from a custom inte
 A module loaded in "test mode" will initialize imported variables using the "test value", as described in 3.1.4:
 
 ```
-~ module_value = 3     -- Will initialize as this in gameplay
-< inherited_value = 9  -- Will only initialize as this in test mode
+~ module_value = 3     --- Will initialize as this in gameplay
+< inherited_value = 9  --- Will only initialize as this in test mode
 ```
 
 ## 5.2 Testbeds
