@@ -8,3 +8,6 @@
 (? missing_method()) Unknown method in a conditional.
 @if count = 1
 @endif
+@if alive
+A: "Chain after a failed one must not crash."
+@endif

@@ -121,7 +121,7 @@ void Document::parse() {
 
   try {
     tao::pegtl::memory_input input(source, filename);
-    tao::pegtl::parse<Skald::grammar, lsp_action>(input, state);
+    tao::pegtl::parse<Skald::grammar, lsp_action, Skald::control>(input, state);
     parse_ok_ = true;
 
     // The grammar recovers from malformed lines and consumes the whole file,
