@@ -1075,7 +1075,7 @@ ParsedModule parse_module(const std::string &text, const std::string &path,
   ParseState pstate(path, codex);
   try {
     pegtl::memory_input in(text, source.empty() ? path : source);
-    if (!pegtl::parse<grammar, action>(in, pstate)) {
+    if (!pegtl::parse<grammar, action, control>(in, pstate)) {
       dbg_out("Parse failed!");
       return ParsedModule{std::move(pstate.module),
                           ParseResult::fail("Module parse failed!")};

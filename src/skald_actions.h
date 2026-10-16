@@ -5,6 +5,7 @@
 #include "skald.h"
 #include "skald_grammar.h"
 #include "tao/pegtl/position.hpp"
+#include <__iterator/reverse_iterator.h>
 #include <array>
 #include <optional>
 #include <string>
@@ -864,6 +865,22 @@ template <> struct action<cond_chain> {
     state.current_block->members.push_back(
         MainBlockMember{std::move(*state.open_chain)});
     state.open_chain.reset();
+  }
+};
+
+// SECTION: CONTROLS
+
+template <typename Rule> struct control : tao::pegtl::normal<Rule> {};
+
+// do rollback if cond chain fails; prevents parser crash when you type that
+// opening @if.
+template <> struct control<cond_chain> : tao::pegtl::normal<cond_chain> {
+  template <typename ParseInput>
+
+  // handles the failure of this rule so we can unroll the chain state and keep
+  // parsing.
+  static void failure(const ParseInput &, ParseState &state) {
+    state.abandon_chain();
   }
 };
 

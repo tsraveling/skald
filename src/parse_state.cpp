@@ -61,6 +61,15 @@ void ParseState::add_member(BlockMember mem) {
   }
 }
 
+/** This cleans up the cond chain if the parse rule fails; prevents crashes if
+ * malformed, or when initially typing in Skald text. */
+void ParseState::abandon_chain() {
+  open_chain.reset();
+  conditional_stack.clear();
+  conditional_buffer.reset();
+  current_comparison = ConditionalAtom::Comparison::TRUTHY;
+}
+
 // SECTION: BEATS
 
 void ParseState::add_beat(int line_number) {

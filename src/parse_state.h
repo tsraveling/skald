@@ -71,6 +71,9 @@ struct ParseState {
    *  list. */
   std::unique_ptr<ConditionalChain> open_chain;
 
+  /** Discards a partially-parsed chain and its conditional state */
+  void abandon_chain();
+
   // SECTION: BEATS
 
   /** The current beat attribution tag */

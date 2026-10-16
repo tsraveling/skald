@@ -8,6 +8,8 @@
 - Parser: `@receive` matches in the grammar but has no action and no `Module` field; it is silently dropped.
 - Parser: `EXIT some_var` errors because `Exit.argument` is `SimpleRValue`; Syntax.md 4.1.2 says variables are allowed.
 - Codex: `@readonly` documented in Syntax.md 4.2.2 but absent from `codex_grammar.h`.
+- Parser: `argument_queue` leaks on a failed method call (half-typed `foo(1,`); arg actions push eagerly (skald_actions.h:307) and only a completed call drains it, so the next call inherits stray args.
+
 
 ## NEXT
 
