@@ -9,7 +9,8 @@
 namespace SkaldLsp {
 
 // Determine completion context from text before cursor
-enum class CompletionContext { None, MoveTarget, Variable, Method, GoPath, BlockDefinition };
+// Value: variables and methods
+enum class CompletionContext { None, MoveTarget, Value, GoPath, BlockDefinition };
 
 CompletionContext detect_completion_context(const std::string &line_text,
                                             int character);

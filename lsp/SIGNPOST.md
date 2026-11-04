@@ -71,7 +71,7 @@ errors). We piggyback on that and add LSP-only bookkeeping.
   exist?", and computes **open transitions** (targets referenced by `->` with
   no defining block yet) for `# `/`## `/`### ` completion.
 - **analyzer.{h,cpp}** — stateless feature builders over a `Document`:
-  completion (context-sniffs the line: `->` → block tags, `:` → codex methods,
-  `{`/`(?`/`~` → vars, `GO ` → files, `# ` → open transitions), document
+  completion (context-sniffs the line: `->` → block tags,
+  `{`/`(?`/`~`/`@if` → vars + codex methods, `GO ` → files, `# ` → open transitions), document
   outline, and hover (block beat counts + `---` doc comments; variable scope
   global/module/local; method signature from codex).

@@ -266,7 +266,7 @@ struct ConditionalAtom {
     LESS_EQUAL
   };
   static Comparison comparison_for_operator(const std::string op) {
-    if (op == "=")
+    if (op == "==")
       return Comparison::EQUALS;
     if (op == "!=")
       return Comparison::NOT_EQUALS;

@@ -8,7 +8,7 @@ With a Skald module loaded:
 2. A Response can be **Content**, **Query**, or **End**.
 3. Respond:
   - A **Content** is something you can handle and render: a piece of dialogue, a set of options (an `OptionGroup`), an action notification, etc. If it's an option group, you call `act(index)` with the option your player picks in order to get the next Response.
-  - A **Query** means Skald needs something from your game -- a calculation from game state, a minigame result, whatever you want. You respond to it with `.answer` (see below). This is entirely asynchronous, which means you could do `@if :win_chess()` in a module, have an entire ten minute chess minigame, and then advance the Skald module from there.
+  - A **Query** means Skald needs something from your game -- a calculation from game state, a minigame result, whatever you want. You respond to it with `.answer` (see below). This is entirely asynchronous, which means you could do `@if win_chess()` in a module, have an entire ten minute chess minigame, and then advance the Skald module from there.
 
 # API Description
 

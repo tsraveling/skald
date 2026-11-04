@@ -158,7 +158,7 @@ void ProjectIndex::build(const Skald::Codex *codex) {
         LspParseState state(rel, codex);
         try {
             tao::pegtl::memory_input input(text, rel);
-            tao::pegtl::parse<Skald::grammar, lsp_action>(input, state);
+            tao::pegtl::parse<Skald::grammar, lsp_action, Skald::control>(input, state);
         } catch (...) {
             // keep partial results
         }

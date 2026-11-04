@@ -61,6 +61,15 @@ void ParseState::add_member(BlockMember mem) {
   }
 }
 
+/** This cleans up the cond chain if the parse rule fails; prevents crashes if
+ * malformed, or when initially typing in Skald text. */
+void ParseState::abandon_chain() {
+  open_chain.reset();
+  conditional_stack.clear();
+  conditional_buffer.reset();
+  current_comparison = ConditionalAtom::Comparison::TRUTHY;
+}
+
 // SECTION: BEATS
 
 void ParseState::add_beat(int line_number) {
@@ -189,11 +198,6 @@ void ParseState::validate_method(const MethodCallOp &m,
         err(pos, "Type value mismatch; " + val_type_to_str(def->args[i].type) +
                      " was expected, " + val_type_to_str(t) + " was found.");
       }
-    }
-
-    // Must be normal RValue (not method call)
-    if (rval_get_call(m.args[i])) {
-      err(pos, "Methods are not yet supported as arguments of other methods");
     }
   }
 }

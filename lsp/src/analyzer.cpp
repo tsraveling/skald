@@ -78,48 +78,24 @@ CompletionContext detect_completion_context(const std::string &line_text,
             return CompletionContext::GoPath;
     }
 
-    // After ":": method completion.
-    if (!before.empty() && before.back() == ':') {
-        return CompletionContext::Method;
-    }
-    auto colon_pos = before.rfind(':');
-    if (colon_pos != std::string::npos) {
-        auto after_colon = before.substr(colon_pos + 1);
-        bool all_id = true;
-        for (char c : after_colon)
-            if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
-                all_id = false;
-                break;
-            }
-        if (all_id && !after_colon.empty())
-            return CompletionContext::Method;
-    }
-
-    // After "~ ": variable completion (mutations).
+    // Logic lines (~ ...), @if / @elseif: variables and methods.
     {
-        auto tilde_pos = trimmed.rfind("~ ");
-        if (tilde_pos != std::string::npos) {
-            auto after_tilde = trimmed.substr(tilde_pos + 2);
-            bool all_id = true;
-            for (char c : after_tilde)
-                if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
-                    all_id = false;
-                    break;
-                }
-            if (all_id)
-                return CompletionContext::Variable;
-        }
+        auto lead = before.find_first_not_of(" \t");
+        if (lead != std::string::npos &&
+            (before[lead] == '~' || before.compare(lead, 4, "@if ") == 0 ||
+             before.compare(lead, 8, "@elseif ") == 0))
+            return CompletionContext::Value;
     }
     // Inside (? ...) conditional.
     if (before.find("(?") != std::string::npos) {
-        return CompletionContext::Variable;
+        return CompletionContext::Value;
     }
     // Inside { ... } injection.
     auto brace_pos = before.rfind('{');
     if (brace_pos != std::string::npos) {
         auto close = before.find('}', brace_pos);
         if (close == std::string::npos)
-            return CompletionContext::Variable;
+            return CompletionContext::Value;
     }
 
     return CompletionContext::None;
@@ -141,23 +117,19 @@ get_completions(const Document &doc, int line, int character,
                 {tag, LspTypes::CompletionItemKind::Reference, "Block tag"});
         break;
     }
-    case CompletionContext::Variable: {
+    case CompletionContext::Value: {
         for (auto &var : doc.variable_names())
             items.push_back(
                 {var, LspTypes::CompletionItemKind::Variable, "Module variable"});
-        if (codex)
+        if (codex) {
             for (auto &g : codex->global_vars)
                 items.push_back({g.var.name,
                                  LspTypes::CompletionItemKind::Variable,
                                  "Global"});
-        break;
-    }
-    case CompletionContext::Method: {
-        // Methods come from the codex.
-        if (codex)
             for (auto &def : codex->method_defs)
                 items.push_back({def.name, LspTypes::CompletionItemKind::Method,
                                  def.dbg_desc()});
+        }
         break;
     }
     case CompletionContext::GoPath: {
@@ -299,14 +271,14 @@ std::optional<std::string> get_hover(const Document &doc, int line,
         if (codex)
             for (auto &def : codex->method_defs)
                 if (def.name == sym->name) {
-                    std::string hover = "Method `:" + def.dbg_desc() + "`";
+                    std::string hover = "Method `" + def.dbg_desc() + "`";
                     if (doc.project())
                         if (auto md = doc.project()->resolve_method(sym->name))
                             if (!md->doc.empty())
                                 hover += "\n\n---\n\n" + md->doc;
                     return hover;
                 }
-        return "Method `:" + sym->name + "()` (not defined in codex)";
+        return "Method `" + sym->name + "()` (not defined in codex)";
     }
     case SymbolKind::FileRef:
         return "Module reference: `" + sym->name + "`";

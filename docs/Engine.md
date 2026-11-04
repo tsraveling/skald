@@ -13,7 +13,7 @@ This is useful because it makes method resolution (very) asynchronous. If you wa
 
 opponent: So you think you can beat me, eh?
 
-* (? :play_chess()) -> win_block
+* (? play_chess()) -> win_block
 
 opponent: Tough luck!
 

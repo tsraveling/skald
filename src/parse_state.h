@@ -71,6 +71,9 @@ struct ParseState {
    *  list. */
   std::unique_ptr<ConditionalChain> open_chain;
 
+  /** Discards a partially-parsed chain and its conditional state */
+  void abandon_chain();
+
   // SECTION: BEATS
 
   /** The current beat attribution tag */
@@ -101,6 +104,9 @@ struct ParseState {
 
   /** Stack of relative movement steps for parsing */
   std::vector<RelMoveStep> rel_move_steps;
+
+  /** Stores lval for a mutation */
+  std::string mutate_lvalue;
 
   /** Stores move identifier for transitions and GO statements */
   std::string move_identifier_store;
