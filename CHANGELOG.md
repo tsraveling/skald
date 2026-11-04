@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.7.0 - 2026-11-04
+#### Features
+- logic syntax consolidation (#38) - (c6ca248) - Tim Raveling
+- adds compiler for emitting Skald modules and codices to lua and json (#37) - (cf17ac7) - Tim Raveling
+
+- - -
+
 ## 0.6.3 - 2026-08-28
 #### Bug Fixes
 - all Response exits now use SimpleRValue instead of RValue (#36) - (00157f2) - Tim Raveling
